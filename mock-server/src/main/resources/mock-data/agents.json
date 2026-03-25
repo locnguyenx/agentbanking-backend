@@ -1,0 +1,6 @@
+[
+  {"agentCode": "AGT-001", "tier": "MICRO", "status": "ACTIVE", "gpsLat": 3.1390, "gpsLng": 101.6869},
+  {"agentCode": "AGT-002", "tier": "STANDARD", "status": "ACTIVE", "gpsLat": 3.1400, "gpsLng": 101.6870},
+  {"agentCode": "AGT-003", "tier": "PREMIER", "status": "ACTIVE", "gpsLat": 3.1395, "gpsLng": 101.6865},
+  {"agentCode": "AGT-004", "tier": "STANDARD", "status": "SUSPENDED", "gpsLat": 3.1390, "gpsLng": 101.6869}
+]
