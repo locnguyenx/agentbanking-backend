@@ -15,8 +15,17 @@ public class PaynetMockController {
         this.config = config;
     }
 
+    private void simulateLatency() {
+        try {
+            Thread.sleep(config.getPaynet().getLatencyMs());
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+    }
+
     @PostMapping("/iso8583/auth")
     public Map<String, Object> cardAuth(@RequestBody Map<String, Object> request) {
+        simulateLatency();
         String defaultResponse = config.getPaynet().getDefaultResponse();
         if ("APPROVE".equals(defaultResponse)) {
             return Map.of(
@@ -35,6 +44,7 @@ public class PaynetMockController {
 
     @PostMapping("/iso8583/reversal")
     public Map<String, Object> reversal(@RequestBody Map<String, Object> request) {
+        simulateLatency();
         return Map.of(
             "status", "ACKNOWLEDGED",
             "referenceId", "REV-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase()
@@ -43,6 +53,7 @@ public class PaynetMockController {
 
     @PostMapping("/iso20022/transfer")
     public Map<String, Object> duitNowTransfer(@RequestBody Map<String, Object> request) {
+        simulateLatency();
         return Map.of(
             "status", "SETTLED",
             "transactionId", "DN-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase(),
