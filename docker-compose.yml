@@ -1,0 +1,305 @@
+version: '3.8'
+
+services:
+  # ==================== Infrastructure ====================
+  
+  # PostgreSQL for Rules Service
+  postgres-rules:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: rules_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata-rules:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # PostgreSQL for Ledger Service
+  postgres-ledger:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ledger_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5434:5432"
+    volumes:
+      - pgdata-ledger:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # PostgreSQL for Onboarding Service
+  postgres-onboarding:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: onboarding_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5435:5432"
+    volumes:
+      - pgdata-onboarding:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # PostgreSQL for Switch Adapter Service
+  postgres-switch:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: switch_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5436:5432"
+    volumes:
+      - pgdata-switch:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # PostgreSQL for Biller Service
+  postgres-biller:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: biller_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5437:5432"
+    volumes:
+      - pgdata-biller:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Redis for caching and idempotency
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Kafka (using KRaft mode, no Zookeeper)
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:29093
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:29093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_LOG_DIRS: /tmp/kraft-combined-logs
+      CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
+    healthcheck:
+      test: ["CMD-SHELL", "kafka-broker-api-versions --bootstrap-server localhost:9092 || exit 1"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+
+  # ==================== Application Services ====================
+
+  # Mock Server (downstream simulators)
+  mock-server:
+    build:
+      context: ./mock-server
+      dockerfile: Dockerfile
+    ports:
+      - "8090:8090"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8090/mock/jpn/verify || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Rules Service
+  rules-service:
+    build:
+      context: ./services/rules-service
+      dockerfile: Dockerfile
+    ports:
+      - "8081:8081"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-rules:5432/rules_db
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+      SPRING_DATA_REDIS_HOST: redis
+    depends_on:
+      postgres-rules:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8081/internal/fees/CASH_WITHDRAWAL/MICRO || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # Ledger Service
+  ledger-service:
+    build:
+      context: ./services/ledger-service
+      dockerfile: Dockerfile
+    ports:
+      - "8082:8082"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-ledger:5432/ledger_db
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    depends_on:
+      postgres-ledger:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      rules-service:
+        condition: service_healthy
+      switch-adapter-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8082/internal/balance/00000000-0000-0000-0000-000000000000 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+
+  # Onboarding Service
+  onboarding-service:
+    build:
+      context: ./services/onboarding-service
+      dockerfile: Dockerfile
+    ports:
+      - "8083:8083"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-onboarding:5432/onboarding_db
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+    depends_on:
+      postgres-onboarding:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8083/internal/verify-mykad -X POST -H 'Content-Type: application/json' -d '{\"mykadNumber\":\"123456789012\"}' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # Switch Adapter Service
+  switch-adapter-service:
+    build:
+      context: ./services/switch-adapter-service
+      dockerfile: Dockerfile
+    ports:
+      - "8084:8084"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-switch:5432/switch_db
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+      MOCK_SERVER_URL: http://mock-server:8090
+    depends_on:
+      postgres-switch:
+        condition: service_healthy
+      mock-server:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8084/internal/auth -X POST -H 'Content-Type: application/json' -d '{}' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # Biller Service
+  biller-service:
+    build:
+      context: ./services/biller-service
+      dockerfile: Dockerfile
+    ports:
+      - "8085:8085"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-biller:5432/biller_db
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+      MOCK_SERVER_URL: http://mock-server:8090
+    depends_on:
+      postgres-biller:
+        condition: service_healthy
+      mock-server:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8085/internal/validate-ref -X POST -H 'Content-Type: application/json' -d '{\"billerCode\":\"JOMPAY\",\"ref1\":\"INV-12345\"}' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # API Gateway
+  gateway:
+    build:
+      context: ./gateway
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_CLOUD_GATEWAY_ROUTES_0_URI: http://rules-service:8081
+      SPRING_CLOUD_GATEWAY_ROUTES_1_URI: http://ledger-service:8082
+      SPRING_CLOUD_GATEWAY_ROUTES_2_URI: http://onboarding-service:8083
+      SPRING_CLOUD_GATEWAY_ROUTES_3_URI: http://switch-adapter-service:8084
+      SPRING_CLOUD_GATEWAY_ROUTES_4_URI: http://biller-service:8085
+    depends_on:
+      rules-service:
+        condition: service_healthy
+      ledger-service:
+        condition: service_healthy
+      onboarding-service:
+        condition: service_healthy
+      switch-adapter-service:
+        condition: service_healthy
+      biller-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+
+  # Backoffice UI
+  backoffice:
+    build:
+      context: ./backoffice
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    depends_on:
+      gateway:
+        condition: service_healthy
+
+volumes:
+  pgdata-rules:
+  pgdata-ledger:
+  pgdata-onboarding:
+  pgdata-switch:
+  pgdata-biller:
