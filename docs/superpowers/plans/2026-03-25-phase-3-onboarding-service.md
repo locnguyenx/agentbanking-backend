@@ -41,7 +41,19 @@ services/onboarding-service/
 
 ## Tasks
 
-### Task 1: Project Setup
+### Task 1: Project Setup [DONE]
+
+### Task 2: KycVerification Entity [DONE]
+
+### Task 3: JPN Gateway (Outbound Port) [DONE]
+
+### Task 4: KYC Decision Service [DONE]
+
+### Task 5: REST Controller [DONE]
+
+---
+
+## Phase 3: Onboarding Service - COMPLETE ✅
 
 - [ ] Create build.gradle with Spring Boot 3.x, JPA, PostgreSQL, Flyway
 - [ ] Create application.yaml with port 8083
