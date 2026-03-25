@@ -1,4 +1,5 @@
 rootProject.name = 'agent-banking-platform'
+include 'common'
 include 'services:rules-service'
 include 'services:ledger-service'
 include 'services:onboarding-service'
