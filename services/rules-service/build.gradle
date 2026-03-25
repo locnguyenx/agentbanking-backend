@@ -25,6 +25,10 @@ dependencies {
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
 }
 
+tasks.named('test') {
+    useJUnitPlatform()
+}
+
 tasks.named('bootJar') {
     archiveBaseName = 'rules-service'
 }
