@@ -71,7 +71,21 @@ services/rules-service/
 
 ## Tasks
 
-### Task 1: Project Setup
+### Task 1: Project Setup [DONE]
+
+### Task 2: Domain Layer — Enums and Value Objects [DONE]
+
+### Task 3: FeeConfig Entity and Repository Port [DONE]
+
+### Task 4: Fee Calculation Domain Service [DONE]
+
+### Task 5: Limit and Velocity Services [DONE]
+
+### Task 6: REST Controller [DONE]
+
+---
+
+## Phase 1: Rules Service - COMPLETE ✅
 
 **BDD Scenarios:** Foundation for all Rules operations
 

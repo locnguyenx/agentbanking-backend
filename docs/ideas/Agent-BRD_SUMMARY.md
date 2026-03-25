@@ -99,7 +99,10 @@ Every transaction must consult the **Rules Service** for the following:
 * **Net Settlement:** Agents are settled "Net." (Total Deposits - Total Withdrawals + Total Commissions).
 * **Output:** The system must generate a CSV/Flat-file for the Core Banking System (CBS) upload by 02:00 AM.
 
-## 6. Security & Fraud (EFM)
+## 6. STRAIGHT-THROUGH PROCESSING (STP)
+Refer to ./STP-rules.md
+
+## 7. Security & Fraud (EFM)
 * **Velocity Checks:** Limit the number of transactions per MyKad per day to prevent "Smurfing."
 * **Geofencing:** Transactions must only be allowed within 100 meters of the registered Merchant GPS coordinate.
 * **Encryption:** PINs must never be logged. Card numbers (PAN) must be masked (e.g., `4111********1111`).

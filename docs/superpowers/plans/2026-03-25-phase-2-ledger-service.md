@@ -10,7 +10,7 @@
 
 ---
 
-## Task 1: Project Scaffolding
+## Task 1: Project Scaffolding [DONE]
 
 **BDD Scenarios:** N/A (infrastructure)
 **BRD Requirements:** N/A
