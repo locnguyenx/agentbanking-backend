@@ -46,7 +46,21 @@ services/switch-adapter-service/
 
 ## Tasks
 
-### Task 1: Project Setup
+### Task 1: Project Setup [DONE]
+
+### Task 2: HSM Gateway (PIN Verification) [DONE]
+
+### Task 3: PayNet Gateway (Card Authorization) [DONE]
+
+### Task 4: Card Authorization Use Case [DONE]
+
+### Task 5: Reversal Logic (MTI 0400) [DONE]
+
+### Task 6: REST Controller [DONE]
+
+---
+
+## Phase 4: Switch Adapter Service - COMPLETE ✅
 
 - [ ] Create build.gradle with Spring Boot 3.x, JPA, PostgreSQL
 - [ ] Create application.yaml with port 8084

@@ -45,7 +45,23 @@ backoffice/
 
 ## Tasks
 
-### Task 1: Project Setup
+### Task 1: Project Setup [DONE]
+
+### Task 2: Layout and Navigation [DONE]
+
+### Task 3: Dashboard Page [DONE]
+
+### Task 4: Agent Management [DONE]
+
+### Task 5: Transaction Monitor [DONE]
+
+### Task 6: Settlement Report [DONE]
+
+### Task 7: KYC Review Queue [DONE]
+
+---
+
+## Phase 5: Backoffice UI - COMPLETE ✅
 
 - [ ] Create vite project with React + TypeScript
 - [ ] Add dependencies: react-router-dom, @tanstack/react-query, axios
