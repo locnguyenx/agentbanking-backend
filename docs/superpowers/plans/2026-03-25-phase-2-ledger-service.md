@@ -12,6 +12,8 @@
 
 ## Task 1: Project Scaffolding [DONE]
 
+## Phase 2: Ledger & Float Service - COMPLETE ✅
+
 **BDD Scenarios:** N/A (infrastructure)
 **BRD Requirements:** N/A
 **User-Facing:** NO
