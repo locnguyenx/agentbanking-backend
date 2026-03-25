@@ -1,0 +1,20 @@
+server:
+  port: 8090
+
+spring:
+  application:
+    name: mock-server
+
+mock:
+  paynet:
+    default-response: APPROVE
+    decline-codes: ["51", "54", "55"]
+    latency-ms: 200
+  jpn:
+    default-match: MATCH
+    aml-default: CLEAN
+  hsm:
+    pin-validation: VALID
+  billers:
+    default-validation: VALID
+    latency-ms: 500
