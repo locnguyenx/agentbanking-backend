@@ -1,0 +1,1 @@
+ALTER TABLE switch_transaction ADD COLUMN amount NUMERIC(15,2) NOT NULL DEFAULT 0;

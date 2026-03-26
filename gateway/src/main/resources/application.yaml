@@ -4,6 +4,12 @@ server:
 spring:
   application:
     name: api-gateway
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${JWT_ISSUER_URI:https://auth.agentbanking.com}
+          jwk-set-uri: ${JWT_JWK_SET_URI:https://auth.agentbanking.com/.well-known/jwks.json}
   cloud:
     gateway:
       routes:

@@ -1,76 +1,95 @@
 package com.agentbanking.switchadapter.domain.service;
 
-import com.agentbanking.switchadapter.domain.model.*;
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.PersistenceContext;
+import com.agentbanking.switchadapter.domain.model.MessageType;
+import com.agentbanking.switchadapter.domain.model.SwitchStatus;
+import com.agentbanking.switchadapter.domain.model.SwitchTransactionRecord;
+import com.agentbanking.switchadapter.domain.port.out.SwitchTransactionRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Service
 public class SwitchAdapterService {
 
-    @PersistenceContext
-    private EntityManager em;
+    private final SwitchTransactionRepository repository;
 
-    @Transactional
-    public SwitchTransaction processCardAuth(UUID internalTransactionId, 
-                                              String pan, 
-                                              double amount) {
-        // Simulate ISO 8583 authorization
-        SwitchTransaction txn = new SwitchTransaction();
-        txn.setSwitchTxId(UUID.randomUUID());
-        txn.setInternalTransactionId(internalTransactionId);
-        txn.setMtType(MessageType.MT0100);
-        txn.setIsoResponseCode("00"); // Approved
-        txn.setSwitchReference("PAYNET-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
-        txn.setStatus(SwitchStatus.APPROVED);
-        txn.setCreatedAt(LocalDateTime.now());
-        txn.setCompletedAt(LocalDateTime.now());
-        
-        em.persist(txn);
-        return txn;
+    public SwitchAdapterService(SwitchTransactionRepository repository) {
+        this.repository = repository;
     }
 
     @Transactional
-    public SwitchTransaction processReversal(UUID originalTransactionId, 
-                                              String originalReference,
-                                              double amount) {
-        // Simulate ISO 8583 reversal (MTI 0400)
-        SwitchTransaction txn = new SwitchTransaction();
-        txn.setSwitchTxId(UUID.randomUUID());
-        txn.setInternalTransactionId(originalTransactionId);
-        txn.setMtType(MessageType.MT0400);
-        txn.setIsoResponseCode("00"); // Acknowledged
-        txn.setSwitchReference("REV-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
-        txn.setStatus(SwitchStatus.REVERSED);
-        txn.setOriginalReference(originalReference);
-        txn.setCreatedAt(LocalDateTime.now());
-        txn.setCompletedAt(LocalDateTime.now());
+    public SwitchTransactionRecord processCardAuth(UUID internalTransactionId, 
+                                                   String pan, 
+                                                   java.math.BigDecimal amount) {
+        java.math.BigDecimal roundedAmount = amount.setScale(2, RoundingMode.HALF_UP);
         
-        em.persist(txn);
-        return txn;
+        SwitchTransactionRecord record = new SwitchTransactionRecord(
+            UUID.randomUUID(),
+            internalTransactionId,
+            MessageType.MT0100,
+            "00",
+            "PAYNET-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase(),
+            SwitchStatus.APPROVED,
+            null,
+            0,
+            roundedAmount,
+            LocalDateTime.now(),
+            LocalDateTime.now()
+        );
+        
+        repository.save(record);
+        return record;
     }
 
     @Transactional
-    public SwitchTransaction processDuitNowTransfer(UUID internalTransactionId,
-                                                     String proxyType,
-                                                     String proxyValue,
-                                                     double amount) {
-        // Simulate ISO 20022 DuitNow transfer
-        SwitchTransaction txn = new SwitchTransaction();
-        txn.setSwitchTxId(UUID.randomUUID());
-        txn.setInternalTransactionId(internalTransactionId);
-        txn.setMtType(MessageType.ISO20022);
-        txn.setIsoResponseCode("ACSC"); // AcceptedSettlementCompleted
-        txn.setSwitchReference("DN-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
-        txn.setStatus(SwitchStatus.APPROVED);
-        txn.setCreatedAt(LocalDateTime.now());
-        txn.setCompletedAt(LocalDateTime.now());
+    public SwitchTransactionRecord processReversal(UUID originalTransactionId, 
+                                                   String originalReference,
+                                                   java.math.BigDecimal amount) {
+        java.math.BigDecimal roundedAmount = amount.setScale(2, RoundingMode.HALF_UP);
         
-        em.persist(txn);
-        return txn;
+        SwitchTransactionRecord record = new SwitchTransactionRecord(
+            UUID.randomUUID(),
+            originalTransactionId,
+            MessageType.MT0400,
+            "00",
+            "REV-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase(),
+            SwitchStatus.REVERSED,
+            originalReference,
+            1,
+            roundedAmount,
+            LocalDateTime.now(),
+            LocalDateTime.now()
+        );
+        
+        repository.save(record);
+        return record;
+    }
+
+    @Transactional
+    public SwitchTransactionRecord processDuitNowTransfer(UUID internalTransactionId,
+                                                           String proxyType,
+                                                           String proxyValue,
+                                                           java.math.BigDecimal amount) {
+        java.math.BigDecimal roundedAmount = amount.setScale(2, RoundingMode.HALF_UP);
+        
+        SwitchTransactionRecord record = new SwitchTransactionRecord(
+            UUID.randomUUID(),
+            internalTransactionId,
+            MessageType.ISO20022,
+            "ACSC",
+            "DN-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase(),
+            SwitchStatus.APPROVED,
+            null,
+            0,
+            roundedAmount,
+            LocalDateTime.now(),
+            LocalDateTime.now()
+        );
+        
+        repository.save(record);
+        return record;
     }
 }

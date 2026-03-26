@@ -1,12 +1,16 @@
-package com.agentbanking.switchadapter.domain.model;
+package com.agentbanking.switchadapter.infrastructure.persistence.entity;
 
+import com.agentbanking.switchadapter.domain.model.MessageType;
+import com.agentbanking.switchadapter.domain.model.SwitchStatus;
 import jakarta.persistence.*;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
 @Table(name = "switch_transaction")
-public class SwitchTransaction {
+public class SwitchTransactionEntity {
+
     @Id
     private UUID switchTxId;
     
@@ -33,6 +37,9 @@ public class SwitchTransaction {
     @Column(name = "reversal_count")
     private int reversalCount;
     
+    @Column(name = "amount", precision = 15, scale = 2)
+    private BigDecimal amount;
+    
     @Column(name = "created_at")
     private LocalDateTime createdAt;
     
@@ -55,6 +62,8 @@ public class SwitchTransaction {
     public void setOriginalReference(String originalReference) { this.originalReference = originalReference; }
     public int getReversalCount() { return reversalCount; }
     public void setReversalCount(int reversalCount) { this.reversalCount = reversalCount; }
+    public BigDecimal getAmount() { return amount; }
+    public void setAmount(BigDecimal amount) { this.amount = amount; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
     public LocalDateTime getCompletedAt() { return completedAt; }
