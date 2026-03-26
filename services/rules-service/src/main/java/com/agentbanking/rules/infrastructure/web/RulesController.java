@@ -2,10 +2,9 @@ package com.agentbanking.rules.infrastructure.web;
 
 import com.agentbanking.rules.domain.model.AgentTier;
 import com.agentbanking.rules.domain.model.TransactionType;
-import com.agentbanking.rules.domain.service.FeeCalculationService;
-import com.agentbanking.rules.domain.service.FeeCalculationService.FeeCalculationResult;
-import com.agentbanking.rules.domain.service.LimitEnforcementService;
-import com.agentbanking.rules.domain.service.VelocityCheckService;
+import com.agentbanking.rules.domain.port.in.FeeQueryUseCase;
+import com.agentbanking.rules.domain.port.in.FeeQueryUseCase.FeeQueryResult;
+import com.agentbanking.rules.domain.port.in.VelocityCheckUseCase;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -16,16 +15,13 @@ import java.util.Map;
 @RequestMapping("/internal")
 public class RulesController {
 
-    private final FeeCalculationService feeCalculationService;
-    private final LimitEnforcementService limitEnforcementService;
-    private final VelocityCheckService velocityCheckService;
+    private final FeeQueryUseCase feeQueryUseCase;
+    private final VelocityCheckUseCase velocityCheckUseCase;
 
-    public RulesController(FeeCalculationService feeCalculationService,
-                           LimitEnforcementService limitEnforcementService,
-                           VelocityCheckService velocityCheckService) {
-        this.feeCalculationService = feeCalculationService;
-        this.limitEnforcementService = limitEnforcementService;
-        this.velocityCheckService = velocityCheckService;
+    public RulesController(FeeQueryUseCase feeQueryUseCase,
+                           VelocityCheckUseCase velocityCheckUseCase) {
+        this.feeQueryUseCase = feeQueryUseCase;
+        this.velocityCheckUseCase = velocityCheckUseCase;
     }
 
     @PostMapping("/fees/calculate")
@@ -36,7 +32,7 @@ public class RulesController {
         TransactionType txType = TransactionType.valueOf(transactionType);
         AgentTier tier = AgentTier.valueOf(agentTier);
 
-        FeeCalculationResult result = feeCalculationService.calculate(amount, txType, tier);
+        FeeQueryResult result = feeQueryUseCase.calculate(amount, txType, tier);
 
         return ResponseEntity.ok(Map.of(
             "customerFee", result.customerFee(),
@@ -51,7 +47,6 @@ public class RulesController {
     public ResponseEntity<Map<String, Object>> getFeeConfig(
             @PathVariable String transactionType,
             @PathVariable String agentTier) {
-        // Stub response - would normally query repository
         return ResponseEntity.ok(Map.of(
             "transactionType", transactionType,
             "agentTier", agentTier,
@@ -70,7 +65,7 @@ public class RulesController {
         int transactionCountToday = (Integer) request.get("transactionCountToday");
         BigDecimal amountToday = new BigDecimal(request.get("amountToday").toString());
 
-        var result = velocityCheckService.check(transactionCountToday, amountToday);
+        var result = velocityCheckUseCase.check(transactionCountToday, amountToday);
 
         return ResponseEntity.ok(Map.of(
             "passed", result.passed(),
@@ -82,7 +77,6 @@ public class RulesController {
     public ResponseEntity<Map<String, Object>> getLimits(
             @PathVariable String transactionType,
             @PathVariable String agentTier) {
-        // Stub response
         return ResponseEntity.ok(Map.of(
             "transactionType", transactionType,
             "agentTier", agentTier,

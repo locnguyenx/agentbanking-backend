@@ -5,10 +5,7 @@ import com.agentbanking.rules.domain.model.VelocityRuleRecord;
 import com.agentbanking.rules.domain.port.out.VelocityRuleRepository;
 import java.math.BigDecimal;
 import java.util.List;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
-@Service
 public class VelocityCheckService {
 
     private final VelocityRuleRepository velocityRuleRepository;
@@ -17,7 +14,6 @@ public class VelocityCheckService {
         this.velocityRuleRepository = velocityRuleRepository;
     }
 
-    @Transactional(readOnly = true)
     public VelocityCheckResult check(int transactionCountToday, BigDecimal amountToday) {
         List<VelocityRuleRecord> rules = velocityRuleRepository.findActiveRules();
         for (VelocityRuleRecord rule : rules) {
