@@ -1,9 +1,11 @@
 package com.agentbanking.rules.domain.service;
 
+import com.agentbanking.common.security.ErrorCodes;
 import com.agentbanking.rules.domain.model.VelocityRuleRecord;
 import com.agentbanking.rules.domain.port.out.VelocityRuleRepository;
 import java.math.BigDecimal;
 import java.util.List;
+import org.springframework.transaction.annotation.Transactional;
 
 public class VelocityCheckService {
 
@@ -13,6 +15,7 @@ public class VelocityCheckService {
         this.velocityRuleRepository = velocityRuleRepository;
     }
 
+    @Transactional(readOnly = true)
     public VelocityCheckResult check(int transactionCountToday, BigDecimal amountToday) {
         List<VelocityRuleRecord> rules = velocityRuleRepository.findActiveRules();
         for (VelocityRuleRecord rule : rules) {
@@ -20,10 +23,10 @@ public class VelocityCheckService {
                 continue;
             }
             if (transactionCountToday >= rule.maxTransactionsPerDay()) {
-                return new VelocityCheckResult(false, "ERR_VELOCITY_COUNT_EXCEEDED");
+                return new VelocityCheckResult(false, ErrorCodes.ERR_VELOCITY_COUNT_EXCEEDED);
             }
             if (amountToday.compareTo(rule.maxAmountPerDay()) > 0) {
-                return new VelocityCheckResult(false, "ERR_VELOCITY_AMOUNT_EXCEEDED");
+                return new VelocityCheckResult(false, ErrorCodes.ERR_VELOCITY_AMOUNT_EXCEEDED);
             }
         }
         return new VelocityCheckResult(true, null);

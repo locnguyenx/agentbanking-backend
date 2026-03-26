@@ -67,10 +67,14 @@ public class RulesController {
     @PostMapping("/check-velocity")
     public ResponseEntity<Map<String, Object>> checkVelocity(
             @RequestBody Map<String, Object> request) {
-        // Stub response - would normally check velocity rules
+        int transactionCountToday = (Integer) request.get("transactionCountToday");
+        BigDecimal amountToday = new BigDecimal(request.get("amountToday").toString());
+
+        var result = velocityCheckService.check(transactionCountToday, amountToday);
+
         return ResponseEntity.ok(Map.of(
-            "passed", true,
-            "message", "Velocity check passed"
+            "passed", result.passed(),
+            "errorCode", result.errorCode() != null ? result.errorCode() : ""
         ));
     }
 
