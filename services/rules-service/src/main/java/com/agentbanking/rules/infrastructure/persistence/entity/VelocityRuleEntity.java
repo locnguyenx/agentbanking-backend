@@ -1,12 +1,14 @@
-package com.agentbanking.rules.domain.model;
+package com.agentbanking.rules.infrastructure.persistence.entity;
 
+import com.agentbanking.rules.domain.model.TransactionType;
+import com.agentbanking.rules.domain.model.VelocityScope;
 import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.util.UUID;
 
 @Entity
 @Table(name = "velocity_rule")
-public class VelocityRule {
+public class VelocityRuleEntity {
     @Id
     private UUID ruleId;
     

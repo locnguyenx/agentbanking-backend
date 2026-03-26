@@ -1,22 +1,28 @@
 package com.agentbanking.rules.domain.service;
 
-import com.agentbanking.rules.domain.model.VelocityRule;
+import com.agentbanking.rules.domain.model.VelocityRuleRecord;
+import com.agentbanking.rules.domain.port.out.VelocityRuleRepository;
 import java.math.BigDecimal;
 import java.util.List;
-import org.springframework.stereotype.Service;
 
-@Service
 public class VelocityCheckService {
 
-    public VelocityCheckResult check(List<VelocityRule> rules, int transactionCountToday, BigDecimal amountToday) {
-        for (VelocityRule rule : rules) {
-            if (!rule.isActive()) {
+    private final VelocityRuleRepository velocityRuleRepository;
+
+    public VelocityCheckService(VelocityRuleRepository velocityRuleRepository) {
+        this.velocityRuleRepository = velocityRuleRepository;
+    }
+
+    public VelocityCheckResult check(int transactionCountToday, BigDecimal amountToday) {
+        List<VelocityRuleRecord> rules = velocityRuleRepository.findActiveRules();
+        for (VelocityRuleRecord rule : rules) {
+            if (!rule.active()) {
                 continue;
             }
-            if (transactionCountToday >= rule.getMaxTransactionsPerDay()) {
+            if (transactionCountToday >= rule.maxTransactionsPerDay()) {
                 return new VelocityCheckResult(false, "ERR_VELOCITY_COUNT_EXCEEDED");
             }
-            if (amountToday.compareTo(rule.getMaxAmountPerDay()) > 0) {
+            if (amountToday.compareTo(rule.maxAmountPerDay()) > 0) {
                 return new VelocityCheckResult(false, "ERR_VELOCITY_AMOUNT_EXCEEDED");
             }
         }

@@ -1,5 +1,8 @@
-package com.agentbanking.rules.domain.model;
+package com.agentbanking.rules.infrastructure.persistence.entity;
 
+import com.agentbanking.rules.domain.model.AgentTier;
+import com.agentbanking.rules.domain.model.FeeType;
+import com.agentbanking.rules.domain.model.TransactionType;
 import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -7,7 +10,7 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "fee_config")
-public class FeeConfig {
+public class FeeConfigEntity {
     @Id
     private UUID feeConfigId;
     
@@ -43,7 +46,7 @@ public class FeeConfig {
     
     @Column(name = "effective_to")
     private LocalDate effectiveTo;
-    
+
     public UUID getFeeConfigId() { return feeConfigId; }
     public void setFeeConfigId(UUID feeConfigId) { this.feeConfigId = feeConfigId; }
     public TransactionType getTransactionType() { return transactionType; }

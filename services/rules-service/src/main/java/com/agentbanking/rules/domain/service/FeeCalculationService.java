@@ -1,18 +1,30 @@
 package com.agentbanking.rules.domain.service;
 
-import com.agentbanking.rules.domain.model.FeeConfig;
+import com.agentbanking.rules.domain.model.AgentTier;
+import com.agentbanking.rules.domain.model.FeeConfigRecord;
 import com.agentbanking.rules.domain.model.FeeType;
+import com.agentbanking.rules.domain.model.TransactionType;
+import com.agentbanking.rules.domain.port.out.FeeConfigRepository;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import org.springframework.stereotype.Service;
+import java.time.LocalDate;
 
-@Service
 public class FeeCalculationService {
 
-    public FeeCalculationResult calculate(BigDecimal amount, FeeConfig config) {
-        BigDecimal customerFee = calculateComponent(amount, config.getCustomerFeeValue(), config.getFeeType());
-        BigDecimal agentCommission = calculateComponent(amount, config.getAgentCommissionValue(), config.getFeeType());
-        BigDecimal bankShare = calculateComponent(amount, config.getBankShareValue(), config.getFeeType());
+    private final FeeConfigRepository feeConfigRepository;
+
+    public FeeCalculationService(FeeConfigRepository feeConfigRepository) {
+        this.feeConfigRepository = feeConfigRepository;
+    }
+
+    public FeeCalculationResult calculate(BigDecimal amount, TransactionType transactionType, AgentTier agentTier) {
+        FeeConfigRecord config = feeConfigRepository.findByTransactionTypeAndAgentTier(
+            transactionType, agentTier, LocalDate.now()
+        ).orElseThrow(() -> new IllegalArgumentException("No fee config found"));
+
+        BigDecimal customerFee = calculateComponent(amount, config.customerFeeValue(), config.feeType());
+        BigDecimal agentCommission = calculateComponent(amount, config.agentCommissionValue(), config.feeType());
+        BigDecimal bankShare = calculateComponent(amount, config.bankShareValue(), config.feeType());
         return new FeeCalculationResult(customerFee, agentCommission, bankShare);
     }
 

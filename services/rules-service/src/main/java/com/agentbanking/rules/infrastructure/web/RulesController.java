@@ -1,6 +1,7 @@
 package com.agentbanking.rules.infrastructure.web;
 
-import com.agentbanking.rules.domain.model.*;
+import com.agentbanking.rules.domain.model.AgentTier;
+import com.agentbanking.rules.domain.model.TransactionType;
 import com.agentbanking.rules.domain.service.FeeCalculationService;
 import com.agentbanking.rules.domain.service.FeeCalculationService.FeeCalculationResult;
 import com.agentbanking.rules.domain.service.LimitEnforcementService;
@@ -32,15 +33,10 @@ public class RulesController {
             @RequestParam String transactionType,
             @RequestParam String agentTier,
             @RequestParam BigDecimal amount) {
-        // For now, return a simple response with hardcoded fees
-        // In production, this would look up FeeConfig from repository
-        FeeConfig config = new FeeConfig();
-        config.setFeeType(FeeType.FIXED);
-        config.setCustomerFeeValue(new BigDecimal("1.00"));
-        config.setAgentCommissionValue(new BigDecimal("0.20"));
-        config.setBankShareValue(new BigDecimal("0.80"));
+        TransactionType txType = TransactionType.valueOf(transactionType);
+        AgentTier tier = AgentTier.valueOf(agentTier);
 
-        FeeCalculationResult result = feeCalculationService.calculate(amount, config);
+        FeeCalculationResult result = feeCalculationService.calculate(amount, txType, tier);
 
         return ResponseEntity.ok(Map.of(
             "customerFee", result.customerFee(),
