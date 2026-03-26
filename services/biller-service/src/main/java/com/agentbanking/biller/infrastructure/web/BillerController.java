@@ -1,8 +1,8 @@
 package com.agentbanking.biller.infrastructure.web;
 
-import com.agentbanking.biller.domain.model.BillPaymentRecord;
-import com.agentbanking.biller.domain.model.TopupTransaction;
-import com.agentbanking.biller.domain.service.BillerService;
+import com.agentbanking.biller.domain.port.in.ValidateBillUseCase;
+import com.agentbanking.biller.domain.port.in.PayBillUseCase;
+import com.agentbanking.biller.domain.port.in.ProcessTopupUseCase;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -14,10 +14,16 @@ import java.util.UUID;
 @RequestMapping("/internal")
 public class BillerController {
 
-    private final BillerService billerService;
+    private final ValidateBillUseCase validateBillUseCase;
+    private final PayBillUseCase payBillUseCase;
+    private final ProcessTopupUseCase processTopupUseCase;
 
-    public BillerController(BillerService billerService) {
-        this.billerService = billerService;
+    public BillerController(ValidateBillUseCase validateBillUseCase,
+                            PayBillUseCase payBillUseCase,
+                            ProcessTopupUseCase processTopupUseCase) {
+        this.validateBillUseCase = validateBillUseCase;
+        this.payBillUseCase = payBillUseCase;
+        this.processTopupUseCase = processTopupUseCase;
     }
 
     @PostMapping("/validate-ref")
@@ -25,14 +31,14 @@ public class BillerController {
         String billerCode = request.get("billerCode");
         String ref1 = request.get("ref1");
 
-        boolean valid = ref1 != null && !ref1.isBlank();
+        ValidateBillUseCase.ValidateBillResult result = validateBillUseCase.validateBill(billerCode, ref1);
 
         return ResponseEntity.ok(Map.of(
-            "valid", valid,
-            "billerCode", billerCode,
-            "ref1", ref1,
-            "amount", valid ? "150.00" : "0",
-            "customerName", valid ? "MOCK CUSTOMER" : ""
+            "valid", result.valid(),
+            "billerCode", result.billerCode(),
+            "ref1", result.ref1(),
+            "amount", result.amount(),
+            "customerName", result.customerName()
         ));
     }
 
@@ -44,10 +50,10 @@ public class BillerController {
             BigDecimal amount = new BigDecimal(request.get("amount").toString());
             UUID internalTxId = UUID.fromString((String) request.get("internalTransactionId"));
 
-            BillPaymentRecord payment = billerService.validateAndPay(billerCode, ref1, amount, internalTxId);
+            PayBillUseCase.PayBillResult payment = payBillUseCase.payBill(billerCode, ref1, amount, internalTxId);
 
             return ResponseEntity.ok(Map.of(
-                "status", "PAID",
+                "status", payment.status(),
                 "paymentId", payment.paymentId().toString(),
                 "receiptNo", payment.receiptNo(),
                 "billerReference", payment.billerReference(),
@@ -69,13 +75,13 @@ public class BillerController {
             BigDecimal amount = new BigDecimal(request.get("amount").toString());
             UUID internalTxId = UUID.fromString((String) request.get("internalTransactionId"));
 
-            TopupTransaction topup = billerService.processTopup(telco, phoneNumber, amount, internalTxId);
+            ProcessTopupUseCase.ProcessTopupResult topup = processTopupUseCase.processTopup(telco, phoneNumber, amount, internalTxId);
 
             return ResponseEntity.ok(Map.of(
-                "status", "COMPLETED",
-                "topupId", topup.getTopupId().toString(),
-                "telcoReference", topup.getTelcoReference(),
-                "amount", topup.getAmount()
+                "status", topup.status(),
+                "topupId", topup.topupId().toString(),
+                "telcoReference", topup.telcoReference(),
+                "amount", topup.amount()
             ));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of(

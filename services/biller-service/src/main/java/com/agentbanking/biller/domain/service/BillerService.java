@@ -4,21 +4,18 @@ import com.agentbanking.biller.domain.model.*;
 import com.agentbanking.biller.domain.port.out.BillerConfigRepository;
 import com.agentbanking.biller.domain.port.out.BillPaymentRepository;
 import com.agentbanking.biller.domain.port.out.TopupTransactionRepository;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
-@Service
 public class BillerService {
 
     private final BillerConfigRepository billerConfigRepository;
     private final BillPaymentRepository billPaymentRepository;
     private final TopupTransactionRepository topupTransactionRepository;
 
-    public BillerService(BillerConfigRepository billerConfigRepository, 
+    public BillerService(BillerConfigRepository billerConfigRepository,
                          BillPaymentRepository billPaymentRepository,
                          TopupTransactionRepository topupTransactionRepository) {
         this.billerConfigRepository = billerConfigRepository;
@@ -26,8 +23,7 @@ public class BillerService {
         this.topupTransactionRepository = topupTransactionRepository;
     }
 
-    @Transactional
-    public BillPaymentRecord validateAndPay(String billerCode, String ref1, 
+    public BillPaymentRecord validateAndPay(String billerCode, String ref1,
                                        BigDecimal amount, UUID internalTransactionId) {
         BillerConfigRecord biller = billerConfigRepository.findByBillerCodeAndActiveTrue(billerCode)
             .orElseThrow(() -> new IllegalArgumentException("Biller not found or inactive: " + billerCode));
@@ -45,11 +41,10 @@ public class BillerService {
             LocalDateTime.now(),
             LocalDateTime.now()
         );
-        
+
         return billPaymentRepository.save(payment);
     }
 
-    @Transactional
     public TopupTransaction processTopup(String telco, String phoneNumber,
                                   BigDecimal amount, UUID internalTransactionId) {
         TopupTransactionRecord record = new TopupTransactionRecord(
@@ -63,9 +58,9 @@ public class BillerService {
             LocalDateTime.now(),
             LocalDateTime.now()
         );
-        
+
         TopupTransactionRecord saved = topupTransactionRepository.save(record);
-        
+
         TopupTransaction topup = new TopupTransaction();
         topup.setTopupId(saved.topupId());
         topup.setInternalTransactionId(saved.internalTransactionId());
@@ -76,7 +71,7 @@ public class BillerService {
         topup.setTelcoReference(saved.telcoReference());
         topup.setCreatedAt(saved.createdAt());
         topup.setCompletedAt(saved.completedAt());
-        
+
         return topup;
     }
 }
