@@ -1,64 +1,60 @@
-package com.agentbanking.ledger.infrastructure.persistence.repository;
+package com.agentbanking.ledger.infrastructure.persistence.adapter;
 
 import com.agentbanking.ledger.domain.model.TransactionRecord;
 import com.agentbanking.ledger.domain.port.out.TransactionRepository;
-import com.agentbanking.ledger.infrastructure.persistence.entity.TransactionEntity;
 import com.agentbanking.ledger.infrastructure.persistence.mapper.TransactionMapper;
-import org.springframework.stereotype.Repository;
+import com.agentbanking.ledger.infrastructure.persistence.repository.TransactionJpaRepository;
 
 import java.math.BigDecimal;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
-@Repository
-public class JpaTransactionRepository implements TransactionRepository {
-    
+public class TransactionRepositoryAdapter implements TransactionRepository {
+
     private final TransactionJpaRepository jpaRepository;
-    
-    public JpaTransactionRepository(TransactionJpaRepository jpaRepository) {
+
+    public TransactionRepositoryAdapter(TransactionJpaRepository jpaRepository) {
         this.jpaRepository = jpaRepository;
     }
-    
+
     @Override
     public TransactionRecord save(TransactionRecord record) {
-        TransactionEntity entity = TransactionMapper.toEntity(record);
-        if (entity.getTransactionId() == null) {
-            entity.setTransactionId(UUID.randomUUID());
-        }
-        TransactionEntity saved = jpaRepository.save(entity);
+        var entity = TransactionMapper.toEntity(record);
+        var saved = jpaRepository.save(entity);
         return TransactionMapper.toRecord(saved);
     }
-    
+
     @Override
     public TransactionRecord findByIdempotencyKey(String idempotencyKey) {
-        Optional<TransactionEntity> entity = jpaRepository.findByIdempotencyKey(idempotencyKey);
-        return entity.map(TransactionMapper::toRecord).orElse(null);
+        return jpaRepository.findByIdempotencyKey(idempotencyKey)
+                .map(TransactionMapper::toRecord)
+                .orElse(null);
     }
-    
+
     @Override
     public TransactionRecord findById(UUID transactionId) {
-        Optional<TransactionEntity> entity = jpaRepository.findById(transactionId);
-        return entity.map(TransactionMapper::toRecord).orElse(null);
+        return jpaRepository.findById(transactionId)
+                .map(TransactionMapper::toRecord)
+                .orElse(null);
     }
-    
+
     @Override
     public List<TransactionRecord> findRecentTransactions() {
         return jpaRepository.findRecentTransactions().stream()
                 .map(TransactionMapper::toRecord)
                 .toList();
     }
-    
+
     @Override
     public BigDecimal sumSuccessfulTransactionAmount() {
         return jpaRepository.sumSuccessfulTransactionAmount();
     }
-    
+
     @Override
     public long countAllTransactions() {
         return jpaRepository.countAllTransactions();
     }
-    
+
     @Override
     public long countDistinctAgents() {
         return jpaRepository.countDistinctAgents();

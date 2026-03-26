@@ -4,10 +4,6 @@ import com.agentbanking.ledger.domain.model.*;
 import com.agentbanking.ledger.domain.port.out.*;
 import com.agentbanking.common.security.ErrorCodes;
 import com.agentbanking.common.exception.LedgerException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -18,10 +14,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-@Service
 public class LedgerService {
     
-    private static final Logger log = LoggerFactory.getLogger(LedgerService.class);
     private static final Duration IDEMPOTENCY_TTL = Duration.ofHours(24);
     private static final String MYR_CURRENCY = "MYR";
     
@@ -42,7 +36,6 @@ public class LedgerService {
     }
     
     @SuppressWarnings("unchecked")
-    @Transactional
     public Map<String, Object> processWithdrawal(UUID agentId, BigDecimal amount, 
                                                   BigDecimal customerFee, BigDecimal agentCommission,
                                                   BigDecimal bankShare, String idempotencyKey,
@@ -51,7 +44,6 @@ public class LedgerService {
             try {
                 return idempotencyCache.get(idempotencyKey, Map.class);
             } catch (Exception e) {
-                log.error("Failed to retrieve cached response for idempotency key: {}", idempotencyKey, e);
             }
         }
         
@@ -126,7 +118,6 @@ public class LedgerService {
     }
     
     @SuppressWarnings("unchecked")
-    @Transactional
     public Map<String, Object> processDeposit(UUID agentId, BigDecimal amount,
                                                BigDecimal customerFee, BigDecimal agentCommission,
                                                BigDecimal bankShare, String idempotencyKey,
@@ -135,7 +126,6 @@ public class LedgerService {
             try {
                 return idempotencyCache.get(idempotencyKey, Map.class);
             } catch (Exception e) {
-                log.error("Failed to retrieve cached response for idempotency key: {}", idempotencyKey, e);
             }
         }
         
@@ -272,7 +262,6 @@ public class LedgerService {
         journalEntryRepository.saveAll(entries);
     }
     
-    @Transactional(readOnly = true)
     public BigDecimal getBalance(UUID agentId) {
         AgentFloatRecord agentFloat = agentFloatRepository.findByIdWithLock(agentId);
         if (agentFloat == null) {

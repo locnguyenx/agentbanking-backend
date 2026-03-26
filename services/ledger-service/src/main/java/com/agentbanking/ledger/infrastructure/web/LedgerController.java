@@ -1,8 +1,8 @@
 package com.agentbanking.ledger.infrastructure.web;
 
-import com.agentbanking.ledger.domain.service.LedgerService;
-import com.agentbanking.ledger.infrastructure.persistence.entity.TransactionEntity;
-import com.agentbanking.ledger.infrastructure.persistence.repository.TransactionJpaRepository;
+import com.agentbanking.ledger.application.usecase.TransactionQueryUseCaseImpl;
+import com.agentbanking.ledger.domain.model.TransactionRecord;
+import com.agentbanking.ledger.domain.port.in.*;
 import com.agentbanking.ledger.infrastructure.web.dto.DepositRequest;
 import com.agentbanking.ledger.infrastructure.web.dto.WithdrawalRequest;
 import org.springframework.http.ResponseEntity;
@@ -20,18 +20,28 @@ import java.util.UUID;
 @RequestMapping("/internal")
 public class LedgerController {
 
-    private final LedgerService ledgerService;
-    private final TransactionJpaRepository transactionRepository;
+    private final ProcessWithdrawalUseCase processWithdrawalUseCase;
+    private final ProcessDepositUseCase processDepositUseCase;
+    private final GetBalanceUseCase getBalanceUseCase;
+    private final ReverseTransactionUseCase reverseTransactionUseCase;
+    private final TransactionQueryUseCaseImpl transactionQueryUseCase;
 
-    public LedgerController(LedgerService ledgerService, TransactionJpaRepository transactionRepository) {
-        this.ledgerService = ledgerService;
-        this.transactionRepository = transactionRepository;
+    public LedgerController(ProcessWithdrawalUseCase processWithdrawalUseCase,
+                            ProcessDepositUseCase processDepositUseCase,
+                            GetBalanceUseCase getBalanceUseCase,
+                            ReverseTransactionUseCase reverseTransactionUseCase,
+                            TransactionQueryUseCaseImpl transactionQueryUseCase) {
+        this.processWithdrawalUseCase = processWithdrawalUseCase;
+        this.processDepositUseCase = processDepositUseCase;
+        this.getBalanceUseCase = getBalanceUseCase;
+        this.reverseTransactionUseCase = reverseTransactionUseCase;
+        this.transactionQueryUseCase = transactionQueryUseCase;
     }
 
     @PostMapping("/debit")
     public ResponseEntity<Map<String, Object>> debit(@RequestBody WithdrawalRequest request) {
         try {
-            Map<String, Object> result = ledgerService.processWithdrawal(
+            Map<String, Object> result = processWithdrawalUseCase.processWithdrawal(
                 request.agentId(),
                 request.amount(),
                 request.customerFee(),
@@ -41,7 +51,7 @@ public class LedgerController {
                 request.customerCardMasked()
             );
 
-            result.put("balance", ledgerService.getBalance(request.agentId()));
+            result.put("balance", getBalanceUseCase.getBalance(request.agentId()));
             return ResponseEntity.ok(result);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of(
@@ -59,7 +69,7 @@ public class LedgerController {
     @PostMapping("/credit")
     public ResponseEntity<Map<String, Object>> credit(@RequestBody DepositRequest request) {
         try {
-            Map<String, Object> result = ledgerService.processDeposit(
+            Map<String, Object> result = processDepositUseCase.processDeposit(
                 request.agentId(),
                 request.amount(),
                 request.customerFee(),
@@ -69,7 +79,7 @@ public class LedgerController {
                 request.destinationAccount()
             );
 
-            result.put("balance", ledgerService.getBalance(request.agentId()));
+            result.put("balance", getBalanceUseCase.getBalance(request.agentId()));
             return ResponseEntity.ok(result);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of(
@@ -82,7 +92,7 @@ public class LedgerController {
     @GetMapping("/balance/{agentId}")
     public ResponseEntity<Map<String, Object>> getBalance(@PathVariable UUID agentId) {
         try {
-            BigDecimal balance = ledgerService.getBalance(agentId);
+            BigDecimal balance = getBalanceUseCase.getBalance(agentId);
             return ResponseEntity.ok(Map.of(
                 "agentId", agentId.toString(),
                 "balance", balance,
@@ -98,17 +108,14 @@ public class LedgerController {
 
     @PostMapping("/reverse/{transactionId}")
     public ResponseEntity<Map<String, Object>> reverse(@PathVariable UUID transactionId) {
-        return ResponseEntity.ok(Map.of(
-            "status", "REVERSED",
-            "transactionId", transactionId.toString()
-        ));
+        return ResponseEntity.ok(reverseTransactionUseCase.reverseTransaction(transactionId));
     }
 
     @GetMapping("/backoffice/dashboard")
     public ResponseEntity<Map<String, Object>> getDashboard() {
-        long totalTransactions = transactionRepository.countAllTransactions();
-        BigDecimal totalVolume = transactionRepository.sumSuccessfulTransactionAmount();
-        long activeAgents = transactionRepository.countDistinctAgents();
+        long totalTransactions = transactionQueryUseCase.countAllTransactions();
+        BigDecimal totalVolume = transactionQueryUseCase.sumSuccessfulTransactionAmount();
+        long activeAgents = transactionQueryUseCase.countDistinctAgents();
         
         return ResponseEntity.ok(Map.of(
             "totalAgents", activeAgents,
@@ -124,16 +131,16 @@ public class LedgerController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
         
-        List<TransactionEntity> transactions = transactionRepository.findRecentTransactions();
+        List<TransactionRecord> transactions = transactionQueryUseCase.findRecentTransactions();
         List<Map<String, Object>> agentList = transactions.stream()
             .limit(20)
             .map(t -> {
                 Map<String, Object> item = new HashMap<>();
-                item.put("agentId", t.getAgentId().toString());
-                item.put("transactionType", t.getTransactionType());
-                item.put("amount", t.getAmount());
-                item.put("status", t.getStatus());
-                item.put("createdAt", t.getCreatedAt().toString());
+                item.put("agentId", t.agentId().toString());
+                item.put("transactionType", t.transactionType());
+                item.put("amount", t.amount());
+                item.put("status", t.status());
+                item.put("createdAt", t.createdAt().toString());
                 return item;
             })
             .toList();
@@ -152,19 +159,19 @@ public class LedgerController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
         
-        List<TransactionEntity> transactions = transactionRepository.findRecentTransactions();
+        List<TransactionRecord> transactions = transactionQueryUseCase.findRecentTransactions();
         List<Map<String, Object>> content = transactions.stream()
             .skip((long) page * size)
             .limit(size)
             .map(t -> {
                 Map<String, Object> item = new HashMap<>();
-                item.put("transactionId", t.getTransactionId().toString());
-                item.put("agentId", t.getAgentId().toString());
-                item.put("transactionType", t.getTransactionType());
-                item.put("amount", t.getAmount());
-                item.put("status", t.getStatus());
-                item.put("customerCardMasked", t.getCustomerCardMasked());
-                item.put("createdAt", t.getCreatedAt().toString());
+                item.put("transactionId", t.transactionId().toString());
+                item.put("agentId", t.agentId().toString());
+                item.put("transactionType", t.transactionType());
+                item.put("amount", t.amount());
+                item.put("status", t.status());
+                item.put("customerCardMasked", t.customerCardMasked());
+                item.put("createdAt", t.createdAt().toString());
                 return item;
             })
             .toList();
@@ -186,18 +193,18 @@ public class LedgerController {
         LocalDateTime startOfDay = settlementDate.atStartOfDay();
         LocalDateTime endOfDay = settlementDate.plusDays(1).atStartOfDay();
         
-        List<TransactionEntity> transactions = transactionRepository.findRecentTransactions();
+        List<TransactionRecord> transactions = transactionQueryUseCase.findRecentTransactions();
         
         BigDecimal totalDeposits = transactions.stream()
-            .filter(t -> "DEPOSIT".equals(t.getTransactionType()))
-            .filter(t -> t.getCreatedAt().isAfter(startOfDay) && t.getCreatedAt().isBefore(endOfDay))
-            .map(TransactionEntity::getAmount)
+            .filter(t -> "DEPOSIT".equals(t.transactionType()))
+            .filter(t -> t.createdAt().isAfter(startOfDay) && t.createdAt().isBefore(endOfDay))
+            .map(TransactionRecord::amount)
             .reduce(BigDecimal.ZERO, BigDecimal::add);
         
         BigDecimal totalWithdrawals = transactions.stream()
-            .filter(t -> "WITHDRAWAL".equals(t.getTransactionType()))
-            .filter(t -> t.getCreatedAt().isAfter(startOfDay) && t.getCreatedAt().isBefore(endOfDay))
-            .map(TransactionEntity::getAmount)
+            .filter(t -> "WITHDRAWAL".equals(t.transactionType()))
+            .filter(t -> t.createdAt().isAfter(startOfDay) && t.createdAt().isBefore(endOfDay))
+            .map(TransactionRecord::amount)
             .reduce(BigDecimal.ZERO, BigDecimal::add);
         
         return ResponseEntity.ok(Map.of(
@@ -206,14 +213,14 @@ public class LedgerController {
             "totalCredits", totalDeposits,
             "netAmount", totalDeposits.subtract(totalWithdrawals),
             "transactions", transactions.stream()
-                .filter(t -> t.getCreatedAt().isAfter(startOfDay) && t.getCreatedAt().isBefore(endOfDay))
+                .filter(t -> t.createdAt().isAfter(startOfDay) && t.createdAt().isBefore(endOfDay))
                 .map(t -> {
                     Map<String, Object> item = new HashMap<>();
-                    item.put("transactionId", t.getTransactionId().toString());
-                    item.put("agentId", t.getAgentId().toString());
-                    item.put("transactionType", t.getTransactionType());
-                    item.put("amount", t.getAmount());
-                    item.put("status", t.getStatus());
+                    item.put("transactionId", t.transactionId().toString());
+                    item.put("agentId", t.agentId().toString());
+                    item.put("transactionType", t.transactionType());
+                    item.put("amount", t.amount());
+                    item.put("status", t.status());
                     return item;
                 })
                 .toList()
