@@ -27,4 +27,36 @@ subprojects {
             mavenBom 'org.springframework.cloud:spring-cloud-dependencies:2023.0.0'
         }
     }
+
+    tasks.named('bootJar') {
+        enabled = false
+    }
+}
+
+project(':gateway').tasks.named('bootJar') {
+    enabled = true
+}
+
+project(':services:rules-service').tasks.named('bootJar') {
+    enabled = true
+}
+
+project(':services:ledger-service').tasks.named('bootJar') {
+    enabled = true
+}
+
+project(':services:onboarding-service').tasks.named('bootJar') {
+    enabled = true
+}
+
+project(':services:switch-adapter-service').tasks.named('bootJar') {
+    enabled = true
+}
+
+project(':services:biller-service').tasks.named('bootJar') {
+    enabled = true
+}
+
+project(':mock-server').tasks.named('bootJar') {
+    enabled = true
 }

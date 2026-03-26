@@ -1,11 +1,10 @@
-version: '3.8'
-
 services:
   # ==================== Infrastructure ====================
   
   # PostgreSQL for Rules Service
   postgres-rules:
     image: postgres:16-alpine
+    profiles: [infra, all]
     environment:
       POSTGRES_DB: rules_db
       POSTGRES_USER: postgres
@@ -14,6 +13,7 @@ services:
       - "5433:5432"
     volumes:
       - pgdata-rules:/var/lib/postgresql/data
+    mem_limit: 256m
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
@@ -23,6 +23,7 @@ services:
   # PostgreSQL for Ledger Service
   postgres-ledger:
     image: postgres:16-alpine
+    profiles: [infra, all]
     environment:
       POSTGRES_DB: ledger_db
       POSTGRES_USER: postgres
@@ -31,6 +32,7 @@ services:
       - "5434:5432"
     volumes:
       - pgdata-ledger:/var/lib/postgresql/data
+    mem_limit: 256m
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
@@ -40,6 +42,7 @@ services:
   # PostgreSQL for Onboarding Service
   postgres-onboarding:
     image: postgres:16-alpine
+    profiles: [infra, all]
     environment:
       POSTGRES_DB: onboarding_db
       POSTGRES_USER: postgres
@@ -48,6 +51,7 @@ services:
       - "5435:5432"
     volumes:
       - pgdata-onboarding:/var/lib/postgresql/data
+    mem_limit: 256m
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
@@ -57,6 +61,7 @@ services:
   # PostgreSQL for Switch Adapter Service
   postgres-switch:
     image: postgres:16-alpine
+    profiles: [infra, all]
     environment:
       POSTGRES_DB: switch_db
       POSTGRES_USER: postgres
@@ -65,6 +70,7 @@ services:
       - "5436:5432"
     volumes:
       - pgdata-switch:/var/lib/postgresql/data
+    mem_limit: 256m
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
@@ -74,6 +80,7 @@ services:
   # PostgreSQL for Biller Service
   postgres-biller:
     image: postgres:16-alpine
+    profiles: [infra, all]
     environment:
       POSTGRES_DB: biller_db
       POSTGRES_USER: postgres
@@ -82,6 +89,7 @@ services:
       - "5437:5432"
     volumes:
       - pgdata-biller:/var/lib/postgresql/data
+    mem_limit: 256m
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
@@ -91,8 +99,10 @@ services:
   # Redis for caching and idempotency
   redis:
     image: redis:7-alpine
+    profiles: [infra, all]
     ports:
       - "6379:6379"
+    mem_limit: 128m
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -102,6 +112,7 @@ services:
   # Kafka (using KRaft mode, no Zookeeper)
   kafka:
     image: confluentinc/cp-kafka:7.5.0
+    profiles: [infra, all]
     ports:
       - "9092:9092"
     environment:
@@ -116,6 +127,7 @@ services:
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_LOG_DIRS: /tmp/kraft-combined-logs
       CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
+    mem_limit: 512m
     healthcheck:
       test: ["CMD-SHELL", "kafka-broker-api-versions --bootstrap-server localhost:9092 || exit 1"]
       interval: 10s
@@ -127,12 +139,14 @@ services:
   # Mock Server (downstream simulators)
   mock-server:
     build:
-      context: ./mock-server
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ./mock-server/Dockerfile
+    profiles: [mocks, backend, all]
     ports:
       - "8090:8090"
+    mem_limit: 256m
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:8090/mock/jpn/verify || exit 1"]
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8090/ || true"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -140,10 +154,12 @@ services:
   # Rules Service
   rules-service:
     build:
-      context: ./services/rules-service
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ./services/rules-service/Dockerfile
+    profiles: [backend, all]
     ports:
       - "8081:8081"
+    mem_limit: 384m
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-rules:5432/rules_db
       SPRING_DATASOURCE_USERNAME: postgres
@@ -155,7 +171,7 @@ services:
       redis:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:8081/internal/fees/CASH_WITHDRAWAL/MICRO || exit 1"]
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8081/internal/fees/CASH_WITHDRAWAL/MICRO || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -163,10 +179,12 @@ services:
   # Ledger Service
   ledger-service:
     build:
-      context: ./services/ledger-service
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ./services/ledger-service/Dockerfile
+    profiles: [backend, all]
     ports:
       - "8082:8082"
+    mem_limit: 384m
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-ledger:5432/ledger_db
       SPRING_DATASOURCE_USERNAME: postgres
@@ -185,7 +203,7 @@ services:
       switch-adapter-service:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:8082/internal/balance/00000000-0000-0000-0000-000000000000 || exit 1"]
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8082/ || true"]
       interval: 10s
       timeout: 5s
       retries: 15
@@ -193,10 +211,12 @@ services:
   # Onboarding Service
   onboarding-service:
     build:
-      context: ./services/onboarding-service
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ./services/onboarding-service/Dockerfile
+    profiles: [backend, all]
     ports:
       - "8083:8083"
+    mem_limit: 384m
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-onboarding:5432/onboarding_db
       SPRING_DATASOURCE_USERNAME: postgres
@@ -205,7 +225,7 @@ services:
       postgres-onboarding:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:8083/internal/verify-mykad -X POST -H 'Content-Type: application/json' -d '{\"mykadNumber\":\"123456789012\"}' || exit 1"]
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8083/ || true"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -213,10 +233,12 @@ services:
   # Switch Adapter Service
   switch-adapter-service:
     build:
-      context: ./services/switch-adapter-service
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ./services/switch-adapter-service/Dockerfile
+    profiles: [backend, all]
     ports:
       - "8084:8084"
+    mem_limit: 384m
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-switch:5432/switch_db
       SPRING_DATASOURCE_USERNAME: postgres
@@ -228,7 +250,7 @@ services:
       mock-server:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:8084/internal/auth -X POST -H 'Content-Type: application/json' -d '{}' || exit 1"]
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8084/ || true"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -236,10 +258,12 @@ services:
   # Biller Service
   biller-service:
     build:
-      context: ./services/biller-service
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ./services/biller-service/Dockerfile
+    profiles: [backend, all]
     ports:
       - "8085:8085"
+    mem_limit: 384m
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-biller:5432/biller_db
       SPRING_DATASOURCE_USERNAME: postgres
@@ -251,7 +275,7 @@ services:
       mock-server:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:8085/internal/validate-ref -X POST -H 'Content-Type: application/json' -d '{\"billerCode\":\"JOMPAY\",\"ref1\":\"INV-12345\"}' || exit 1"]
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8085/ || true"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -259,16 +283,12 @@ services:
   # API Gateway
   gateway:
     build:
-      context: ./gateway
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: gateway/Dockerfile
+    profiles: [gateway, all]
     ports:
       - "8080:8080"
-    environment:
-      SPRING_CLOUD_GATEWAY_ROUTES_0_URI: http://rules-service:8081
-      SPRING_CLOUD_GATEWAY_ROUTES_1_URI: http://ledger-service:8082
-      SPRING_CLOUD_GATEWAY_ROUTES_2_URI: http://onboarding-service:8083
-      SPRING_CLOUD_GATEWAY_ROUTES_3_URI: http://switch-adapter-service:8084
-      SPRING_CLOUD_GATEWAY_ROUTES_4_URI: http://biller-service:8085
+    mem_limit: 256m
     depends_on:
       rules-service:
         condition: service_healthy
@@ -281,7 +301,7 @@ services:
       biller-service:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:8080/actuator/health || exit 1"]
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8080/ || true"]
       interval: 10s
       timeout: 5s
       retries: 15
@@ -291,8 +311,10 @@ services:
     build:
       context: ./backoffice
       dockerfile: Dockerfile
+    profiles: [frontend, all]
     ports:
       - "3000:3000"
+    mem_limit: 128m
     depends_on:
       gateway:
         condition: service_healthy

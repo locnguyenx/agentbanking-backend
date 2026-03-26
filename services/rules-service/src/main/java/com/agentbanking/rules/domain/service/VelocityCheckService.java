@@ -3,7 +3,9 @@ package com.agentbanking.rules.domain.service;
 import com.agentbanking.rules.domain.model.VelocityRule;
 import java.math.BigDecimal;
 import java.util.List;
+import org.springframework.stereotype.Service;
 
+@Service
 public class VelocityCheckService {
 
     public VelocityCheckResult check(List<VelocityRule> rules, int transactionCountToday, BigDecimal amountToday) {

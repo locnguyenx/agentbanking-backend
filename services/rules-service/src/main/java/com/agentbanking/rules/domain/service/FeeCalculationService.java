@@ -4,7 +4,9 @@ import com.agentbanking.rules.domain.model.FeeConfig;
 import com.agentbanking.rules.domain.model.FeeType;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import org.springframework.stereotype.Service;
 
+@Service
 public class FeeCalculationService {
 
     public FeeCalculationResult calculate(BigDecimal amount, FeeConfig config) {

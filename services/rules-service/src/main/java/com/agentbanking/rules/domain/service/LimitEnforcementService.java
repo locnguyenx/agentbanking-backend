@@ -2,7 +2,9 @@ package com.agentbanking.rules.domain.service;
 
 import com.agentbanking.rules.domain.model.FeeConfig;
 import java.math.BigDecimal;
+import org.springframework.stereotype.Service;
 
+@Service
 public class LimitEnforcementService {
 
     public boolean checkDailyLimit(BigDecimal amount, FeeConfig config, BigDecimal todayTotalAmount, int todayTransactionCount) {

@@ -1,0 +1,6 @@
+[
+  {"mykad": "123456789012", "fullName": "AHMAD BIN ABU", "dateOfBirth": "1990-05-15", "amlStatus": "CLEAN"},
+  {"mykad": "990101011234", "fullName": "SITI BINTI ALI", "dateOfBirth": "1999-01-01", "amlStatus": "CLEAN"},
+  {"mykad": "880101015555", "fullName": "TAN WEI MING", "dateOfBirth": "1988-01-01", "amlStatus": "FLAGGED"},
+  {"mykad": "050101019999", "fullName": "YOUNG CUSTOMER", "dateOfBirth": "2005-01-01", "amlStatus": "CLEAN"}
+]

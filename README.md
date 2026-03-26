@@ -57,7 +57,13 @@ npm run dev
 | Mock Server | 8090 | Downstream system simulators |
 | Backoffice UI | 3000 | Bank operations dashboard |
 
-## API Documentation
+**Access points:**
+| Service | URL	|
+|---------|------|
+| API Gateway	|	http://localhost:8080 (http://localhost:8080)	|
+| Mock Server	|	http://localhost:8090 (http://localhost:8090)	|
+| Backoffice UI	|	http://localhost:5173 (http://localhost:5173)	|
+| Swagger UI	|	http://localhost:8080/swagger-ui.html (http://localhost:8080/swagger-ui.html)	|
 
 - **External API:** `docs/api/openapi.yaml` (OpenAPI 3.0)
 - **Internal APIs:** `<service>/docs/openapi-internal.yaml`
@@ -88,6 +94,98 @@ npm run dev
 ./gradlew test
 ./scripts/integration-tests.sh
 ```
+
+**Test flow:**
+1. Mock Server (8090) simulates downstream systems
+2. Gateway (8080) routes API requests
+3. Backoffice UI connects to Gateway
+```bash
+# Check service status
+docker compose ps
+# View logs
+docker compose logs -f
+```
+
+## Docker Compose Usage
+
+### Start all services
+
+```bash
+docker compose up -d
+```
+
+### Profiles
+
+The profiles are working. Here's a summary of available profiles:
+
+| Profile	| Services	|
+|---------|------|
+| infra	| PostgreSQL (5), Redis, Kafka	|
+| mocks	| Mock Server	|
+| backend	| Rules, Ledger, Onboarding, Switch-Adapter, Biller, Mock Server	|
+| gateway	| API Gateway	|
+| frontend	| Backoffice	|
+| all	| Everything	|
+
+### Start specific service groups using profiles
+
+```bash
+# Infrastructure only (PostgreSQL, Redis, Kafka)
+docker compose --profile infra up -d
+
+# Backend services only
+docker compose --profile backend up -d
+
+# Mock server only
+docker compose --profile mocks up -d
+
+# Frontend only
+docker compose --profile frontend up -d
+
+# Gateway only
+docker compose --profile gateway up -d
+```
+
+### Combine profiles
+
+```bash
+# Backend + Infrastructure (without frontend/gateway)
+docker compose --profile infra --profile backend up -d
+
+# All except frontend
+docker compose --profile infra --profile backend --profile gateway --profile mocks up -d
+```
+
+### Common commands
+
+```bash
+# Stop all services
+docker compose down
+
+# View service status
+docker compose ps
+
+# View logs (all services)
+docker compose logs -f
+
+# View logs (specific service)
+docker compose logs -f rules-service
+
+# Rebuild specific service
+docker compose build backoffice
+docker compose up -d backoffice
+
+# Restart specific service
+docker compose restart rules-service
+
+# Clean slate (remove containers + volumes)
+docker compose down -v
+
+# List available services
+docker compose config --services
+```
+
+## API Documentation
 
 ## Tech Stack
 

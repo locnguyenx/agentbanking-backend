@@ -16,3 +16,7 @@ repositories {
 dependencies {
     api 'org.slf4j:slf4j-api'
 }
+
+tasks.named('bootJar') {
+    enabled = false
+}
