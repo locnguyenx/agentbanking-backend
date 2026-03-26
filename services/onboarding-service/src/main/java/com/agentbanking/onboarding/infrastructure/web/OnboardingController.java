@@ -1,53 +1,49 @@
 package com.agentbanking.onboarding.infrastructure.web;
 
-import com.agentbanking.onboarding.domain.model.*;
-import com.agentbanking.onboarding.domain.service.KycDecisionService;
-import com.agentbanking.onboarding.domain.port.out.KycVerificationRepository;
+import com.agentbanking.onboarding.domain.port.in.VerifyMyKadUseCase;
+import com.agentbanking.onboarding.domain.port.in.BiometricMatchUseCase;
+import com.agentbanking.onboarding.domain.port.in.GetReviewQueueUseCase;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.Period;
-import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 
 @RestController
 @RequestMapping("/internal")
 public class OnboardingController {
 
-    private final KycDecisionService kycDecisionService;
-    private final KycVerificationRepository kycVerificationRepository;
+    private final VerifyMyKadUseCase verifyMyKadUseCase;
+    private final BiometricMatchUseCase biometricMatchUseCase;
+    private final GetReviewQueueUseCase getReviewQueueUseCase;
 
-    public OnboardingController(KycDecisionService kycDecisionService, KycVerificationRepository kycVerificationRepository) {
-        this.kycDecisionService = kycDecisionService;
-        this.kycVerificationRepository = kycVerificationRepository;
+    public OnboardingController(VerifyMyKadUseCase verifyMyKadUseCase,
+                                BiometricMatchUseCase biometricMatchUseCase,
+                                GetReviewQueueUseCase getReviewQueueUseCase) {
+        this.verifyMyKadUseCase = verifyMyKadUseCase;
+        this.biometricMatchUseCase = biometricMatchUseCase;
+        this.getReviewQueueUseCase = getReviewQueueUseCase;
     }
 
     @PostMapping("/verify-mykad")
     public ResponseEntity<Map<String, Object>> verifyMyKad(@RequestBody Map<String, String> request) {
         String mykad = request.get("mykadNumber");
-        
-        // Validate MyKad format (12 digits)
-        if (mykad == null || !mykad.matches("^\\d{12}$")) {
+
+        try {
+            VerifyMyKadUseCase.VerifyMyKadResult result = verifyMyKadUseCase.verifyMyKad(mykad);
+            return ResponseEntity.ok(Map.of(
+                "verificationId", result.verificationId().toString(),
+                "status", result.status(),
+                "fullName", result.fullName(),
+                "dateOfBirth", result.dateOfBirth(),
+                "age", result.age(),
+                "amlStatus", result.amlStatus()
+            ));
+        } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of(
                 "status", "FAILED",
-                "error", Map.of("code", "ERR_INVALID_MYKAD_FORMAT", "message", "MyKad must be exactly 12 digits")
+                "error", Map.of("code", "ERR_INVALID_MYKAD_FORMAT", "message", e.getMessage())
             ));
         }
-
-        // Simulate JPN verification (would call JPN API in production)
-        // For now, return a mock response
-        UUID verificationId = UUID.randomUUID();
-        return ResponseEntity.ok(Map.of(
-            "verificationId", verificationId.toString(),
-            "status", "FOUND",
-            "fullName", "MOCK CUSTOMER",
-            "dateOfBirth", "1990-01-01",
-            "age", 35,
-            "amlStatus", "CLEAN"
-        ));
     }
 
     @PostMapping("/biometric")
@@ -55,60 +51,44 @@ public class OnboardingController {
         String verificationId = request.get("verificationId");
         String biometricData = request.get("biometricData");
 
-        if (verificationId == null) {
+        try {
+            BiometricMatchUseCase.BiometricMatchResult result = biometricMatchUseCase.matchBiometric(verificationId, biometricData);
+            return ResponseEntity.ok(Map.of(
+                "verificationId", result.verificationId(),
+                "status", result.status(),
+                "biometricMatch", result.biometricMatch(),
+                "timestamp", result.timestamp()
+            ));
+        } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of(
                 "status", "FAILED",
-                "error", Map.of("code", "ERR_MISSING_VERIFICATION_ID", "message", "verificationId is required")
+                "error", Map.of("code", "ERR_MISSING_VERIFICATION_ID", "message", e.getMessage())
             ));
         }
-
-        // Simulate biometric match (would call HSM/match-on-card in production)
-        BiometricResult match = BiometricResult.MATCH;
-        AmlStatus amlStatus = AmlStatus.CLEAN;
-        int age = 35;
-
-        // Apply decision matrix
-        KycStatus decision = kycDecisionService.decide(match, amlStatus, age);
-
-        return ResponseEntity.ok(Map.of(
-            "verificationId", verificationId,
-            "status", decision.name(),
-            "biometricMatch", match.name(),
-            "timestamp", LocalDateTime.now().toString()
-        ));
     }
 
     @GetMapping("/kyc/review-queue")
     public ResponseEntity<Map<String, Object>> getKycReviewQueue(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        
-        List<KycVerificationRecord> pending = kycVerificationRepository.findByVerificationStatusOrderByCreatedAtDesc(KycStatus.MANUAL_REVIEW);
-        
-        List<Map<String, Object>> content = pending.stream()
-            .map(k -> {
-                Map<String, Object> item = new java.util.HashMap<>();
-                item.put("verificationId", k.verificationId().toString());
-                item.put("mykadMasked", maskMykad(k.mykadNumber()));
-                item.put("fullName", k.fullName() != null ? k.fullName() : "");
-                item.put("amlStatus", k.amlStatus() != null ? k.amlStatus().name() : "UNKNOWN");
-                item.put("biometricMatch", k.biometricMatch() != null ? k.biometricMatch().name() : "UNKNOWN");
-                item.put("rejectionReason", k.rejectionReason() != null ? k.rejectionReason() : "");
-                return item;
-            })
-            .toList();
-        
+
+        GetReviewQueueUseCase.ReviewQueueResult result = getReviewQueueUseCase.getReviewQueue(page, size);
+
         return ResponseEntity.ok(Map.of(
-            "content", content,
-            "totalElements", pending.size(),
-            "totalPages", 1,
-            "page", page,
-            "size", size
+            "content", result.content().stream()
+                .map(item -> Map.of(
+                    "verificationId", item.verificationId(),
+                    "mykadMasked", item.mykadMasked(),
+                    "fullName", item.fullName(),
+                    "amlStatus", item.amlStatus(),
+                    "biometricMatch", item.biometricMatch(),
+                    "rejectionReason", item.rejectionReason()
+                ))
+                .toList(),
+            "totalElements", result.totalElements(),
+            "totalPages", result.totalPages(),
+            "page", result.page(),
+            "size", result.size()
         ));
-    }
-    
-    private String maskMykad(String mykad) {
-        if (mykad == null || mykad.length() < 4) return "****";
-        return mykad.substring(0, 4) + "********";
     }
 }

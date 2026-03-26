@@ -3,9 +3,7 @@ package com.agentbanking.onboarding.domain.service;
 import com.agentbanking.onboarding.domain.model.AmlStatus;
 import com.agentbanking.onboarding.domain.model.BiometricResult;
 import com.agentbanking.onboarding.domain.model.KycStatus;
-import org.springframework.stereotype.Service;
 
-@Service
 public class KycDecisionService {
 
     /**
