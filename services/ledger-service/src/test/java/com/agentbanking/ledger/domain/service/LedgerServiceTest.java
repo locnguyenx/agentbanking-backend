@@ -15,6 +15,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
@@ -120,7 +122,7 @@ class LedgerServiceTest {
     }
     
     @Test
-    void processWithdrawal_withExistingIdempotencyKey_returnsCached() {
+    void processWithdrawal_withExistingIdempotencyKey_returnsCached() throws JsonProcessingException {
         Map<String, Object> cachedResponse = Map.of(
             "status", "COMPLETED",
             "transactionId", "cached-txn-id",

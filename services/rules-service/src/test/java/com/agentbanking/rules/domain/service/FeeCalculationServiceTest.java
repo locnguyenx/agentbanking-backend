@@ -36,7 +36,7 @@ class FeeCalculationServiceTest {
     void calculate_withFixedFeeType_returnsCorrectFees() {
         FeeConfigRecord config = new FeeConfigRecord(
             UUID.randomUUID(),
-            TransactionType.CASH_IN,
+            TransactionType.CASH_DEPOSIT,
             AgentTier.STANDARD,
             FeeType.FIXED,
             new BigDecimal("5.00"),
@@ -48,11 +48,11 @@ class FeeCalculationServiceTest {
             null
         );
         when(feeConfigRepository.findByTransactionTypeAndAgentTier(
-            TransactionType.CASH_IN, AgentTier.STANDARD, LocalDate.now()))
+            TransactionType.CASH_DEPOSIT, AgentTier.STANDARD, LocalDate.now()))
             .thenReturn(Optional.of(config));
 
         FeeCalculationService.FeeCalculationResult result = 
-            feeCalculationService.calculate(new BigDecimal("100.00"), TransactionType.CASH_IN, AgentTier.STANDARD);
+            feeCalculationService.calculate(new BigDecimal("100.00"), TransactionType.CASH_DEPOSIT, AgentTier.STANDARD);
 
         assertEquals(new BigDecimal("5.00"), result.customerFee());
         assertEquals(new BigDecimal("2.00"), result.agentCommission());
@@ -63,7 +63,7 @@ class FeeCalculationServiceTest {
     void calculate_withPercentageFeeType_returnsCorrectCalculatedFees() {
         FeeConfigRecord config = new FeeConfigRecord(
             UUID.randomUUID(),
-            TransactionType.CASH_IN,
+            TransactionType.CASH_DEPOSIT,
             AgentTier.STANDARD,
             FeeType.PERCENTAGE,
             new BigDecimal("0.05"),
@@ -75,11 +75,11 @@ class FeeCalculationServiceTest {
             null
         );
         when(feeConfigRepository.findByTransactionTypeAndAgentTier(
-            TransactionType.CASH_IN, AgentTier.STANDARD, LocalDate.now()))
+            TransactionType.CASH_DEPOSIT, AgentTier.STANDARD, LocalDate.now()))
             .thenReturn(Optional.of(config));
 
         FeeCalculationService.FeeCalculationResult result = 
-            feeCalculationService.calculate(new BigDecimal("100.00"), TransactionType.CASH_IN, AgentTier.STANDARD);
+            feeCalculationService.calculate(new BigDecimal("100.00"), TransactionType.CASH_DEPOSIT, AgentTier.STANDARD);
 
         assertEquals(new BigDecimal("5.00"), result.customerFee());
         assertEquals(new BigDecimal("2.00"), result.agentCommission());
@@ -89,10 +89,10 @@ class FeeCalculationServiceTest {
     @Test
     void calculate_withNoConfig_throwsException() {
         when(feeConfigRepository.findByTransactionTypeAndAgentTier(
-            TransactionType.CASH_IN, AgentTier.STANDARD, LocalDate.now()))
+            TransactionType.CASH_DEPOSIT, AgentTier.STANDARD, LocalDate.now()))
             .thenReturn(Optional.empty());
 
         assertThrows(IllegalArgumentException.class, () -> 
-            feeCalculationService.calculate(new BigDecimal("100.00"), TransactionType.CASH_IN, AgentTier.STANDARD));
+            feeCalculationService.calculate(new BigDecimal("100.00"), TransactionType.CASH_DEPOSIT, AgentTier.STANDARD));
     }
 }

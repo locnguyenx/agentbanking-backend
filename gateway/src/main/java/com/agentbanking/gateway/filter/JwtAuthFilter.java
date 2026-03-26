@@ -41,25 +41,24 @@ public class JwtAuthFilter extends AbstractGatewayFilterFactory<JwtAuthFilter.Co
                 .filter(ctx -> ctx.getAuthentication() != null)
                 .map(ctx -> (Jwt) ctx.getAuthentication().getPrincipal())
                 .flatMap(jwt -> {
-                    String agentId = jwt.getClaimAsString("agent_id");
-                    if (agentId == null) {
-                        agentId = jwt.getSubject();
-                    }
-                    String agentTier = jwt.getClaimAsString("agent_tier");
+                    String agentIdClaim = jwt.getClaimAsString("agent_id");
+                    String agentId = (agentIdClaim != null && !agentIdClaim.isBlank()) 
+                        ? agentIdClaim 
+                        : jwt.getSubject();
+                    final String agentTier = jwt.getClaimAsString("agent_tier");
 
                     if (agentId == null || agentId.isBlank()) {
                         return onError(exchange, "Missing agent_id claim in token", "ERR_AUTH_INVALID_TOKEN");
                     }
 
-                    ServerWebExchange modifiedExchange = exchange.mutate()
-                        .request(r -> r.header("X-Agent-Id", agentId))
-                        .build();
+                    var exchangeBuilder = exchange.mutate();
+                    exchangeBuilder.request(r -> r.header("X-Agent-Id", agentId));
 
                     if (agentTier != null && !agentTier.isBlank()) {
-                        modifiedExchange = modifiedExchange.mutate()
-                            .request(r -> r.header("X-Agent-Tier", agentTier))
-                            .build();
+                        exchangeBuilder.request(r -> r.header("X-Agent-Tier", agentTier));
                     }
+
+                    ServerWebExchange modifiedExchange = exchangeBuilder.build();
 
                     return chain.filter(modifiedExchange);
                 })

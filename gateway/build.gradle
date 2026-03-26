@@ -21,7 +21,7 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
     implementation 'org.springframework.boot:spring-boot-starter-data-redis-reactive'
     implementation 'org.springframework.boot:spring-boot-starter-oauth2-resource-server'
-    implementation 'org.springframework.cloud:spring-cloud-starter-security'
+    implementation 'org.springframework.boot:spring-boot-starter-security'
     implementation 'io.github.resilience4j:resilience4j-reactor'
     
     testImplementation 'org.springframework.boot:spring-boot-starter-test'

@@ -9,8 +9,10 @@ import com.agentbanking.rules.domain.port.out.FeeConfigRepository;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
+import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+@Service
 public class FeeCalculationService {
 
     private final FeeConfigRepository feeConfigRepository;

@@ -111,7 +111,10 @@ docker compose logs -f
 ### Start all services
 
 ```bash
+# this doesn't work when we enable profile
 docker compose up -d
+# alternative
+docker compose --profile all up -d
 ```
 
 ### Profiles

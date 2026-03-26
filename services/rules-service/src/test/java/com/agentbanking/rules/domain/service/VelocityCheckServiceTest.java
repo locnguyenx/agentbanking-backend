@@ -50,7 +50,7 @@ class VelocityCheckServiceTest {
             10,
             new BigDecimal("10000.00"),
             VelocityScope.GLOBAL,
-            TransactionType.CASH_IN,
+            TransactionType.CASH_DEPOSIT,
             true
         );
         when(velocityRuleRepository.findActiveRules()).thenReturn(List.of(rule));
@@ -70,7 +70,7 @@ class VelocityCheckServiceTest {
             10,
             new BigDecimal("10000.00"),
             VelocityScope.GLOBAL,
-            TransactionType.CASH_IN,
+            TransactionType.CASH_DEPOSIT,
             true
         );
         when(velocityRuleRepository.findActiveRules()).thenReturn(List.of(rule));
@@ -79,7 +79,7 @@ class VelocityCheckServiceTest {
             velocityCheckService.check(11, new BigDecimal("500.00"));
 
         assertFalse(result.passed());
-        assertEquals("ERR_VELOCITY_COUNT_EXCEEDED", result.errorCode());
+        assertEquals("ERR_BIZ_VELOCITY_COUNT_EXCEEDED", result.errorCode());
     }
 
     @Test
@@ -90,7 +90,7 @@ class VelocityCheckServiceTest {
             10,
             new BigDecimal("10000.00"),
             VelocityScope.GLOBAL,
-            TransactionType.CASH_IN,
+            TransactionType.CASH_DEPOSIT,
             true
         );
         when(velocityRuleRepository.findActiveRules()).thenReturn(List.of(rule));
@@ -110,7 +110,7 @@ class VelocityCheckServiceTest {
             10,
             new BigDecimal("10000.00"),
             VelocityScope.GLOBAL,
-            TransactionType.CASH_IN,
+            TransactionType.CASH_DEPOSIT,
             true
         );
         when(velocityRuleRepository.findActiveRules()).thenReturn(List.of(rule));
@@ -119,7 +119,7 @@ class VelocityCheckServiceTest {
             velocityCheckService.check(5, new BigDecimal("15000.00"));
 
         assertFalse(result.passed());
-        assertEquals("ERR_VELOCITY_AMOUNT_EXCEEDED", result.errorCode());
+        assertEquals("ERR_BIZ_VELOCITY_AMOUNT_EXCEEDED", result.errorCode());
     }
 
     @Test
@@ -130,7 +130,7 @@ class VelocityCheckServiceTest {
             10,
             new BigDecimal("10000.00"),
             VelocityScope.GLOBAL,
-            TransactionType.CASH_IN,
+            TransactionType.CASH_DEPOSIT,
             false
         );
         when(velocityRuleRepository.findActiveRules()).thenReturn(List.of(rule));
