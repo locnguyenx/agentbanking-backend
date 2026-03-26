@@ -1,6 +1,0 @@
-[
-  {"billerCode": "JOMPAY", "name": "JomPAY", "validRefs": ["INV-12345", "INV-67890"]},
-  {"billerCode": "ASTRO", "name": "ASTRO RPN", "validRefs": ["AST-001", "AST-002"]},
-  {"billerCode": "TM", "name": "TM RPN", "validRefs": ["TM-001", "TM-002"]},
-  {"billerCode": "EPF", "name": "EPF i-SARAAN", "validRefs": ["EPF-001", "EPF-002"]}
-]

@@ -1,18 +1,34 @@
 # Gradle
 .gradle/
 build/
-!gradle/wrapper/gradle-wrapper.jar
+bin/
 
 # IDE
-.idea/
-*.iml
-.vscode/
 .classpath
 .project
 .settings/
+*.iml
+.idea/
+
+# Compiled
+*.class
+*.jar
+*.war
+
+# Frontend
+node_modules/
+backoffice/coverage/
+dist/
+
+# Environment
+.env
+*.local
 
 # OS
 .DS_Store
+Thumbs.db
 
-# Logs
-*.log
+# Worktrees
+.worktrees/
+gradle/
+.grepai/
