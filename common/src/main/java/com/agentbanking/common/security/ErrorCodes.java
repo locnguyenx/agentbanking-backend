@@ -61,4 +61,7 @@ public final class ErrorCodes {
     public static final String ERR_SERVICE_UNAVAILABLE = "ERR_SYS_SERVICE_UNAVAILABLE";
     public static final String ERR_INTERNAL = "ERR_SYS_INTERNAL";
     public static final String ERR_AGENT_FLOAT_NOT_FOUND = "ERR_SYS_AGENT_FLOAT_NOT_FOUND";
+
+    // Currency Errors
+    public static final String ERR_INVALID_CURRENCY = "ERR_VAL_INVALID_CURRENCY";
 }

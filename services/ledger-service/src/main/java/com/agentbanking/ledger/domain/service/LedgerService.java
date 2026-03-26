@@ -3,6 +3,7 @@ package com.agentbanking.ledger.domain.service;
 import com.agentbanking.ledger.domain.model.*;
 import com.agentbanking.ledger.domain.port.out.*;
 import com.agentbanking.common.security.ErrorCodes;
+import com.agentbanking.common.exception.LedgerException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -22,6 +23,7 @@ public class LedgerService {
     
     private static final Logger log = LoggerFactory.getLogger(LedgerService.class);
     private static final Duration IDEMPOTENCY_TTL = Duration.ofHours(24);
+    private static final String MYR_CURRENCY = "MYR";
     
     private final AgentFloatRepository agentFloatRepository;
     private final TransactionRepository transactionRepository;
@@ -60,7 +62,12 @@ public class LedgerService {
         
         AgentFloatRecord agentFloat = agentFloatRepository.findByIdWithLock(agentId);
         if (agentFloat == null) {
-            throw new IllegalArgumentException(ErrorCodes.ERR_AGENT_FLOAT_NOT_FOUND);
+            throw new LedgerException(ErrorCodes.ERR_AGENT_FLOAT_NOT_FOUND, "RETRY");
+        }
+        
+        if (!MYR_CURRENCY.equals(agentFloat.currency())) {
+            throw new LedgerException(ErrorCodes.ERR_INVALID_CURRENCY, "DECLINE", 
+                "Only MYR currency is supported, got: " + agentFloat.currency());
         }
         
         if (agentFloat.balance().compareTo(amount) < 0) {
@@ -139,7 +146,12 @@ public class LedgerService {
         
         AgentFloatRecord agentFloat = agentFloatRepository.findByIdWithLock(agentId);
         if (agentFloat == null) {
-            throw new IllegalArgumentException(ErrorCodes.ERR_AGENT_FLOAT_NOT_FOUND);
+            throw new LedgerException(ErrorCodes.ERR_AGENT_FLOAT_NOT_FOUND, "RETRY");
+        }
+        
+        if (!MYR_CURRENCY.equals(agentFloat.currency())) {
+            throw new LedgerException(ErrorCodes.ERR_INVALID_CURRENCY, "DECLINE", 
+                "Only MYR currency is supported, got: " + agentFloat.currency());
         }
         
         BigDecimal newBalance = agentFloat.balance().add(amount).setScale(2, RoundingMode.HALF_UP);
@@ -264,8 +276,14 @@ public class LedgerService {
     public BigDecimal getBalance(UUID agentId) {
         AgentFloatRecord agentFloat = agentFloatRepository.findByIdWithLock(agentId);
         if (agentFloat == null) {
-            throw new IllegalArgumentException(ErrorCodes.ERR_AGENT_FLOAT_NOT_FOUND);
+            throw new LedgerException(ErrorCodes.ERR_AGENT_FLOAT_NOT_FOUND, "RETRY");
         }
+        
+        if (!MYR_CURRENCY.equals(agentFloat.currency())) {
+            throw new LedgerException(ErrorCodes.ERR_INVALID_CURRENCY, "DECLINE", 
+                "Only MYR currency is supported, got: " + agentFloat.currency());
+        }
+        
         return agentFloat.balance();
     }
 }
