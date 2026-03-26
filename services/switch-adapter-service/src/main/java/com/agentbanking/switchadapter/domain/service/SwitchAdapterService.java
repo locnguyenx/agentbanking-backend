@@ -4,14 +4,11 @@ import com.agentbanking.switchadapter.domain.model.MessageType;
 import com.agentbanking.switchadapter.domain.model.SwitchStatus;
 import com.agentbanking.switchadapter.domain.model.SwitchTransactionRecord;
 import com.agentbanking.switchadapter.domain.port.out.SwitchTransactionRepository;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
-@Service
 public class SwitchAdapterService {
 
     private final SwitchTransactionRepository repository;
@@ -20,12 +17,11 @@ public class SwitchAdapterService {
         this.repository = repository;
     }
 
-    @Transactional
-    public SwitchTransactionRecord processCardAuth(UUID internalTransactionId, 
-                                                   String pan, 
+    public SwitchTransactionRecord processCardAuth(UUID internalTransactionId,
+                                                   String pan,
                                                    java.math.BigDecimal amount) {
         java.math.BigDecimal roundedAmount = amount.setScale(2, RoundingMode.HALF_UP);
-        
+
         SwitchTransactionRecord record = new SwitchTransactionRecord(
             UUID.randomUUID(),
             internalTransactionId,
@@ -39,17 +35,16 @@ public class SwitchAdapterService {
             LocalDateTime.now(),
             LocalDateTime.now()
         );
-        
+
         repository.save(record);
         return record;
     }
 
-    @Transactional
-    public SwitchTransactionRecord processReversal(UUID originalTransactionId, 
+    public SwitchTransactionRecord processReversal(UUID originalTransactionId,
                                                    String originalReference,
                                                    java.math.BigDecimal amount) {
         java.math.BigDecimal roundedAmount = amount.setScale(2, RoundingMode.HALF_UP);
-        
+
         SwitchTransactionRecord record = new SwitchTransactionRecord(
             UUID.randomUUID(),
             originalTransactionId,
@@ -63,18 +58,17 @@ public class SwitchAdapterService {
             LocalDateTime.now(),
             LocalDateTime.now()
         );
-        
+
         repository.save(record);
         return record;
     }
 
-    @Transactional
     public SwitchTransactionRecord processDuitNowTransfer(UUID internalTransactionId,
                                                            String proxyType,
                                                            String proxyValue,
                                                            java.math.BigDecimal amount) {
         java.math.BigDecimal roundedAmount = amount.setScale(2, RoundingMode.HALF_UP);
-        
+
         SwitchTransactionRecord record = new SwitchTransactionRecord(
             UUID.randomUUID(),
             internalTransactionId,
@@ -88,7 +82,7 @@ public class SwitchAdapterService {
             LocalDateTime.now(),
             LocalDateTime.now()
         );
-        
+
         repository.save(record);
         return record;
     }

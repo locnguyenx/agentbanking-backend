@@ -1,8 +1,9 @@
 package com.agentbanking.switchadapter.infrastructure.web;
 
 import com.agentbanking.common.exception.ErrorResponse;
-import com.agentbanking.switchadapter.domain.model.SwitchTransactionRecord;
-import com.agentbanking.switchadapter.domain.service.SwitchAdapterService;
+import com.agentbanking.switchadapter.domain.port.in.AuthorizeTransactionUseCase;
+import com.agentbanking.switchadapter.domain.port.in.ProcessReversalUseCase;
+import com.agentbanking.switchadapter.domain.port.in.DuitNowTransferUseCase;
 import com.agentbanking.switchadapter.infrastructure.web.dto.CardAuthRequest;
 import com.agentbanking.switchadapter.infrastructure.web.dto.DuitNowRequest;
 import com.agentbanking.switchadapter.infrastructure.web.dto.ReversalRequest;
@@ -16,25 +17,31 @@ import java.util.Map;
 @RequestMapping("/internal")
 public class SwitchController {
 
-    private final SwitchAdapterService switchAdapterService;
+    private final AuthorizeTransactionUseCase authorizeTransactionUseCase;
+    private final ProcessReversalUseCase processReversalUseCase;
+    private final DuitNowTransferUseCase duitNowTransferUseCase;
 
-    public SwitchController(SwitchAdapterService switchAdapterService) {
-        this.switchAdapterService = switchAdapterService;
+    public SwitchController(AuthorizeTransactionUseCase authorizeTransactionUseCase,
+                            ProcessReversalUseCase processReversalUseCase,
+                            DuitNowTransferUseCase duitNowTransferUseCase) {
+        this.authorizeTransactionUseCase = authorizeTransactionUseCase;
+        this.processReversalUseCase = processReversalUseCase;
+        this.duitNowTransferUseCase = duitNowTransferUseCase;
     }
 
     @PostMapping("/auth")
     public ResponseEntity<?> cardAuth(@Valid @RequestBody CardAuthRequest request) {
         try {
-            SwitchTransactionRecord txn = switchAdapterService.processCardAuth(
+            AuthorizeTransactionUseCase.AuthorizeTransactionResult txn = authorizeTransactionUseCase.authorizeTransaction(
                 request.internalTransactionId(),
                 request.pan(),
                 request.amount()
             );
 
             return ResponseEntity.ok(Map.of(
-                "status", "APPROVED",
-                "responseCode", txn.isoResponseCode(),
-                "referenceId", txn.switchReference(),
+                "status", txn.status(),
+                "responseCode", txn.responseCode(),
+                "referenceId", txn.referenceId(),
                 "switchTxId", txn.switchTxId().toString()
             ));
         } catch (Exception e) {
@@ -49,16 +56,16 @@ public class SwitchController {
     @PostMapping("/reversal")
     public ResponseEntity<?> reversal(@Valid @RequestBody ReversalRequest request) {
         try {
-            SwitchTransactionRecord txn = switchAdapterService.processReversal(
+            ProcessReversalUseCase.ProcessReversalResult txn = processReversalUseCase.processReversal(
                 request.originalTransactionId(),
                 request.originalReference(),
                 request.amount()
             );
 
             return ResponseEntity.ok(Map.of(
-                "status", "REVERSED",
-                "responseCode", txn.isoResponseCode(),
-                "referenceId", txn.switchReference(),
+                "status", txn.status(),
+                "responseCode", txn.responseCode(),
+                "referenceId", txn.referenceId(),
                 "switchTxId", txn.switchTxId().toString()
             ));
         } catch (Exception e) {
@@ -73,7 +80,7 @@ public class SwitchController {
     @PostMapping("/duitnow")
     public ResponseEntity<?> duitNowTransfer(@Valid @RequestBody DuitNowRequest request) {
         try {
-            SwitchTransactionRecord txn = switchAdapterService.processDuitNowTransfer(
+            DuitNowTransferUseCase.DuitNowTransferResult txn = duitNowTransferUseCase.transferDuitNow(
                 request.internalTransactionId(),
                 request.proxyType(),
                 request.proxyValue(),
@@ -81,9 +88,9 @@ public class SwitchController {
             );
 
             return ResponseEntity.ok(Map.of(
-                "status", "SETTLED",
-                "responseCode", txn.isoResponseCode(),
-                "referenceId", txn.switchReference(),
+                "status", txn.status(),
+                "responseCode", txn.responseCode(),
+                "referenceId", txn.referenceId(),
                 "switchTxId", txn.switchTxId().toString()
             ));
         } catch (Exception e) {
