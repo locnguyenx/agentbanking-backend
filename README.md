@@ -27,7 +27,10 @@ cd mock-server
 ### 2. Start All Services with Docker Compose
 
 ```bash
+# this doesn't work when we enable profile
 docker compose up -d
+# alternative
+docker compose --profile all up -d
 ```
 
 ### 3. Run Integration Tests

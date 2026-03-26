@@ -104,12 +104,58 @@ service-name/
 
 | Service | Owns | Database | Exposes (Internal) | Exposes (External via Gateway) |
 |---------|------|----------|-------------------|-------------------------------|
-| **Rules** | FeeConfig, VelocityRule, limit checks | rules_db | GET /fees, GET /limits, POST /check-velocity | — |
-| **Ledger & Float** | AgentFloat, Transaction, JournalEntry | ledger_db | POST /debit, POST /credit, GET /balance, POST /reverse | — |
-| **Onboarding** | KycVerification, agent/customer records | onboarding_db | POST /verify-mykad, POST /biometric-match | — |
-| **Switch Adapter** | ISO 8583/20022 translation, PayNet integration | switch_db | POST /auth, POST /reversal | — |
-| **Biller** | BillerConfig, biller webhooks | biller_db | POST /validate-ref, POST /pay-bill | — |
+| **Rules** | FeeConfig, VelocityRule, limit checks | rules_db | GET /fees, GET /limits, POST /check-velocity, GET /config | — |
+| **Ledger & Float** | AgentFloat, Transaction, JournalEntry, SettlementSummary | ledger_db | POST /block-float, POST /commit, POST /rollback, POST /credit, GET /balance, POST /reverse | — |
+| **Onboarding** | KycVerification, agent/customer records | onboarding_db | POST /verify-mykad, POST /biometric-match, POST /activate-agent | — |
+| **Switch Adapter** | ISO 8583/20022 routing, PayNet integration | switch_db | POST /auth, POST /reversal, POST /reversal-saf | — |
+| **Biller** | BillerConfig, biller webhooks | biller_db | POST /validate-ref, POST /pay-bill, POST /notify-biller | — |
+| **Transaction Orchestrator** | Saga coordination, error handling | orchestrator_db | POST /execute-saga, POST /compensate | — |
 | **Gateway** | — | — | — | All external POS endpoints |
+
+### Detailed Service Interfaces
+
+#### Onboarding Service
+| Interface Type | Connected System | Protocol | Data Exchanged |
+|---------------|-----------------|----------|----------------|
+| **Internal** | Rules & Parameter Service | Feign (Sync) | **Req:** Agent Type, Location. **Res:** KYC required fields, Age limits |
+| **Internal** | Transaction Orchestrator | Kafka (Async) | **Event:** `AGENT_READY`. **Payload:** Agent UUID, Default Tier |
+| **External** | **JPN (National ID)** | SOAP/REST | **Req:** NRIC, Biometric Template. **Res:** Match Score, Full Name, Photo |
+| **External** | **SSM (Business Reg)** | REST | **Req:** SSM Number. **Res:** Registration Status, Director Names |
+| **Downstream** | **Core Banking (CBS)** | REST/MQ | **Req:** NRIC. **Res:** Existing Customer Info, Internal Risk Rating |
+
+#### Ledger & Float Service
+| Interface Type | Connected System | Protocol | Data Exchanged |
+|---------------|-----------------|----------|----------------|
+| **Internal (Peer)** | Transaction Orchestrator | Feign (Sync) | **Req/Res:** Float Block/Commit commands (JSON) |
+| **Internal** | Rules Service | Feign (Sync) | **Req:** Agent ID, Txn Amount. **Res:** Velocity Check Result |
+| **Downstream (Tier 3)** | CBS Connector | REST / MQ | **Req:** Real-time Balance Inquiry. **Res:** Account Status (JSON) |
+| **Downstream (Tier 3)** | Batch File Generator | Local File System | **Outbound:** Raw Transaction CSV for EOD Settlement |
+
+#### Switch Adapter Service
+| Interface Type | Connected System | Protocol | Data Exchanged |
+|---------------|-----------------|----------|----------------|
+| **Internal (Peer)** | Transaction Orchestrator | Feign (Sync) | **Req:** Txn Data (Amount, PAN, PIN). **Res:** Network Approval/Decline |
+| **Downstream (Tier 3)** | ISO Translation Engine | gRPC / REST | **Req:** Transaction JSON. **Res:** Decoded ISO Response (JSON) |
+
+#### Biller Service
+| Interface Type | Connected System | Protocol | Data Exchanged |
+|---------------|-----------------|----------|----------------|
+| **Internal** | Transaction Orchestrator | Feign (Sync) | **Req:** Biller Code, Ref-1. **Res:** Validation, Biller Name, Balance |
+| **Internal** | Rules Service | Feign (Sync) | **Req:** Biller ID. **Res:** Convenience Fee |
+| **External** | **JomPAY (PayNet)** | REST / XML | **Req:** Bill Account Number (Ref-1). **Res:** Validation Status |
+| **External** | **Fiuu / Aggregators** | REST API | **Req:** Product ID. **Res:** 16-digit PIN code or Instant Top-up status |
+
+#### Rules & Parameter Service
+| Interface Type | Connected System | Protocol | Data Exchanged |
+|---------------|-----------------|----------|----------------|
+| **Internal** | All Services | Feign (Sync) | **Req:** Parameter Key. **Res:** Value |
+| **Internal** | Admin Dashboard | REST (Inbound) | **Req:** Update Fee. **Res:** Update Success, Audit Log ID |
+
+#### Transaction Orchestrator
+| Interface Type | Connected System | Protocol | Data Exchanged |
+|---------------|-----------------|----------|----------------|
+| **Internal** | Ledger, Switch, Biller | Feign (Sync) | **Outbound:** Commands to execute parts of flow |
+| **External** | **Notification Gateway** | REST API | **Req:** Mobile Number, Message Template. **Res:** SMS Delivery Status |
 
 ### External API Flow (Withdrawal Example)
 
@@ -187,15 +233,36 @@ Core Ledger and Gateway stay online regardless.
 
 | Method | Path | Service | Description |
 |--------|------|---------|-------------|
-| POST | /api/v1/withdrawal | Ledger | Cash withdrawal (EMV + PIN) |
+| POST | /api/v1/withdrawal | Ledger | Cash withdrawal (EMV + PIN or MyKad) |
 | POST | /api/v1/deposit | Ledger | Cash deposit |
 | POST | /api/v1/balance-inquiry | Ledger | Customer or agent balance |
 | POST | /api/v1/kyc/verify | Onboarding | MyKad verification |
 | POST | /api/v1/kyc/biometric | Onboarding | Biometric match |
-| POST | /api/v1/bill/pay | Biller | Bill payment |
-| POST | /api/v1/topup | Biller | Prepaid top-up |
+| POST | /api/v1/bill/pay | Biller | Bill payment (JomPAY, ASTRO, TM, EPF) |
+| POST | /api/v1/topup | Biller | Prepaid top-up (CELCOM, M1) |
 | POST | /api/v1/transfer/duitnow | Switch | DuitNow transfer |
+| POST | /api/v1/retail/sale | Merchant | Retail card/QR purchase (MDR applies) |
+| POST | /api/v1/retail/pin-purchase | Merchant | PIN voucher purchase (commission) |
+| POST | /api/v1/retail/cashback | Merchant | Hybrid purchase + cash withdrawal |
+| POST | /api/v1/ewallet/withdraw | Biller | e-Wallet withdrawal |
+| POST | /api/v1/ewallet/topup | Biller | e-Wallet top-up |
+| POST | /api/v1/essp/purchase | Biller | eSSP certificate purchase |
 | GET | /api/v1/agent/balance | Ledger | Agent wallet balance |
+
+**Backoffice Endpoints (via separate route):**
+
+| Method | Path | Service | Description |
+|--------|------|---------|-------------|
+| GET | /api/v1/backoffice/agents | Onboarding | List agents |
+| POST | /api/v1/backoffice/agents | Onboarding | Create agent |
+| PUT | /api/v1/backoffice/agents/{id} | Onboarding | Update agent |
+| DELETE | /api/v1/backoffice/agents/{id} | Onboarding | Deactivate agent |
+| GET | /api/v1/backoffice/transactions | Ledger | Transaction monitoring |
+| GET | /api/v1/backoffice/settlement | Ledger | Settlement reports |
+| GET | /api/v1/backoffice/kyc/review-queue | Onboarding | Manual review queue |
+| POST | /api/v1/backoffice/discrepancy/{id}/maker-action | Reconciliation | Maker proposes adjustment |
+| POST | /api/v1/backoffice/discrepancy/{id}/checker-approve | Reconciliation | Checker approves/rejects |
+| GET | /api/v1/backoffice/audit-logs | Audit | Audit log viewer |
 
 ### Request Headers
 
@@ -443,6 +510,28 @@ Request → Controller → Service → Exception thrown
 | System | ERR_SYS_xxx | ERR_SERVICE_UNAVAILABLE, ERR_INTERNAL |
 
 Each error code maps to a message template (localization-ready).
+
+### External Error Mapping (Tier 3 → Tier 2)
+
+The Translation Layer (Tier 3) normalizes legacy error codes to clean business errors:
+
+| Legacy Source | External Code | Legacy Description | Business Error | Action |
+|--------------|--------------|-------------------|---------------|--------|
+| ISO 8583 | 00 | Approved | SUCCESS | Finalize |
+| ISO 8583 | 51 | Insufficient Funds | ERR_INSUFFICIENT_FUNDS | Notify Customer |
+| ISO 8583 | 05 | Do Not Honor | ERR_DECLINED_BY_ISSUER | Notify Customer |
+| ISO 8583 | 13 | Invalid Amount | ERR_INVALID_TRANSACTION | Stop / Alert |
+| ISO 8583 | 91 | Issuer/Switch Inoperative | ERR_NETWORK_TIMEOUT | Trigger Reversal |
+| ISO 20022 | AB05 | Timeout at Clearing | ERR_NETWORK_TIMEOUT | Trigger Reversal |
+| ISO 20022 | AC04 | Closed Account | ERR_ACCOUNT_INACTIVE | Notify Customer |
+| CBS | E102 | Hold on Account | ERR_ACCOUNT_FROZEN | Notify Customer |
+| CBS | E999 | System Error | ERR_DOWNSTREAM_UNAVAILABLE | Retry / Alert |
+| HSM | 15 | PIN Block Mismatch | ERR_INVALID_PIN | Block / Security Alert |
+
+**Action Categories:**
+- **Notify Customer:** Clean failure — stop and tell customer why
+- **Trigger Reversal:** Technical failure — call Rollback to release float
+- **Stop / Alert:** Potential fraud — block terminal, alert security team
 
 ### Security Architecture
 
@@ -703,3 +792,491 @@ services:
       - "8090:8090"
     profiles: ["dev", "test"]
 ```
+
+---
+
+## 11. Tier 3 Translation Layer Detail
+
+### Overview
+
+The Translation Layer (Tier 3) exists to protect clean, modern Tier 2 services from the messy, legacy protocols of external systems. It handles "dirty work" so Tier 2 only speaks JSON.
+
+### 11.1 ISO Translation Engine
+
+**Purpose:** Transform internal JSON to ISO 8583 (card) and ISO 20022 (DuitNow) binary/XML formats.
+
+**Responsibilities:**
+- Marshal JSON into binary bitmaps (ISO 8583) or XML (ISO 20022)
+- Manage persistent TCP/IP socket connections with PayNet
+- Send Echo/Heartbeat messages every 30-60 seconds
+- Unmarshal binary responses back to clean JSON
+- Generate and track System Trace Audit Number (STAN) incrementally (000001-999999)
+
+**Interface:**
+| Direction | Protocol | Data |
+|-----------|----------|------|
+| Inbound (Tier 2) | gRPC/REST | Canonical JSON |
+| Outbound (Tier 4) | ISO 8583/20022 | Binary bitmaps |
+
+### 11.2 CBS Connector
+
+**Purpose:** Shield Tier 2 from Core Banking System legacy interfaces (SOAP, MQ, fixed-length strings).
+
+**Responsibilities:**
+- Wrap JSON data into SOAP envelopes or MQ message headers
+- Manage Request/Reply Queue orchestration
+- Handle long timeouts without blocking Tier 2 threads
+- Convert settlement JSON to the specific "Flat-File" format for CBS batch engine
+
+**Interface:**
+| Direction | Protocol | Data |
+|-----------|----------|------|
+| Inbound (Tier 2) | REST/JSON | Settlement JSON, Account Inquiry JSON |
+| Outbound (Tier 4) | SOAP/MQ/Fixed-Length | Legacy XML/Fixed-Format |
+
+### 11.3 HSM Wrapper
+
+**Purpose:** Handle all communication with the Hardware Security Module. Tier 2 never sees a raw PIN or clear-text encryption key.
+
+**Responsibilities:**
+- Format proprietary HSM commands (Thales "CA"/"BA" commands)
+- Translate PIN blocks from Zone Personal Key (ZPK) to Local Master Key (LMK)
+- Verify PIN blocks
+- Isolate encryption keys (reside only in HSM, never in Tier 2 memory)
+
+**Interface:**
+| Direction | Protocol | Data |
+|-----------|----------|------|
+| Inbound (Tier 2/ISO Engine) | gRPC/REST | Encrypted PIN Block (ZPK) |
+| Outbound (Tier 4) | TCP Socket (Proprietary) | Thales HSM commands |
+
+### 11.4 Biller Gateway
+
+**Purpose:** Provide unified interface for multiple biller providers (TNB, Astro, JomPAY, Fiuu) who use different API standards.
+
+**Responsibilities:**
+- Route requests to correct 3rd party URL based on Biller_ID
+- Inject 3rd party API keys and OAuth tokens automatically
+- Use Adapter Pattern to convert internal JSON to biller-specific XML/REST
+- Ensure idempotency (prevent double-charging biller on retry)
+
+**Interface:**
+| Direction | Protocol | Data |
+|-----------|----------|------|
+| Inbound (Tier 2) | gRPC/REST | Generic Bill Payment JSON |
+| Outbound (Tier 4) | Varies (XML, REST) | Biller-specific payload |
+
+### 11.5 Tier 2 → Tier 3 Interaction Summary
+
+| Tier 2 Service | Calls | Tier 3 Service | Data Exchanged |
+|---------------|-------|---------------|----------------|
+| Switch Adapter | → | ISO Translation Engine | JSON (Logic) ↔ Binary/ISO (Network) |
+| Ledger Service | → | CBS Connector | JSON (Sub-ledger) ↔ SOAP/MQ (Mainframe) |
+| Biller Service | → | Biller Gateway | JSON (Unified) ↔ XML/REST (Multiple Billers) |
+| ISO Engine | → | HSM Wrapper | PIN Block (ZPK) ↔ PIN Block (LMK) |
+
+---
+
+## 12. Transaction Orchestrator (Saga Pattern)
+
+### Overview
+
+The Orchestrator is the "Conductor" of the multi-step financial flow. It coordinates the Saga: Reserve Float → Switch Auth → Commit Ledger.
+
+### 12.1 ExecuteSaga Flow
+
+```
+POS Request
+    │
+    ▼
+┌─────────────────────────────────────────────┐
+│ Transaction Orchestrator                     │
+│                                              │
+│ Step 1: Validate Idempotency Key (Redis)    │
+│         → Return cached if found            │
+│                                              │
+│ Step 2: Call Rules Service                   │
+│         → Check velocity, limits, fees      │
+│                                              │
+│ Step 3: Call Ledger Service                  │
+│         → BlockFloat (PESSIMISTIC_WRITE)    │
+│         → RESERVE the float amount          │
+│                                              │
+│ Step 4: Call Switch Adapter                  │
+│         → Authorize at PayNet               │
+│         → Get approval/decline              │
+│                                              │
+│ Step 5: If Switch SUCCESS:                   │
+│         → Call Ledger Service               │
+│         → CommitTransaction                 │
+│         → Update actual_balance             │
+│         → Post journal entries              │
+│                                              │
+│ Step 6: If Switch FAILED:                   │
+│         → Call Ledger Service               │
+│         → RollbackTransaction               │
+│         → Release reserved float            │
+│                                              │
+│ Step 7: Publish Kafka events                 │
+│         → SMS notification                  │
+│         → Commission accrual                │
+│         → EFM event (if applicable)         │
+│                                              │
+│ Step 8: Cache response in Redis (TTL: 24h) │
+│                                              │
+│ Step 9: Return response to Gateway           │
+└─────────────────────────────────────────────┘
+```
+
+### 12.2 Compensate (Error Recovery)
+
+**Purpose:** Ensure the system is "clean" if a mid-way failure occurs.
+
+**Trigger:** Any exception or timeout during a saga step.
+
+**Processing:**
+1. Identify which step failed
+2. Trigger Reverse/Undo on all previously completed steps
+3. Ensure no "Zombie" locks remain on AgentFloat
+4. Log the compensation action in AuditLog
+
+### 12.3 Resilience Configuration
+
+| Inter-service Call | Timeout | Retry | Circuit Breaker |
+|-------------------|---------|-------|-----------------|
+| Rules Service | 5s | 3x exponential | 50% failure → open |
+| Ledger Service | 5s | 0x (financial) | 50% failure → open |
+| Switch Adapter | 25s | 0x (financial) | Timeout → trigger reversal |
+| Biller Service | 10s | 3x exponential | 50% failure → open |
+
+---
+
+## 13. Error Mapping Table
+
+### Legacy to Business Core Mapping
+
+| Legacy Source | External Code | Legacy Description | Business Tier 2 Error | Action Category |
+|--------------|--------------|-------------------|----------------------|----------------|
+| ISO 8583 | 00 | Approved or Completed | SUCCESS | Finalize |
+| ISO 8583 | 51 | Insufficient Funds | INSUFFICIENT_FUNDS | Notify Customer |
+| ISO 8583 | 05 | Do Not Honor (Generic) | DECLINED_BY_ISSUER | Notify Customer |
+| ISO 8583 | 13 | Invalid Amount | INVALID_TRANSACTION | Stop / Alert |
+| ISO 8583 | 91 | Issuer or Switch Inoperative | NETWORK_TIMEOUT | Trigger Reversal |
+| ISO 20022 | AB05 | Timeout at Clearing | NETWORK_TIMEOUT | Trigger Reversal |
+| ISO 20022 | AC04 | Closed Account | ACCOUNT_INACTIVE | Notify Customer |
+| CBS (Core) | E102 | Hold on Account | ACCOUNT_FROZEN | Notify Customer |
+| CBS (Core) | E999 | System Error / DB Down | DOWNSTREAM_UNAVAILABLE | Retry / Alert |
+| HSM | 15 | PIN Block Mismatch | INVALID_PIN | Block / Security Alert |
+
+### Action Categories
+
+- **Notify Customer:** Clean failures. Stop transaction and tell customer why.
+- **Trigger Reversal:** Technical failures. Call Rollback to release float lock.
+- **Stop / Alert:** Potential fraud or major configuration error. Block terminal and alert security team.
+
+### Error Object Contract
+
+When Tier 3 sends an error to Tier 2:
+```json
+{
+  "status": "FAILED",
+  "business_error": {
+    "code": "INSUFFICIENT_FUNDS",
+    "message": "The customer does not have enough balance.",
+    "action": "NOTIFY_CUSTOMER"
+  },
+  "legacy_context": {
+    "source": "PAYNET_ISO_8583",
+    "raw_code": "51",
+    "trace_id": "99283741"
+  }
+}
+```
+
+---
+
+## 14. Retry & Reversal Policy
+
+### 14.1 The 30-Second Rule (Timeout Policy)
+
+| Stage | Timeout Limit | Action on Timeout |
+|-------|--------------|-------------------|
+| Tier 2 → Tier 3 | 25 Seconds | Initiate Automatic Reversal |
+| Tier 3 → Tier 4 | 20 Seconds | Tier 3 sends NETWORK_TIMEOUT to Tier 2 |
+| Database Lock | 5 Seconds | Fail transaction immediately |
+
+### 14.2 Retry Logic
+
+- **Non-Financial (Echo, Inquiry):** 3 retries with exponential backoff (1s, 2s, 4s). Idempotent — requesting twice doesn't move money.
+- **Financial (Withdrawal, Bill Pay):** ZERO retries at Orchestrator level. If timeout → assume money might have moved → trigger Reversal Flow immediately.
+
+### 14.3 Safety Reversal Flow (MTI 0400)
+
+If Tier 2 hits 25-second timeout:
+1. Mark transaction_history as REVERSAL_INITIATED
+2. Call Tier 3 ISO Engine with REVERSAL_REQUEST (ISO MTI 0400)
+3. Release virtual float via Ledger Service Rollback
+4. Notify POS terminal: "Transaction Timeout. Funds Reversed."
+
+### 14.4 Reversal Persistence (Store & Forward)
+
+- Failed reversal messages persisted in Persistent Queue (Redis/PostgreSQL)
+- Background worker retries every 60 seconds until SUCCESS from Switch
+- Every attempt logged in reversal_audit table
+
+---
+
+## 15. EOD Net Settlement Architecture
+
+### 15.1 Settlement Formula
+
+```
+Net Settlement = (Total Withdrawals + Total Commissions + Total Retail Sales)
+               - (Total Deposits + Total Bill Payments)
+```
+
+- **Positive result:** Bank owes Agent (Direct Credit to Agent's Bank Account)
+- **Negative result:** Agent owes Bank (Direct Debit from Agent's Bank Account)
+
+### 15.2 Transaction Impact on Settlement
+
+| Transaction Type | Float Impact | Net Settlement Effect |
+|-----------------|-------------|----------------------|
+| Cash Withdrawal | Agent gives cash → Float increases (+) | Bank owes Agent |
+| Cash Deposit | Agent collects cash → Float decreases (-) | Agent owes Bank |
+| Bill Payment | Agent collects cash → Float decreases (-) | Agent owes Bank |
+| Retail Sale | No cash, digital → Float increases (+) | Bank owes Agent (net of MDR) |
+| Commission Earned | None | Bank owes Agent |
+| Float Top-up | Prefunding | Excluded from daily net (settled real-time) |
+| Reversals/Voids | Float restored | Neutral (must sum to zero) |
+
+### 15.3 EOD Batch Job Sequence
+
+```
+23:59:59 MYT
+    │
+    ▼
+┌─────────────────────────────────────────────┐
+│ Step 1: Data Harvest                         │
+│ - Extract PayNet PSR file via SFTP           │
+│ - Extract internal ledger for business date  │
+│                                              │
+│ Step 2: Reconciliation (Triple-Match)        │
+│ - Match Internal Ledger ↔ PayNet PSR         │
+│ - Categorize: Ghost/Orphan/Mismatch          │
+│ - If discrepancies → HOLD settlement         │
+│                                              │
+│ Step 3: Settlement Calculation               │
+│ - Aggregate SUCCESS transactions per agent   │
+│ - Calculate net settlement amount            │
+│ - Determine direction (BANK_OWES/AGENT_OWES) │
+│                                              │
+│ Step 4: CBS File Generation                  │
+│ - Generate CSV/flat file per agent           │
+│ - Place at /sftp/cbs/outbound/               │
+│ - Target: 02:00 AM                           │
+│                                              │
+│ Step 5: Commission Accrual                   │
+│ - Calculate daily commission per agent       │
+│ - Post to agent_earnings sub-ledger          │
+│ - Include in settlement file                 │
+└─────────────────────────────────────────────┘
+```
+
+### 15.4 Settlement Status Flow
+
+```
+PENDING → HELD (if discrepancy) → SETTLED
+                ↓
+            DISPUTED → RESOLVED → SETTLED
+```
+
+---
+
+## 16. Reconciliation Architecture
+
+### 16.1 Triple-Match Logic
+
+For a transaction to be "Reconciled," it must appear identically in three places:
+1. **Internal Ledger:** What Spring Boot services recorded
+2. **Terminal Journal:** What the physical POS machine says
+3. **Network Statement (PSR):** What PayNet says it cleared
+
+**Hierarchy of Truth:** Network Statement (PSR) is the "Final Word" because it represents actual interbank movement.
+
+### 16.2 Validation Rules
+
+| Rule | Description |
+|------|-------------|
+| Integrity Key Match | Transaction ID and Network Reference must match across all reports |
+| Status Alignment | Internal=SUCCESS but PayNet=REVERSED → "Broken" → follow PayNet |
+| Amount Zero-Tolerance | RM 100.00 vs RM 100.01 → entire batch halted |
+| Cut-off Synchronization | Transactions at 11:59:59 PM validated against correct business day |
+
+### 16.3 Discrepancy Categories
+
+| Category | Definition | Potential Cause | Business Action |
+|----------|-----------|----------------|-----------------|
+| Ghost | Successful in Internal; Missing in PayNet | Network timeout after local success | Force Reverse: Recover float |
+| Orphan | Missing in Internal; Successful in PayNet | Network timeout after switch approval | Force Success: Credit float |
+| Mismatch | Amounts differ | Rounding error or corruption | Suspend Settlement: Manual audit |
+
+---
+
+## 17. Discrepancy Resolution Architecture
+
+### 17.1 Maker-Checker Workflow
+
+```
+Reconciliation identifies discrepancy
+    │
+    ▼
+┌─────────────────────────────────────────────┐
+│ PENDING_MAKER                                │
+│ - Maker reviews terminal journal             │
+│ - Maker compares with PayNet PSR             │
+│ - Maker selects action:                      │
+│   FORCE_SUCCESS / FORCE_REVERSE / DUPLICATE  │
+│ - Maker attaches reason code + evidence      │
+│ - Maker submits                              │
+└──────────────────┬──────────────────────────┘
+                   │
+                   ▼
+┌─────────────────────────────────────────────┐
+│ PENDING_CHECKER                              │
+│ - Checker reviews evidence                   │
+│ - Checker verifies Maker != Checker          │
+│ - Checker Approves or Rejects                │
+└──────────────────┬──────────────────────────┘
+                   │
+        ┌──────────┴──────────┐
+        ▼                     ▼
+    APPROVED              REJECTED
+        │                     │
+        ▼                     ▼
+    Ledger adjustment     Return to Maker
+    ManualAdjustmentEntry with comment
+    DiscrepancyCase = RESOLVED
+```
+
+### 17.2 Four-Eyes Principle (System Enforcement)
+
+- Maker and Checker must be different user IDs
+- Enforced at API level (self-approval returns ERR_SELF_APPROVAL_PROHIBITED)
+- Enforced at RBAC level (separate MAKER and CHECKER roles)
+
+### 17.3 Financial Integrity Rule
+
+- Original broken transaction is NEVER deleted
+- Resolution creates a secondary ManualAdjustmentEntry for perfect audit trail
+- PayNet PSR is the ultimate "Source of Truth"
+
+---
+
+## 18. STP Architecture
+
+### 18.1 STP Categories
+
+| Category | Scope | Human Intervention | Mechanism |
+|----------|-------|-------------------|-----------|
+| 100% STP | Bill pay, top-up, cash-out (under limits), fund transfers | Zero | Cryptographic proof (PIN, biometric) |
+| Conditional STP | Onboarding, micro-agent approval, float replenishment | Fallback to manual | Rules engine (data intelligence) |
+| Non-STP | Super-agent onboarding, disputes, AML alerts, limit overrides | Mandatory | Maker-Checker (human judgment) |
+
+### 18.2 100% STP Flow
+
+```
+Transaction initiated
+    │
+    ▼
+┌─────────────────────────────────────────────┐
+│ Pre-funded Float Verification                │
+│ → Agent's available float must cover txn     │
+│ → If insufficient: HARD DECLINE              │
+│                                              │
+│ Dual-Handshake Authentication                │
+│ → Customer PIN (HSM encrypted) or Biometric  │
+│ → Agent identity (device/OTP)                │
+│ → Neither party can authorize for other      │
+│                                              │
+│ Velocity & Volume Limits                     │
+│ → Hardcoded API limits at Gateway level      │
+│ → Max RM 3,000/txn, 5 txns/hour/customer    │
+│                                              │
+│ Execution                                    │
+│ → Deduct float, credit biller/switch         │
+│ → SMS receipt for non-repudiation            │
+└─────────────────────────────────────────────┘
+```
+
+### 18.3 Conditional STP Flow
+
+```
+Application submitted (e.g., micro-agent onboarding)
+    │
+    ▼
+┌─────────────────────────────────────────────┐
+│ Data Capture                                 │
+│ → OCR extraction from MyKad/SSM              │
+│ → Facial liveness check                      │
+│                                              │
+│ Concurrent API Verification                  │
+│ → JPN identity check                         │
+│ → SSM business registry                      │
+│ → AML watchlists (LexisNexis, Dow Jones)     │
+│                                              │
+│ Rules Engine Decision Matrix                 │
+│ → Score each parameter                       │
+│ → All pass → AUTO_APPROVED (STP)             │
+│ → Any fail → Graceful degradation            │
+│   → Route to manual review queue             │
+│   → NOT auto-reject (customer-friendly)      │
+│                                              │
+│ Post-Approval Monitoring                     │
+│ → 30-day probationary tier                   │
+│ → Enhanced velocity monitoring               │
+│ → Catch synthetic identity fraud             │
+└─────────────────────────────────────────────┘
+```
+
+### 18.4 Non-STP Flow (Maker-Checker)
+
+```
+Trigger (super-agent app, dispute, AML alert, limit override)
+    │
+    ▼
+┌─────────────────────────────────────────────┐
+│ Maker (Field Officer)                        │
+│ → Reviews physical evidence                  │
+│ → Visits shop, interviews owner              │
+│ → Gathers physical signatures                │
+│ → Submits application with evidence          │
+│                                              │
+│ Checker (Compliance/Risk Officer)            │
+│ → Reviews Maker's notes                      │
+│ → Reviews system risk flags                  │
+│ → Approves, Rejects, or Unfreezes            │
+│                                              │
+│ RBAC Enforcement                             │
+│ → Maker ≠ Checker (system-enforced)          │
+│ → Every click, note, decision logged         │
+│ → Immutable audit trail with timestamps      │
+│                                              │
+│ SLA Queues                                   │
+│ → 24-hour SLA on manual queues               │
+│ → Auto-escalate to supervisor on timeout     │
+└─────────────────────────────────────────────┘
+```
+
+### 18.5 Geofencing Guardrails
+
+- POS GPS coordinates pinged with every transaction
+- If terminal > 100m from registered shop → auto-decline + lock terminal
+- If GPS unavailable → reject with ERR_GPS_UNAVAILABLE
+
+### 18.6 Anti-Smurfing (Structuring Detection)
+
+- Velocity engine tracks transaction frequency
+- Pattern detection: multiple transactions just below limit flag
+- Example: 10 x RM 2,900 deposits in 5 minutes (avoiding RM 3,000 flag)
+- Detection → instant freeze + compliance alert

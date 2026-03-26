@@ -9,10 +9,7 @@ import com.agentbanking.rules.domain.port.out.FeeConfigRepository;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
-@Service
 public class FeeCalculationService {
 
     private final FeeConfigRepository feeConfigRepository;
@@ -21,7 +18,6 @@ public class FeeCalculationService {
         this.feeConfigRepository = feeConfigRepository;
     }
 
-    @Transactional(readOnly = true)
     public FeeCalculationResult calculate(BigDecimal amount, TransactionType transactionType, AgentTier agentTier) {
         FeeConfigRecord config = feeConfigRepository.findByTransactionTypeAndAgentTier(
             transactionType, agentTier, LocalDate.now()
