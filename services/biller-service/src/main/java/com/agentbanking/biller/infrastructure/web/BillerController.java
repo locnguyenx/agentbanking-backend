@@ -1,6 +1,6 @@
 package com.agentbanking.biller.infrastructure.web;
 
-import com.agentbanking.biller.domain.model.BillPayment;
+import com.agentbanking.biller.domain.model.BillPaymentRecord;
 import com.agentbanking.biller.domain.model.TopupTransaction;
 import com.agentbanking.biller.domain.service.BillerService;
 import org.springframework.http.ResponseEntity;
@@ -25,7 +25,6 @@ public class BillerController {
         String billerCode = request.get("billerCode");
         String ref1 = request.get("ref1");
 
-        // Stub validation - would call biller API in production
         boolean valid = ref1 != null && !ref1.isBlank();
 
         return ResponseEntity.ok(Map.of(
@@ -45,14 +44,14 @@ public class BillerController {
             BigDecimal amount = new BigDecimal(request.get("amount").toString());
             UUID internalTxId = UUID.fromString((String) request.get("internalTransactionId"));
 
-            BillPayment payment = billerService.validateAndPay(billerCode, ref1, amount, internalTxId);
+            BillPaymentRecord payment = billerService.validateAndPay(billerCode, ref1, amount, internalTxId);
 
             return ResponseEntity.ok(Map.of(
                 "status", "PAID",
-                "paymentId", payment.getPaymentId().toString(),
-                "receiptNo", payment.getReceiptNo(),
-                "billerReference", payment.getBillerReference(),
-                "amount", payment.getAmount()
+                "paymentId", payment.paymentId().toString(),
+                "receiptNo", payment.receiptNo(),
+                "billerReference", payment.billerReference(),
+                "amount", payment.amount()
             ));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of(

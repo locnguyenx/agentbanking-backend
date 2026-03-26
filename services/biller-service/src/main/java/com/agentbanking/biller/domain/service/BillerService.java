@@ -1,8 +1,9 @@
 package com.agentbanking.biller.domain.service;
 
 import com.agentbanking.biller.domain.model.*;
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.PersistenceContext;
+import com.agentbanking.biller.domain.port.out.BillerConfigRepository;
+import com.agentbanking.biller.domain.port.out.BillPaymentRepository;
+import com.agentbanking.biller.domain.port.out.TopupTransactionRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -13,53 +14,69 @@ import java.util.UUID;
 @Service
 public class BillerService {
 
-    @PersistenceContext
-    private EntityManager em;
+    private final BillerConfigRepository billerConfigRepository;
+    private final BillPaymentRepository billPaymentRepository;
+    private final TopupTransactionRepository topupTransactionRepository;
+
+    public BillerService(BillerConfigRepository billerConfigRepository, 
+                         BillPaymentRepository billPaymentRepository,
+                         TopupTransactionRepository topupTransactionRepository) {
+        this.billerConfigRepository = billerConfigRepository;
+        this.billPaymentRepository = billPaymentRepository;
+        this.topupTransactionRepository = topupTransactionRepository;
+    }
 
     @Transactional
-    public BillPayment validateAndPay(String billerCode, String ref1, 
+    public BillPaymentRecord validateAndPay(String billerCode, String ref1, 
                                        BigDecimal amount, UUID internalTransactionId) {
-        // Find biller config
-        var biller = em.createQuery("SELECT b FROM BillerConfig b WHERE b.billerCode = :code AND b.active = true", 
-                                     BillerConfig.class)
-                       .setParameter("code", billerCode)
-                       .getResultList()
-                       .stream()
-                       .findFirst()
-                       .orElseThrow(() -> new IllegalArgumentException("Biller not found or inactive: " + billerCode));
+        BillerConfigRecord biller = billerConfigRepository.findByBillerCodeAndActiveTrue(billerCode)
+            .orElseThrow(() -> new IllegalArgumentException("Biller not found or inactive: " + billerCode));
 
-        // Create payment record
-        BillPayment payment = new BillPayment();
-        payment.setPaymentId(UUID.randomUUID());
-        payment.setBillerId(biller.getBillerId());
-        payment.setInternalTransactionId(internalTransactionId);
-        payment.setRef1(ref1);
-        payment.setAmount(amount);
-        payment.setStatus(PaymentStatus.PAID);
-        payment.setReceiptNo(billerCode + "-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
-        payment.setBillerReference("BILLER-REF-" + UUID.randomUUID().toString().substring(0, 6).toUpperCase());
-        payment.setCreatedAt(LocalDateTime.now());
-        payment.setCompletedAt(LocalDateTime.now());
+        BillPaymentRecord payment = new BillPaymentRecord(
+            UUID.randomUUID(),
+            biller.billerId(),
+            internalTransactionId,
+            ref1,
+            null,
+            amount,
+            PaymentStatus.PAID,
+            billerCode + "-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase(),
+            "BILLER-REF-" + UUID.randomUUID().toString().substring(0, 6).toUpperCase(),
+            LocalDateTime.now(),
+            LocalDateTime.now()
+        );
         
-        em.persist(payment);
-        return payment;
+        return billPaymentRepository.save(payment);
     }
 
     @Transactional
     public TopupTransaction processTopup(String telco, String phoneNumber,
-                                          BigDecimal amount, UUID internalTransactionId) {
-        TopupTransaction topup = new TopupTransaction();
-        topup.setTopupId(UUID.randomUUID());
-        topup.setInternalTransactionId(internalTransactionId);
-        topup.setTelco(telco);
-        topup.setPhoneNumber(phoneNumber);
-        topup.setAmount(amount);
-        topup.setStatus(PaymentStatus.PAID);
-        topup.setTelcoReference(telco + "-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
-        topup.setCreatedAt(LocalDateTime.now());
-        topup.setCompletedAt(LocalDateTime.now());
+                                  BigDecimal amount, UUID internalTransactionId) {
+        TopupTransactionRecord record = new TopupTransactionRecord(
+            UUID.randomUUID(),
+            internalTransactionId,
+            telco,
+            phoneNumber,
+            amount,
+            PaymentStatus.PAID,
+            telco + "-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase(),
+            LocalDateTime.now(),
+            LocalDateTime.now()
+        );
         
-        em.persist(topup);
+        TopupTransactionRecord saved = topupTransactionRepository.save(record);
+        
+        TopupTransaction topup = new TopupTransaction();
+        topup.setTopupId(saved.topupId());
+        topup.setInternalTransactionId(saved.internalTransactionId());
+        topup.setTelco(saved.telco());
+        topup.setPhoneNumber(saved.phoneNumber());
+        topup.setAmount(saved.amount());
+        topup.setStatus(saved.status());
+        topup.setTelcoReference(saved.telcoReference());
+        topup.setCreatedAt(saved.createdAt());
+        topup.setCompletedAt(saved.completedAt());
+        
         return topup;
     }
 }

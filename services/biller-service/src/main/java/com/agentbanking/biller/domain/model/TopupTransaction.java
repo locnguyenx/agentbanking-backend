@@ -1,39 +1,18 @@
 package com.agentbanking.biller.domain.model;
 
-import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
-@Entity
-@Table(name = "topup_transaction")
 public class TopupTransaction {
-    @Id
     private UUID topupId;
-    
-    @Column(name = "internal_transaction_id")
     private UUID internalTransactionId;
-    
-    @Column(name = "telco")
     private String telco;
-    
-    @Column(name = "phone_number")
     private String phoneNumber;
-    
-    @Column(name = "amount")
     private BigDecimal amount;
-    
-    @Enumerated(EnumType.STRING)
-    @Column(name = "status")
     private PaymentStatus status;
-    
-    @Column(name = "telco_reference")
     private String telcoReference;
-    
-    @Column(name = "created_at")
     private LocalDateTime createdAt;
-    
-    @Column(name = "completed_at")
     private LocalDateTime completedAt;
 
     public UUID getTopupId() { return topupId; }

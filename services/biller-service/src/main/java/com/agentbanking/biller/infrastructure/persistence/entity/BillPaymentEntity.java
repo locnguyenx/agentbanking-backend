@@ -1,5 +1,6 @@
-package com.agentbanking.biller.domain.model;
+package com.agentbanking.biller.infrastructure.persistence.entity;
 
+import com.agentbanking.biller.domain.model.PaymentStatus;
 import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -7,7 +8,7 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "bill_payment")
-public class BillPayment {
+public class BillPaymentEntity {
     @Id
     private UUID paymentId;
     

@@ -157,13 +157,19 @@ docker compose --profile infra --profile backend up -d
 
 # All except frontend
 docker compose --profile infra --profile backend --profile gateway --profile mocks up -d
+
+# rebuild frontend
+docker compose build backoffice 
+# restart frontend
+docker compose --profile all up -d backoffice
 ```
 
 ### Common commands
 
 ```bash
 # Stop all services
-docker compose down
+docker stop $(docker ps -q)
+# this not work: docker compose down
 
 # View service status
 docker compose ps

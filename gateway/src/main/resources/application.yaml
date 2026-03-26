@@ -18,7 +18,7 @@ spring:
       routes:
         # Rules Service
         - id: rules-service
-          uri: http://localhost:8081
+          uri: http://rules-service:8081
           predicates:
             - Path=/internal/fees/**, /internal/check-velocity, /internal/limits/**
           filters:
@@ -26,7 +26,7 @@ spring:
         
         # Ledger Service
         - id: ledger-service
-          uri: http://localhost:8082
+          uri: http://ledger-service:8082
           predicates:
             - Path=/internal/debit, /internal/credit, /internal/balance/**, /internal/reverse/**
           filters:
@@ -34,15 +34,15 @@ spring:
         
         # Onboarding Service
         - id: onboarding-service
-          uri: http://localhost:8083
+          uri: http://onboarding-service:8083
           predicates:
-            - Path=/internal/verify-mykad, /internal/biometric
+            - Path=/internal/verify-mykad, /internal/biometric, /internal/kyc/review-queue
           filters:
             - RewritePath=/internal/(?<segment>.*), /internal/${segment}
         
         # Switch Adapter Service
         - id: switch-adapter-service
-          uri: http://localhost:8084
+          uri: http://switch-adapter-service:8084
           predicates:
             - Path=/internal/auth, /internal/reversal, /internal/duitnow
           filters:
@@ -50,7 +50,7 @@ spring:
         
         # Biller Service
         - id: biller-service
-          uri: http://localhost:8085
+          uri: http://biller-service:8085
           predicates:
             - Path=/internal/validate-ref, /internal/pay-bill, /internal/topup
           filters:
@@ -58,7 +58,7 @@ spring:
         
         # External API routes (through JWT filter)
         - id: external-withdrawal
-          uri: http://localhost:8082
+          uri: http://ledger-service:8082
           predicates:
             - Path=/api/v1/withdrawal
           filters:
@@ -66,7 +66,7 @@ spring:
             - RewritePath=/api/v1/(?<segment>.*), /internal/debit
         
         - id: external-deposit
-          uri: http://localhost:8082
+          uri: http://ledger-service:8082
           predicates:
             - Path=/api/v1/deposit
           filters:
@@ -74,7 +74,7 @@ spring:
             - RewritePath=/api/v1/(?<segment>.*), /internal/credit
         
         - id: external-balance-inquiry
-          uri: http://localhost:8082
+          uri: http://ledger-service:8082
           predicates:
             - Path=/api/v1/balance-inquiry, /api/v1/agent/balance
           filters:
@@ -82,7 +82,7 @@ spring:
             - RewritePath=/api/v1/(?<segment>.*), /internal/balance/${segment}
         
         - id: external-kyc-verify
-          uri: http://localhost:8083
+          uri: http://onboarding-service:8083
           predicates:
             - Path=/api/v1/kyc/verify
           filters:
@@ -90,7 +90,7 @@ spring:
             - RewritePath=/api/v1/kyc/verify, /internal/verify-mykad
         
         - id: external-kyc-biometric
-          uri: http://localhost:8083
+          uri: http://onboarding-service:8083
           predicates:
             - Path=/api/v1/kyc/biometric
           filters:
@@ -98,33 +98,40 @@ spring:
             - RewritePath=/api/v1/kyc/biometric, /internal/biometric
         
         # Backoffice routes
+        - id: backoffice-dashboard
+          uri: http://ledger-service:8082
+          predicates:
+            - Path=/api/v1/backoffice/dashboard
+          filters:
+            - RewritePath=/api/v1/backoffice/dashboard, /internal/backoffice/dashboard
+        
         - id: backoffice-agents
-          uri: http://localhost:8082
+          uri: http://ledger-service:8082
           predicates:
             - Path=/api/v1/backoffice/agents/**
           filters:
-            - JwtAuthFilter
+            - RewritePath=/api/v1/backoffice/(?<segment>.*), /internal/backoffice/${segment}
         
         - id: backoffice-transactions
-          uri: http://localhost:8082
+          uri: http://ledger-service:8082
           predicates:
             - Path=/api/v1/backoffice/transactions
           filters:
-            - JwtAuthFilter
+            - RewritePath=/api/v1/backoffice/transactions, /internal/backoffice/transactions
         
         - id: backoffice-settlement
-          uri: http://localhost:8082
+          uri: http://ledger-service:8082
           predicates:
             - Path=/api/v1/backoffice/settlement/**
           filters:
-            - JwtAuthFilter
+            - RewritePath=/api/v1/backoffice/(?<segment>.*), /internal/backoffice/${segment}
         
         - id: backoffice-kyc-review
-          uri: http://localhost:8083
+          uri: http://onboarding-service:8083
           predicates:
             - Path=/api/v1/backoffice/kyc/review-queue
           filters:
-            - JwtAuthFilter
+            - RewritePath=/api/v1/backoffice/kyc/review-queue, /internal/kyc/review-queue
 
 management:
   endpoints:

@@ -2,12 +2,14 @@ package com.agentbanking.onboarding.infrastructure.web;
 
 import com.agentbanking.onboarding.domain.model.*;
 import com.agentbanking.onboarding.domain.service.KycDecisionService;
+import com.agentbanking.onboarding.domain.port.out.KycVerificationRepository;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.Period;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -16,9 +18,11 @@ import java.util.UUID;
 public class OnboardingController {
 
     private final KycDecisionService kycDecisionService;
+    private final KycVerificationRepository kycVerificationRepository;
 
-    public OnboardingController(KycDecisionService kycDecisionService) {
+    public OnboardingController(KycDecisionService kycDecisionService, KycVerificationRepository kycVerificationRepository) {
         this.kycDecisionService = kycDecisionService;
+        this.kycVerificationRepository = kycVerificationRepository;
     }
 
     @PostMapping("/verify-mykad")
@@ -72,5 +76,39 @@ public class OnboardingController {
             "biometricMatch", match.name(),
             "timestamp", LocalDateTime.now().toString()
         ));
+    }
+
+    @GetMapping("/kyc/review-queue")
+    public ResponseEntity<Map<String, Object>> getKycReviewQueue(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        
+        List<KycVerificationRecord> pending = kycVerificationRepository.findByVerificationStatusOrderByCreatedAtDesc(KycStatus.MANUAL_REVIEW);
+        
+        List<Map<String, Object>> content = pending.stream()
+            .map(k -> {
+                Map<String, Object> item = new java.util.HashMap<>();
+                item.put("verificationId", k.verificationId().toString());
+                item.put("mykadMasked", maskMykad(k.mykadNumber()));
+                item.put("fullName", k.fullName() != null ? k.fullName() : "");
+                item.put("amlStatus", k.amlStatus() != null ? k.amlStatus().name() : "UNKNOWN");
+                item.put("biometricMatch", k.biometricMatch() != null ? k.biometricMatch().name() : "UNKNOWN");
+                item.put("rejectionReason", k.rejectionReason() != null ? k.rejectionReason() : "");
+                return item;
+            })
+            .toList();
+        
+        return ResponseEntity.ok(Map.of(
+            "content", content,
+            "totalElements", pending.size(),
+            "totalPages", 1,
+            "page", page,
+            "size", size
+        ));
+    }
+    
+    private String maskMykad(String mykad) {
+        if (mykad == null || mykad.length() < 4) return "****";
+        return mykad.substring(0, 4) + "********";
     }
 }

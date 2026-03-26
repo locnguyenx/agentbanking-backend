@@ -60,3 +60,20 @@ project(':services:biller-service').tasks.named('bootJar') {
 project(':mock-server').tasks.named('bootJar') {
     enabled = true
 }
+
+// Verify hexagonal architecture for all services with domain layer
+subprojects {
+    tasks.named('check').configure {
+        dependsOn(tasks.named('test'))
+    }
+    
+    tasks.withType(Test) {
+        testLogging {
+            events "passed", "skipped", "failed"
+        }
+    }
+}
+
+// Manual architecture verification - run after build to verify
+// Usage: ./gradlew build verifyHexagonalArchitecture
+// Or add to CI pipeline

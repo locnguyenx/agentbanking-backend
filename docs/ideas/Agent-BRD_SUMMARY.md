@@ -98,9 +98,10 @@ Every transaction must consult the **Rules Service** for the following:
 * **Cut-off:** 23:59:59 MYT.
 * **Net Settlement:** Agents are settled "Net." (Total Deposits - Total Withdrawals + Total Commissions).
 * **Output:** The system must generate a CSV/Flat-file for the Core Banking System (CBS) upload by 02:00 AM.
+Refer to `./BRD-supplementary/Net-settlement-EOD.md` for more details and explanation
 
 ## 6. STRAIGHT-THROUGH PROCESSING (STP)
-Refer to ./STP-rules.md
+Refer to `./BRD-supplementary/STP-rules.md` for more details and explanation
 
 ## 7. Security & Fraud (EFM)
 * **Velocity Checks:** Limit the number of transactions per MyKad per day to prevent "Smurfing."

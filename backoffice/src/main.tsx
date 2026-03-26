@@ -8,6 +8,7 @@ import { Agents } from './pages/Agents'
 import { Transactions } from './pages/Transactions'
 import { Settlement } from './pages/Settlement'
 import { KycReview } from './pages/KycReview'
+import './styles/global.css'
 
 const queryClient = new QueryClient()
 

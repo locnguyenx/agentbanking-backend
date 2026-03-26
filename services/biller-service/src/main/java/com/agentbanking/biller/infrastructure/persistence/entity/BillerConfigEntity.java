@@ -1,12 +1,13 @@
-package com.agentbanking.biller.domain.model;
+package com.agentbanking.biller.infrastructure.persistence.entity;
 
+import com.agentbanking.biller.domain.model.BillerType;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
 @Table(name = "biller_config")
-public class BillerConfig {
+public class BillerConfigEntity {
     @Id
     private UUID billerId;
     

@@ -1,51 +1,49 @@
 package com.agentbanking.onboarding.domain.model;
 
-import jakarta.persistence.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
-@Entity
-@Table(name = "kyc_verification")
 public class KycVerification {
-    @Id
     private UUID verificationId;
-    
-    @Column(name = "mykad_number")
     private String mykadNumber;
-    
-    @Column(name = "full_name")
     private String fullName;
-    
-    @Column(name = "date_of_birth")
     private LocalDate dateOfBirth;
-    
-    @Column(name = "age")
     private Integer age;
-    
-    @Enumerated(EnumType.STRING)
-    @Column(name = "aml_status")
     private AmlStatus amlStatus;
-    
-    @Enumerated(EnumType.STRING)
-    @Column(name = "biometric_match")
     private BiometricResult biometricMatch;
-    
-    @Enumerated(EnumType.STRING)
-    @Column(name = "verification_status")
     private KycStatus verificationStatus;
-    
-    @Column(name = "rejection_reason")
     private String rejectionReason;
-    
-    @Column(name = "verified_at")
     private LocalDateTime verifiedAt;
-    
-    @Column(name = "reviewed_by")
     private String reviewedBy;
-    
-    @Column(name = "created_at")
     private LocalDateTime createdAt;
+
+    public KycVerification() {}
+
+    public KycVerificationRecord toRecord() {
+        return new KycVerificationRecord(
+            verificationId, mykadNumber, fullName, dateOfBirth, age,
+            amlStatus, biometricMatch, verificationStatus, rejectionReason,
+            verifiedAt, reviewedBy, createdAt
+        );
+    }
+
+    public static KycVerification fromRecord(KycVerificationRecord record) {
+        KycVerification v = new KycVerification();
+        v.verificationId = record.verificationId();
+        v.mykadNumber = record.mykadNumber();
+        v.fullName = record.fullName();
+        v.dateOfBirth = record.dateOfBirth();
+        v.age = record.age();
+        v.amlStatus = record.amlStatus();
+        v.biometricMatch = record.biometricMatch();
+        v.verificationStatus = record.verificationStatus();
+        v.rejectionReason = record.rejectionReason();
+        v.verifiedAt = record.verifiedAt();
+        v.reviewedBy = record.reviewedBy();
+        v.createdAt = record.createdAt();
+        return v;
+    }
 
     public UUID getVerificationId() { return verificationId; }
     public void setVerificationId(UUID verificationId) { this.verificationId = verificationId; }
