@@ -14,6 +14,15 @@ spring:
       host: localhost
       port: 6379
       timeout: 2000
+  kafka:
+    bootstrap-servers: localhost:9092
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      properties:
+        spring.json.type.mapping: >
+          transactionEvent:com.agentbanking.ledger.infrastructure.messaging.TransactionEvent,
+          reversalEvent:com.agentbanking.ledger.infrastructure.messaging.ReversalEvent
 
 server:
   port: 8082
