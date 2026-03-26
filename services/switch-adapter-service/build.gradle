@@ -23,6 +23,7 @@ dependencies {
     implementation 'org.springframework.cloud:spring-cloud-starter-openfeign'
     implementation 'org.postgresql:postgresql'
     implementation 'org.flywaydb:flyway-core:9.22.3'
+    implementation project(':common')
     
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
 }
