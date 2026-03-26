@@ -1,14 +1,14 @@
-package com.agentbanking.ledger.domain.model;
+package com.agentbanking.ledger.infrastructure.persistence.entity;
 
 import jakarta.persistence.*;
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
 @Table(name = "agent_float")
-public class AgentFloat {
+public class AgentFloatEntity {
     @Id
+    @Column(name = "float_id")
     private UUID floatId;
     
     @Column(name = "agent_id")
@@ -28,7 +28,7 @@ public class AgentFloat {
     private Long version;
     
     @Column(name = "updated_at")
-    private LocalDateTime updatedAt;
+    private java.time.LocalDateTime updatedAt;
 
     public UUID getFloatId() { return floatId; }
     public void setFloatId(UUID floatId) { this.floatId = floatId; }
@@ -42,6 +42,6 @@ public class AgentFloat {
     public void setCurrency(String currency) { this.currency = currency; }
     public Long getVersion() { return version; }
     public void setVersion(Long version) { this.version = version; }
-    public LocalDateTime getUpdatedAt() { return updatedAt; }
-    public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
+    public java.time.LocalDateTime getUpdatedAt() { return updatedAt; }
+    public void setUpdatedAt(java.time.LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
 }

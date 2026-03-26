@@ -1,5 +1,7 @@
-package com.agentbanking.ledger.domain.model;
+package com.agentbanking.ledger.infrastructure.persistence.entity;
 
+import com.agentbanking.ledger.domain.model.TransactionStatus;
+import com.agentbanking.ledger.domain.model.TransactionType;
 import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -7,8 +9,9 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "ledger_transaction")
-public class Transaction {
+public class TransactionEntity {
     @Id
+    @Column(name = "transaction_id")
     private UUID transactionId;
     
     @Column(name = "idempotency_key")
