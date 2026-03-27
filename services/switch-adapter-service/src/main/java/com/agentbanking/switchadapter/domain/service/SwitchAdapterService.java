@@ -86,4 +86,25 @@ public class SwitchAdapterService {
         repository.save(record);
         return record;
     }
+
+    public SwitchTransactionRecord processBalanceInquiry(UUID internalTransactionId,
+                                                          String encryptedCardData,
+                                                          String pinBlock) {
+        SwitchTransactionRecord record = new SwitchTransactionRecord(
+            UUID.randomUUID(),
+            internalTransactionId,
+            MessageType.MT0100,
+            "00",
+            "BAL-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase(),
+            SwitchStatus.APPROVED,
+            null,
+            0,
+            java.math.BigDecimal.ZERO,
+            LocalDateTime.now(),
+            LocalDateTime.now()
+        );
+
+        repository.save(record);
+        return record;
+    }
 }

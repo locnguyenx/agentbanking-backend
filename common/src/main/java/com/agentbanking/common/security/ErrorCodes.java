@@ -57,6 +57,7 @@ public final class ErrorCodes {
     public static final String ERR_MISSING_TOKEN = "ERR_AUTH_MISSING_TOKEN";
     public static final String ERR_INVALID_TOKEN = "ERR_AUTH_INVALID_TOKEN";
     public static final String ERR_INVALID_PIN = "ERR_AUTH_INVALID_PIN";
+    public static final String ERR_INVALID_CARD = "ERR_AUTH_INVALID_CARD";
 
     // System Errors (ERR_SYS_xxx)
     public static final String ERR_SERVICE_UNAVAILABLE = "ERR_SYS_SERVICE_UNAVAILABLE";

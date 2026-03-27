@@ -2,9 +2,12 @@ package com.agentbanking.ledger.infrastructure.web;
 
 import com.agentbanking.ledger.application.usecase.TransactionQueryUseCaseImpl;
 import com.agentbanking.ledger.domain.model.TransactionRecord;
+import com.agentbanking.common.transaction.TransactionStatus;
 import com.agentbanking.ledger.domain.port.in.*;
+import com.agentbanking.ledger.infrastructure.web.dto.BalanceInquiryRequest;
 import com.agentbanking.ledger.infrastructure.web.dto.DepositRequest;
 import com.agentbanking.ledger.infrastructure.web.dto.WithdrawalRequest;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -25,17 +28,20 @@ public class LedgerController {
     private final GetBalanceUseCase getBalanceUseCase;
     private final ReverseTransactionUseCase reverseTransactionUseCase;
     private final TransactionQueryUseCaseImpl transactionQueryUseCase;
+    private final CustomerBalanceInquiryUseCase customerBalanceInquiryUseCase;
 
     public LedgerController(ProcessWithdrawalUseCase processWithdrawalUseCase,
                             ProcessDepositUseCase processDepositUseCase,
                             GetBalanceUseCase getBalanceUseCase,
                             ReverseTransactionUseCase reverseTransactionUseCase,
-                            TransactionQueryUseCaseImpl transactionQueryUseCase) {
+                            TransactionQueryUseCaseImpl transactionQueryUseCase,
+                            CustomerBalanceInquiryUseCase customerBalanceInquiryUseCase) {
         this.processWithdrawalUseCase = processWithdrawalUseCase;
         this.processDepositUseCase = processDepositUseCase;
         this.getBalanceUseCase = getBalanceUseCase;
         this.reverseTransactionUseCase = reverseTransactionUseCase;
         this.transactionQueryUseCase = transactionQueryUseCase;
+        this.customerBalanceInquiryUseCase = customerBalanceInquiryUseCase;
     }
 
     @PostMapping("/debit")
@@ -225,5 +231,51 @@ public class LedgerController {
                 })
                 .toList()
         ));
+    }
+
+    @GetMapping("/transactions/has-pending")
+    public ResponseEntity<Map<String, Object>> hasPendingTransactions(@RequestParam UUID agentId) {
+        List<TransactionStatus> pendingStatuses = List.of(TransactionStatus.PENDING, TransactionStatus.COMPLETED);
+        boolean hasPending = transactionQueryUseCase.existsByAgentIdAndStatusIn(agentId, pendingStatuses);
+        return ResponseEntity.ok(Map.of("hasPending", hasPending));
+    }
+
+    @GetMapping("/transactions/count-by-status")
+    public ResponseEntity<Map<String, Object>> countByAgentIdAndStatus(
+            @RequestParam UUID agentId,
+            @RequestParam TransactionStatus status) {
+        long count = transactionQueryUseCase.countByAgentIdAndStatus(agentId, status);
+        return ResponseEntity.ok(Map.of("count", count));
+    }
+
+    @GetMapping("/transactions/exists-by-status")
+    public ResponseEntity<Map<String, Object>> existsByAgentIdAndStatusIn(
+            @RequestParam UUID agentId,
+            @RequestParam List<TransactionStatus> statuses) {
+        boolean exists = transactionQueryUseCase.existsByAgentIdAndStatusIn(agentId, statuses);
+        return ResponseEntity.ok(Map.of("exists", exists));
+    }
+
+    @PostMapping("/balance-inquiry")
+    public ResponseEntity<Map<String, Object>> balanceInquiry(@Valid @RequestBody BalanceInquiryRequest request) {
+        try {
+            var result = customerBalanceInquiryUseCase.inquire(
+                new CustomerBalanceInquiryUseCase.CustomerInquiryCommand(
+                    request.encryptedCardData(),
+                    request.pinBlock()
+                )
+            );
+            return ResponseEntity.ok(Map.of(
+                "status", "SUCCESS",
+                "balance", result.balance(),
+                "currency", result.currency(),
+                "accountMasked", result.accountMasked()
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of(
+                "status", "FAILED",
+                "error", Map.of("code", "ERR_INVALID_CARD", "message", e.getMessage())
+            ));
+        }
     }
 }
