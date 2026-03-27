@@ -37,6 +37,7 @@ public final class ErrorCodes {
     public static final String ERR_FEE_COMPONENTS_MISMATCH = "ERR_BIZ_FEE_COMPONENTS_MISMATCH";
     public static final String ERR_AGENT_HAS_PENDING_TRANSACTIONS = "ERR_BIZ_AGENT_HAS_PENDING_TRANSACTIONS";
     public static final String ERR_DUPLICATE_AGENT = "ERR_BIZ_DUPLICATE_AGENT";
+    public static final String ERR_AGENT_NOT_FOUND = "ERR_BIZ_AGENT_NOT_FOUND";
 
     // External System Errors (ERR_EXT_xxx)
     public static final String ERR_SWITCH_DECLINED = "ERR_EXT_SWITCH_DECLINED";
