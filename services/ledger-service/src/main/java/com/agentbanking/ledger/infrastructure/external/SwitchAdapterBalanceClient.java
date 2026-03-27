@@ -7,7 +7,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 
 import java.math.BigDecimal;
 
-@FeignClient(name = "switch-adapter-service", url = "${switch-adapter-service.url}")
+@FeignClient(name = "switch-adapter-service", url = "${switch-adapter-service.url}", fallbackFactory = SwitchAdapterBalanceClientFallback.class)
 public interface SwitchAdapterBalanceClient {
 
     @PostMapping("/internal/balance-inquiry")

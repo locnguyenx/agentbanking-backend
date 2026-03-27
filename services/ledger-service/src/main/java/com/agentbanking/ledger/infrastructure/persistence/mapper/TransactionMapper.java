@@ -1,7 +1,7 @@
 package com.agentbanking.ledger.infrastructure.persistence.mapper;
 
+import com.agentbanking.common.transaction.TransactionStatus;
 import com.agentbanking.ledger.domain.model.TransactionRecord;
-import com.agentbanking.ledger.domain.model.TransactionStatus;
 import com.agentbanking.ledger.domain.model.TransactionType;
 import com.agentbanking.ledger.infrastructure.persistence.entity.TransactionEntity;
 

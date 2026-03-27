@@ -34,7 +34,7 @@ public class AgentEntity {
     @Column(name = "merchant_gps_lng", nullable = false, precision = 9, scale = 6)
     private java.math.BigDecimal merchantGpsLng;
 
-    @Column(name = "mykad_number", nullable = false)
+    @Column(name = "mykad_number", nullable = false, length = 255)
     private String mykadNumber;
 
     @Column(name = "phone_number", nullable = false, length = 15)

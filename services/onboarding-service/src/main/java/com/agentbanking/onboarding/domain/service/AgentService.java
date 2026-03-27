@@ -1,5 +1,6 @@
 package com.agentbanking.onboarding.domain.service;
 
+import com.agentbanking.common.exception.AgentException;
 import com.agentbanking.common.security.ErrorCodes;
 import com.agentbanking.onboarding.domain.model.AgentRecord;
 import com.agentbanking.onboarding.domain.model.AgentStatus;
@@ -23,7 +24,7 @@ public class AgentService {
     public AgentRecord createAgent(CreateAgentCommand command) {
         agentRepository.findByMykadNumber(command.mykadNumber())
             .ifPresent(existing -> {
-                throw new IllegalArgumentException(ErrorCodes.ERR_DUPLICATE_AGENT);
+                throw new AgentException(ErrorCodes.ERR_DUPLICATE_AGENT, "Agent with this MyKad number already exists");
             });
 
         LocalDateTime now = LocalDateTime.now();
@@ -46,7 +47,7 @@ public class AgentService {
 
     public AgentRecord updateAgent(UUID agentId, UpdateAgentCommand command) {
         AgentRecord existing = agentRepository.findById(agentId)
-            .orElseThrow(() -> new IllegalArgumentException(ErrorCodes.ERR_AGENT_NOT_FOUND));
+            .orElseThrow(() -> new AgentException(ErrorCodes.ERR_AGENT_NOT_FOUND, "Agent not found"));
 
         AgentRecord updated = new AgentRecord(
             existing.agentId(),
@@ -67,10 +68,10 @@ public class AgentService {
 
     public AgentRecord deactivateAgent(UUID agentId) {
         AgentRecord existing = agentRepository.findById(agentId)
-            .orElseThrow(() -> new IllegalArgumentException(ErrorCodes.ERR_AGENT_NOT_FOUND));
+            .orElseThrow(() -> new AgentException(ErrorCodes.ERR_AGENT_NOT_FOUND, "Agent not found"));
 
         if (agentRepository.hasPendingTransactions(agentId)) {
-            throw new IllegalArgumentException(ErrorCodes.ERR_AGENT_HAS_PENDING_TRANSACTIONS);
+            throw new AgentException(ErrorCodes.ERR_AGENT_HAS_PENDING_TRANSACTIONS, "Agent has pending transactions");
         }
 
         AgentRecord deactivated = new AgentRecord(

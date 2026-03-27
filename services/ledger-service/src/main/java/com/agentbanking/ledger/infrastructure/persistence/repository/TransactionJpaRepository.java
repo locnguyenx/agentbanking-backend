@@ -28,4 +28,8 @@ public interface TransactionJpaRepository extends JpaRepository<TransactionEntit
     
     @Query("SELECT t FROM TransactionEntity t ORDER BY t.createdAt DESC")
     List<TransactionEntity> findRecentTransactions();
+
+    long countByAgentIdAndStatus(UUID agentId, com.agentbanking.common.transaction.TransactionStatus status);
+
+    boolean existsByAgentIdAndStatusIn(UUID agentId, List<com.agentbanking.common.transaction.TransactionStatus> statuses);
 }

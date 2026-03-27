@@ -19,6 +19,14 @@ public class GlobalExceptionHandler {
         );
     }
 
+    @ExceptionHandler(AgentException.class)
+    public ResponseEntity<ErrorResponse> handleAgentException(AgentException e) {
+        log.error("Agent exception: {} - {}", e.getErrorCode(), e.getMessage());
+        return ResponseEntity.badRequest().body(
+            ErrorResponse.of(e.getErrorCode(), e.getMessage(), e.getActionCode())
+        );
+    }
+
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ErrorResponse> handleIllegalArgumentException(IllegalArgumentException e) {
         log.error("Illegal argument: {}", e.getMessage());

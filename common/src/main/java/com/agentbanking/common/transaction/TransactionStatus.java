@@ -1,4 +1,4 @@
-package com.agentbanking.ledger.domain.model;
+package com.agentbanking.common.transaction;
 
 public enum TransactionStatus {
     PENDING,

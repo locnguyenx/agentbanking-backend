@@ -1,5 +1,6 @@
 package com.agentbanking.ledger.infrastructure.persistence.repository;
 
+import com.agentbanking.common.transaction.TransactionStatus;
 import com.agentbanking.ledger.domain.model.TransactionRecord;
 import com.agentbanking.ledger.domain.port.out.TransactionRepository;
 import com.agentbanking.ledger.infrastructure.persistence.entity.TransactionEntity;
@@ -62,5 +63,15 @@ public class JpaTransactionRepository implements TransactionRepository {
     @Override
     public long countDistinctAgents() {
         return jpaRepository.countDistinctAgents();
+    }
+
+    @Override
+    public long countByAgentIdAndStatus(UUID agentId, TransactionStatus status) {
+        return jpaRepository.countByAgentIdAndStatus(agentId, status);
+    }
+
+    @Override
+    public boolean existsByAgentIdAndStatusIn(UUID agentId, List<TransactionStatus> statuses) {
+        return jpaRepository.existsByAgentIdAndStatusIn(agentId, statuses);
     }
 }

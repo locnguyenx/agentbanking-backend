@@ -4,6 +4,7 @@ import com.agentbanking.onboarding.domain.model.AgentRecord;
 import com.agentbanking.onboarding.domain.model.AgentStatus;
 import com.agentbanking.onboarding.domain.port.out.AgentRepository;
 import com.agentbanking.onboarding.infrastructure.persistence.entity.AgentEntity;
+import com.agentbanking.onboarding.infrastructure.persistence.mapper.AgentMapper;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Repository;
@@ -16,73 +17,45 @@ import java.util.UUID;
 public class AgentRepositoryImpl implements AgentRepository {
 
     private final AgentJpaRepository jpaRepository;
+    private final AgentMapper agentMapper;
+    private final TransactionQueryClient transactionQueryClient;
 
-    public AgentRepositoryImpl(AgentJpaRepository jpaRepository) {
+    public AgentRepositoryImpl(AgentJpaRepository jpaRepository, AgentMapper agentMapper, TransactionQueryClient transactionQueryClient) {
         this.jpaRepository = jpaRepository;
+        this.agentMapper = agentMapper;
+        this.transactionQueryClient = transactionQueryClient;
     }
 
     @Override
     public AgentRecord save(AgentRecord agent) {
-        AgentEntity entity = toEntity(agent);
+        AgentEntity entity = agentMapper.toEntity(agent);
         AgentEntity saved = jpaRepository.save(entity);
-        return toRecord(saved);
+        return agentMapper.toRecord(saved);
     }
 
     @Override
     public Optional<AgentRecord> findById(UUID agentId) {
-        return jpaRepository.findById(agentId).map(this::toRecord);
+        return jpaRepository.findById(agentId).map(agentMapper::toRecord);
     }
 
     @Override
     public Optional<AgentRecord> findByMykadNumber(String mykadNumber) {
-        return jpaRepository.findByMykadNumber(mykadNumber).map(this::toRecord);
+        return jpaRepository.findByMykadNumber(mykadNumber).map(agentMapper::toRecord);
     }
 
     @Override
     public List<AgentRecord> findAll(int page, int size) {
         Page<AgentEntity> result = jpaRepository.findAll(PageRequest.of(page, size));
-        return result.getContent().stream().map(this::toRecord).toList();
+        return result.getContent().stream().map(agentMapper::toRecord).toList();
     }
 
     @Override
     public boolean hasPendingTransactions(UUID agentId) {
-        return false;
+        return transactionQueryClient.hasPendingTransactions(agentId);
     }
 
     @Override
     public long countByStatus(AgentStatus status) {
         return jpaRepository.findByStatus(status, PageRequest.of(0, 1)).getTotalElements();
-    }
-
-    private AgentRecord toRecord(AgentEntity entity) {
-        return new AgentRecord(
-            entity.getAgentId(),
-            entity.getAgentCode(),
-            entity.getBusinessName(),
-            entity.getTier(),
-            entity.getStatus(),
-            entity.getMerchantGpsLat(),
-            entity.getMerchantGpsLng(),
-            entity.getMykadNumber(),
-            entity.getPhoneNumber(),
-            entity.getCreatedAt(),
-            entity.getUpdatedAt()
-        );
-    }
-
-    private AgentEntity toEntity(AgentRecord record) {
-        AgentEntity entity = new AgentEntity();
-        entity.setAgentId(record.agentId());
-        entity.setAgentCode(record.agentCode());
-        entity.setBusinessName(record.businessName());
-        entity.setTier(record.tier());
-        entity.setStatus(record.status());
-        entity.setMerchantGpsLat(record.merchantGpsLat());
-        entity.setMerchantGpsLng(record.merchantGpsLng());
-        entity.setMykadNumber(record.mykadNumber());
-        entity.setPhoneNumber(record.phoneNumber());
-        entity.setCreatedAt(record.createdAt());
-        entity.setUpdatedAt(record.updatedAt());
-        return entity;
     }
 }

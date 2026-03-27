@@ -1,5 +1,6 @@
 package com.agentbanking.ledger.domain.service;
 
+import com.agentbanking.common.transaction.TransactionStatus;
 import com.agentbanking.ledger.domain.model.*;
 import com.agentbanking.ledger.domain.port.out.*;
 import com.agentbanking.common.security.ErrorCodes;

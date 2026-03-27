@@ -1,6 +1,6 @@
 package com.agentbanking.ledger.infrastructure.persistence.entity;
 
-import com.agentbanking.ledger.domain.model.TransactionStatus;
+import com.agentbanking.common.transaction.TransactionStatus;
 import com.agentbanking.ledger.domain.model.TransactionType;
 import jakarta.persistence.*;
 import java.math.BigDecimal;

@@ -1,9 +1,11 @@
 package com.agentbanking.ledger.domain.usecase;
 
+import com.agentbanking.common.exception.LedgerException;
 import com.agentbanking.common.security.ErrorCodes;
 import com.agentbanking.ledger.application.usecase.CustomerBalanceInquiryUseCaseImpl;
 import com.agentbanking.ledger.domain.port.in.CustomerBalanceInquiryUseCase;
 import com.agentbanking.ledger.infrastructure.external.SwitchAdapterBalanceClient;
+import com.agentbanking.ledger.infrastructure.external.SwitchAdapterBalanceClientFallback;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -56,11 +58,11 @@ class CustomerBalanceInquiryUseCaseTest {
     @Test
     void shouldRejectInquiryWithInvalidCard() {
         when(switchAdapterBalanceClient.getBalance(any()))
-            .thenThrow(new com.agentbanking.common.exception.LedgerException(
+            .thenThrow(new LedgerException(
                 ErrorCodes.ERR_INVALID_CARD, "DECLINE"
             ));
 
-        assertThrows(com.agentbanking.common.exception.LedgerException.class, () ->
+        assertThrows(LedgerException.class, () ->
             useCase.inquire(
                 new CustomerBalanceInquiryUseCase.CustomerInquiryCommand(
                     "invalidCardData",
@@ -68,5 +70,18 @@ class CustomerBalanceInquiryUseCaseTest {
                 )
             )
         );
+    }
+
+    @Test
+    void shouldReturnGracefulErrorWhenSwitchAdapterUnavailable() {
+        SwitchAdapterBalanceClientFallback fallback = new SwitchAdapterBalanceClientFallback();
+        SwitchAdapterBalanceClient fallbackClient = fallback.create(new RuntimeException("Connection refused"));
+
+        LedgerException exception = assertThrows(LedgerException.class, () ->
+            fallbackClient.getBalance(new SwitchAdapterBalanceClient.SwitchBalanceRequest("data", "pin"))
+        );
+
+        assertEquals(ErrorCodes.ERR_SWITCH_UNAVAILABLE, exception.getErrorCode());
+        assertEquals("RETRY", exception.getActionCode());
     }
 }
