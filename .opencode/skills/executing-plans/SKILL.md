@@ -28,6 +28,8 @@ Plan progress MUST be persisted in the plan file itself so it survives session i
 2. After task completes and passes verification → mark `[DONE]`
 3. If blocked → mark `[BLOCKED]` with brief reason
 
+**Rules for plan update:** when updating the plan file, only mark the status, don't change/remove the task content
+
 **Resuming from a previous session:**
 1. Read the plan file
 2. Skip all `[DONE]` tasks

@@ -1,24 +1,40 @@
 plugins {
     id 'java-library'
+    id 'org.springframework.boot' apply false
+    id 'io.spring.dependency-management' apply false
 }
 
 group = 'com.agentbanking'
 version = '1.0.0-SNAPSHOT'
 
 java {
-    sourceCompatibility = '21'
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
 }
 
 repositories {
     mavenCentral()
 }
 
+dependencyManagement {
+    imports {
+        mavenBom 'org.springframework.boot:spring-boot-dependencies:3.2.5'
+    }
+}
+
 dependencies {
     api 'org.slf4j:slf4j-api'
     api 'org.springframework.boot:spring-boot-starter-web'
     api 'org.springframework.boot:spring-boot-starter-validation'
+    
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.10.0'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
 tasks.named('bootJar') {
     enabled = false
+}
+
+test {
+    useJUnitPlatform()
 }
