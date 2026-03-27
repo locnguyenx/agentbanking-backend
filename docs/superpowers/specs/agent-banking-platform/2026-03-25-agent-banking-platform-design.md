@@ -1,8 +1,8 @@
 # Technical Design Specification
 ## Agent Banking Platform (Malaysia)
 
-**Version:** 1.0
-**Date:** 2026-03-25
+**Version:** 1.1
+**Date:** 2026-03-26
 **Status:** Draft — Pending Review
 **BRD Reference:** `2026-03-25-agent-banking-platform-brd.md`
 **BDD Reference:** `2026-03-25-agent-banking-platform-bdd.md`
