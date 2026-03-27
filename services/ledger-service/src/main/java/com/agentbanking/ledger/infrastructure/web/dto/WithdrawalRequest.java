@@ -10,5 +10,7 @@ public record WithdrawalRequest(
     BigDecimal agentCommission,
     BigDecimal bankShare,
     String idempotencyKey,
-    String customerCardMasked
+    String customerCardMasked,
+    BigDecimal geofenceLat,
+    BigDecimal geofenceLng
 ) {}

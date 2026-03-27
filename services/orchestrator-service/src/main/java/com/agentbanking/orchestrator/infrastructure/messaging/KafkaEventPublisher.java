@@ -1,0 +1,34 @@
+package com.agentbanking.orchestrator.infrastructure.messaging;
+
+import com.agentbanking.orchestrator.domain.port.out.EventPublisherPort;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.stereotype.Component;
+
+import java.util.Map;
+
+@Component
+public class KafkaEventPublisher implements EventPublisherPort {
+
+    private static final Logger log = LoggerFactory.getLogger(KafkaEventPublisher.class);
+    private static final String TRANSACTION_TOPIC = "transaction-events";
+
+    private final KafkaTemplate<String, Object> kafkaTemplate;
+
+    public KafkaEventPublisher(KafkaTemplate<String, Object> kafkaTemplate) {
+        this.kafkaTemplate = kafkaTemplate;
+    }
+
+    @Override
+    public void publishTransactionCompleted(Map<String, Object> event) {
+        log.info("Publishing transaction completed event: {}", event.get("transactionId"));
+        kafkaTemplate.send(TRANSACTION_TOPIC, event);
+    }
+
+    @Override
+    public void publishTransactionFailed(Map<String, Object> event) {
+        log.info("Publishing transaction failed event: {}", event.get("transactionId"));
+        kafkaTemplate.send(TRANSACTION_TOPIC, event);
+    }
+}

@@ -8,5 +8,6 @@ public interface ProcessWithdrawalUseCase {
     Map<String, Object> processWithdrawal(UUID agentId, BigDecimal amount,
                                           BigDecimal customerFee, BigDecimal agentCommission,
                                           BigDecimal bankShare, String idempotencyKey,
-                                          String customerCardMasked);
+                                          String customerCardMasked,
+                                          BigDecimal geofenceLat, BigDecimal geofenceLng);
 }

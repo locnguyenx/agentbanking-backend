@@ -7,6 +7,9 @@ import com.agentbanking.ledger.infrastructure.persistence.mapper.TransactionMapp
 import com.agentbanking.ledger.infrastructure.persistence.repository.TransactionJpaRepository;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -69,5 +72,22 @@ public class TransactionRepositoryAdapter implements TransactionRepository {
     @Override
     public boolean existsByAgentIdAndStatusIn(UUID agentId, List<TransactionStatus> statuses) {
         return jpaRepository.existsByAgentIdAndStatusIn(agentId, statuses);
+    }
+
+    @Override
+    public List<UUID> findAgentIdsWithTransactionsOnDate(LocalDate date) {
+        LocalDateTime startOfDay = date.atStartOfDay();
+        LocalDateTime endOfDay = date.atTime(LocalTime.MAX);
+        return jpaRepository.findDistinctAgentIdsByCompletedAtBetween(startOfDay, endOfDay);
+    }
+
+    @Override
+    public List<TransactionRecord> findByAgentIdAndCompletedDate(UUID agentId, LocalDate date) {
+        LocalDateTime startOfDay = date.atStartOfDay();
+        LocalDateTime endOfDay = date.atTime(LocalTime.MAX);
+        return jpaRepository.findByAgentIdAndCompletedAtBetween(agentId, startOfDay, endOfDay)
+                .stream()
+                .map(TransactionMapper::toRecord)
+                .toList();
     }
 }

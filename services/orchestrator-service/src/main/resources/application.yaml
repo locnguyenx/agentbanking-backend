@@ -1,0 +1,56 @@
+server:
+  port: 8084
+
+spring:
+  application:
+    name: orchestrator-service
+  datasource:
+    url: ${ORCHESTRATOR_DB_URL:jdbc:postgresql://localhost:5432/orchestrator_db}
+    username: ${ORCHESTRATOR_DB_USER:postgres}
+    password: ${ORCHESTRATOR_DB_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+  flyway:
+    enabled: false
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+
+rules-service:
+  url: ${RULES_SERVICE_URL:http://localhost:8081}
+
+ledger-service:
+  url: ${LEDGER_SERVICE_URL:http://localhost:8082}
+
+switch-adapter-service:
+  url: ${SWITCH_ADAPTER_SERVICE_URL:http://localhost:8083}
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      switchAdapter:
+        registerHealthIndicator: true
+        slidingWindowSize: 10
+        minimumNumberOfCalls: 5
+        permittedNumberOfCallsInHalfOpenState: 3
+        automaticTransitionFromOpenToHalfOpenEnabled: true
+        waitDurationInOpenState: 5s
+        failureRateThreshold: 50
+        timeoutDurationSec: 25
+        eventConsumerBufferSize: 10
+
+logging:
+  level:
+    com.agentbanking.orchestrator: INFO

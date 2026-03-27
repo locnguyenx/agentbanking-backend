@@ -9,5 +9,7 @@ public record AgentFloatRecord(
     BigDecimal balance,
     BigDecimal reservedBalance,
     String currency,
-    Long version
+    Long version,
+    BigDecimal merchantGpsLat,
+    BigDecimal merchantGpsLng
 ) {}

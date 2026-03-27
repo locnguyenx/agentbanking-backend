@@ -14,7 +14,9 @@ public class AgentFloatMapper {
             entity.getBalance(),
             entity.getReservedBalance(),
             entity.getCurrency(),
-            entity.getVersion()
+            entity.getVersion(),
+            entity.getMerchantGpsLat(),
+            entity.getMerchantGpsLng()
         );
     }
     
@@ -27,6 +29,8 @@ public class AgentFloatMapper {
         entity.setReservedBalance(record.reservedBalance());
         entity.setCurrency(record.currency());
         entity.setVersion(record.version());
+        entity.setMerchantGpsLat(record.merchantGpsLat());
+        entity.setMerchantGpsLng(record.merchantGpsLng());
         return entity;
     }
     
@@ -34,5 +38,7 @@ public class AgentFloatMapper {
         entity.setBalance(record.balance());
         entity.setReservedBalance(record.reservedBalance());
         entity.setCurrency(record.currency());
+        entity.setMerchantGpsLat(record.merchantGpsLat());
+        entity.setMerchantGpsLng(record.merchantGpsLng());
     }
 }

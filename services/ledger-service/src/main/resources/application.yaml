@@ -26,3 +26,6 @@ spring:
 
 server:
   port: 8082
+
+rules-service:
+  url: http://localhost:8083

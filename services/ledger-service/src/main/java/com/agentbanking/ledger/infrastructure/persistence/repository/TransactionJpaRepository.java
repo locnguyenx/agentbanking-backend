@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -32,4 +33,9 @@ public interface TransactionJpaRepository extends JpaRepository<TransactionEntit
     long countByAgentIdAndStatus(UUID agentId, com.agentbanking.common.transaction.TransactionStatus status);
 
     boolean existsByAgentIdAndStatusIn(UUID agentId, List<com.agentbanking.common.transaction.TransactionStatus> statuses);
+
+    @Query("SELECT DISTINCT t.agentId FROM TransactionEntity t WHERE t.completedAt BETWEEN :start AND :end")
+    List<UUID> findDistinctAgentIdsByCompletedAtBetween(LocalDateTime start, LocalDateTime end);
+
+    List<TransactionEntity> findByAgentIdAndCompletedAtBetween(UUID agentId, LocalDateTime start, LocalDateTime end);
 }

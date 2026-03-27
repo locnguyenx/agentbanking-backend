@@ -56,7 +56,9 @@ class LedgerServiceTest {
             new BigDecimal("10000.00"),
             BigDecimal.ZERO,
             "MYR",
-            1L
+            1L,
+            null,
+            null
         );
     }
     
@@ -72,7 +74,9 @@ class LedgerServiceTest {
             new BigDecimal("5.00"),
             new BigDecimal("2.00"),
             "idem-key-123",
-            "411111******1111"
+            "411111******1111",
+            new BigDecimal("3.1390"),
+            new BigDecimal("101.6869")
         );
         
         assertEquals("COMPLETED", result.get("status"));
@@ -98,7 +102,9 @@ class LedgerServiceTest {
                 new BigDecimal("5.00"),
                 new BigDecimal("2.00"),
                 "idem-key-123",
-                "411111******1111"
+                "411111******1111",
+                new BigDecimal("3.1390"),
+                new BigDecimal("101.6869")
             )
         );
     }
@@ -116,7 +122,9 @@ class LedgerServiceTest {
                 new BigDecimal("5.00"),
                 new BigDecimal("2.00"),
                 "idem-key-123",
-                "411111******1111"
+                "411111******1111",
+                new BigDecimal("3.1390"),
+                new BigDecimal("101.6869")
             )
         );
     }
@@ -140,7 +148,9 @@ class LedgerServiceTest {
             new BigDecimal("5.00"),
             new BigDecimal("2.00"),
             "idem-key-123",
-            "411111******1111"
+            "411111******1111",
+            new BigDecimal("3.1390"),
+            new BigDecimal("101.6869")
         );
         
         assertEquals("COMPLETED", result.get("status"));
@@ -219,6 +229,99 @@ class LedgerServiceTest {
         
         assertThrows(IllegalArgumentException.class, () -> 
             ledgerService.getBalance(agentId)
+        );
+    }
+    
+    @Test
+    void shouldRejectWithdrawalOutsideGeofence() {
+        agentFloat = new AgentFloatRecord(
+            UUID.randomUUID(),
+            agentId,
+            new BigDecimal("10000.00"),
+            BigDecimal.ZERO,
+            "MYR",
+            1L,
+            new BigDecimal("3.1390"),
+            new BigDecimal("101.6869")
+        );
+        
+        when(idempotencyCache.exists(anyString())).thenReturn(false);
+        when(agentFloatRepository.findByIdWithLock(agentId)).thenReturn(agentFloat);
+        
+        assertThrows(com.agentbanking.common.exception.LedgerException.class, () ->
+            ledgerService.processWithdrawal(
+                agentId,
+                new BigDecimal("1000.00"),
+                new BigDecimal("10.00"),
+                new BigDecimal("5.00"),
+                new BigDecimal("2.00"),
+                "idem-key-geofence-1",
+                "411111******1111",
+                new BigDecimal("3.2000"),
+                new BigDecimal("101.7000")
+            )
+        );
+    }
+    
+    @Test
+    void shouldAcceptWithdrawalWithinGeofence() {
+        agentFloat = new AgentFloatRecord(
+            UUID.randomUUID(),
+            agentId,
+            new BigDecimal("10000.00"),
+            BigDecimal.ZERO,
+            "MYR",
+            1L,
+            new BigDecimal("3.1390"),
+            new BigDecimal("101.6869")
+        );
+        
+        when(idempotencyCache.exists(anyString())).thenReturn(false);
+        when(agentFloatRepository.findByIdWithLock(agentId)).thenReturn(agentFloat);
+        
+        Map<String, Object> result = ledgerService.processWithdrawal(
+            agentId,
+            new BigDecimal("1000.00"),
+            new BigDecimal("10.00"),
+            new BigDecimal("5.00"),
+            new BigDecimal("2.00"),
+            "idem-key-geofence-2",
+            "411111******1111",
+            new BigDecimal("3.1395"),
+            new BigDecimal("101.6870")
+        );
+        
+        assertEquals("COMPLETED", result.get("status"));
+    }
+    
+    @Test
+    void shouldRejectWhenGpsUnavailable() {
+        agentFloat = new AgentFloatRecord(
+            UUID.randomUUID(),
+            agentId,
+            new BigDecimal("10000.00"),
+            BigDecimal.ZERO,
+            "MYR",
+            1L,
+            new BigDecimal("3.1390"),
+            new BigDecimal("101.6869")
+        );
+        
+        when(idempotencyCache.exists(anyString())).thenReturn(false);
+        when(agentFloatRepository.findByIdWithLock(agentId)).thenReturn(agentFloat);
+        
+        assertThrows(com.agentbanking.common.exception.LedgerException.class, () ->
+            ledgerService.processWithdrawal(
+                agentId,
+                new BigDecimal("1000.00"),
+                new BigDecimal("10.00"),
+                new BigDecimal("5.00"),
+                new BigDecimal("2.00"),
+                "idem-key-geofence-3",
+                "411111******1111",
+                null,
+                null
+            )
         );
     }
 }

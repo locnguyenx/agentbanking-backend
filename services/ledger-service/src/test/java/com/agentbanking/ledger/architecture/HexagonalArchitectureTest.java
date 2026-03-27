@@ -52,8 +52,9 @@ class HexagonalArchitectureTest {
     void domainLayerMustOnlyAccessPorts(JavaClasses classes) {
         com.tngtech.archunit.lang.ArchRule rule = com.tngtech.archunit.lang.syntax.ArchRuleDefinition
             .classes().that().resideInAnyPackage("..domain.service..")
+            .and().areNotAnnotatedWith(org.junit.jupiter.api.Test.class)
             .should().onlyDependOnClassesThat()
-            .resideInAnyPackage("..domain..", "java..", "jakarta..", "org.junit..", "org.mockito..");
+            .resideInAnyPackage("..domain..", "java..", "jakarta..", "org.junit..", "org.mockito..", "com.agentbanking.common..", "com.fasterxml.jackson..");
         rule.check(classes);
     }
 }

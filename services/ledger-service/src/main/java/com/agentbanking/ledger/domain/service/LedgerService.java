@@ -5,6 +5,7 @@ import com.agentbanking.ledger.domain.model.*;
 import com.agentbanking.ledger.domain.port.out.*;
 import com.agentbanking.common.security.ErrorCodes;
 import com.agentbanking.common.exception.LedgerException;
+import com.agentbanking.common.geofence.GeofenceChecker;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -40,7 +41,8 @@ public class LedgerService {
     public Map<String, Object> processWithdrawal(UUID agentId, BigDecimal amount, 
                                                   BigDecimal customerFee, BigDecimal agentCommission,
                                                   BigDecimal bankShare, String idempotencyKey,
-                                                  String customerCardMasked) {
+                                                  String customerCardMasked,
+                                                  BigDecimal geofenceLat, BigDecimal geofenceLng) {
         if (idempotencyKey != null && idempotencyCache.exists(idempotencyKey)) {
             try {
                 return idempotencyCache.get(idempotencyKey, Map.class);
@@ -63,6 +65,20 @@ public class LedgerService {
                 "Only MYR currency is supported, got: " + agentFloat.currency());
         }
         
+        if (geofenceLat == null || geofenceLng == null) {
+            throw new LedgerException(ErrorCodes.ERR_GPS_UNAVAILABLE, "DECLINE", 
+                "GPS coordinates not provided");
+        }
+        
+        if (agentFloat.merchantGpsLat() != null && agentFloat.merchantGpsLng() != null) {
+            if (!GeofenceChecker.isWithinGeofence(
+                    agentFloat.merchantGpsLat(), agentFloat.merchantGpsLng(),
+                    geofenceLat, geofenceLng, 100.0)) {
+                throw new LedgerException(ErrorCodes.ERR_GEOFENCE_VIOLATION, "DECLINE", 
+                    "Transaction outside merchant location");
+            }
+        }
+        
         if (agentFloat.balance().compareTo(amount) < 0) {
             throw new IllegalStateException(ErrorCodes.ERR_INSUFFICIENT_FLOAT);
         }
@@ -74,7 +90,9 @@ public class LedgerService {
             newBalance,
             agentFloat.reservedBalance(),
             agentFloat.currency(),
-            agentFloat.version()
+            agentFloat.version(),
+            agentFloat.merchantGpsLat(),
+            agentFloat.merchantGpsLng()
         );
         agentFloatRepository.save(updatedFloat);
         
@@ -152,7 +170,9 @@ public class LedgerService {
             newBalance,
             agentFloat.reservedBalance(),
             agentFloat.currency(),
-            agentFloat.version()
+            agentFloat.version(),
+            agentFloat.merchantGpsLat(),
+            agentFloat.merchantGpsLng()
         );
         agentFloatRepository.save(updatedFloat);
         

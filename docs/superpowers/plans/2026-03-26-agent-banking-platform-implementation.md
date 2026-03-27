@@ -791,7 +791,7 @@ public class TransactionOrchestrator {
 
 ## Phase 4: Audit Logging
 
-### Task 4.1: Implement Audit Log Entity and Service
+### Task 4.1: Implement Audit Log Entity and Service [DONE] ✓
 
 **BDD Scenarios:** BDD-BO05, BDD-BO05-EC-01
 **BRD Requirements:** US-BO05, FR-13.5, NFR-4.3
@@ -832,7 +832,7 @@ public record AuditLogRecord(
 
 ## Phase 5: EOD Settlement
 
-### Task 5.1: Implement EOD Net Settlement Batch Job
+### Task 5.1: Implement EOD Net Settlement Batch Job [DONE] ✓
 
 **BDD Scenarios:** BDD-SM01 through BDD-SM02-EC-01
 **BRD Requirements:** US-SM01, US-SM02, FR-16.1 through FR-16.5
@@ -848,7 +848,13 @@ public record AuditLogRecord(
 - Create: `services/ledger-service/src/main/java/.../application/job/EodSettlementJob.java`
 - Create: Flyway migration for `settlement_summary` table
 
-- [ ] **Step 1: Create SettlementSummary domain model and entity**
+- [x] **Step 1: Create SettlementSummary domain model and entity**
+- [x] **Step 2: Write failing test for settlement calculation (BDD-SM01)**
+- [x] **Step 3: Implement settlement calculation service**
+- [x] **Step 4: Implement @Scheduled job at 23:59:59 MYT**
+- [x] **Step 5: Implement CBS file generation (CSV)**
+- [x] **Step 6: Run tests**
+- [x] **Step 7: Commit**
 
 - [ ] **Step 2: Write failing test for settlement calculation (BDD-SM01)**
 
@@ -879,7 +885,7 @@ void shouldCalculatePositiveNetSettlement() {
 
 ## Phase 6: Integration Tests
 
-### Task 6.1: Add Testcontainers Integration Tests
+### Task 6.1: Add Testcontainers Integration Tests [DONE] ✓
 
 **BDD Scenarios:** All — integration tests validate end-to-end flows
 **BRD Requirements:** All
@@ -891,7 +897,10 @@ void shouldCalculatePositiveNetSettlement() {
 - Create: `services/rules-service/src/test/java/.../integration/RulesIntegrationTest.java`
 - Create: `docker-compose.test.yaml`
 
-- [ ] **Step 1: Add Testcontainers dependency**
+- [x] **Step 1: Add Testcontainers dependency**
+- [x] **Step 2: Create integration test for withdrawal flow**
+- [x] **Step 3: Run integration tests**
+- [x] **Step 4: Commit**
 
 ```groovy
 testImplementation 'org.testcontainers:postgresql:1.19.3'

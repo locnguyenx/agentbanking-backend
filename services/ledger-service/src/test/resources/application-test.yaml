@@ -1,0 +1,16 @@
+spring:
+  kafka:
+    bootstrap-servers: localhost:0
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.kafka.KafkaAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
+
+rules-service:
+  url: http://localhost:9999
+
+switch-adapter-service:
+  url: http://localhost:9998

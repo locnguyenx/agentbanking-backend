@@ -23,6 +23,12 @@ public class AgentFloatEntity {
     @Column(name = "currency")
     private String currency;
     
+    @Column(name = "merchant_gps_lat")
+    private BigDecimal merchantGpsLat;
+    
+    @Column(name = "merchant_gps_lng")
+    private BigDecimal merchantGpsLng;
+    
     @Version
     @Column(name = "version")
     private Long version;
@@ -40,6 +46,10 @@ public class AgentFloatEntity {
     public void setReservedBalance(BigDecimal reservedBalance) { this.reservedBalance = reservedBalance; }
     public String getCurrency() { return currency; }
     public void setCurrency(String currency) { this.currency = currency; }
+    public BigDecimal getMerchantGpsLat() { return merchantGpsLat; }
+    public void setMerchantGpsLat(BigDecimal merchantGpsLat) { this.merchantGpsLat = merchantGpsLat; }
+    public BigDecimal getMerchantGpsLng() { return merchantGpsLng; }
+    public void setMerchantGpsLng(BigDecimal merchantGpsLng) { this.merchantGpsLng = merchantGpsLng; }
     public Long getVersion() { return version; }
     public void setVersion(Long version) { this.version = version; }
     public java.time.LocalDateTime getUpdatedAt() { return updatedAt; }

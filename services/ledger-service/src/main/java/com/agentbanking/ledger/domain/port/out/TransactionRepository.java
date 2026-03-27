@@ -4,6 +4,7 @@ import com.agentbanking.ledger.domain.model.TransactionRecord;
 import com.agentbanking.common.transaction.TransactionStatus;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
@@ -17,4 +18,6 @@ public interface TransactionRepository {
     long countDistinctAgents();
     long countByAgentIdAndStatus(UUID agentId, TransactionStatus status);
     boolean existsByAgentIdAndStatusIn(UUID agentId, List<TransactionStatus> statuses);
+    List<UUID> findAgentIdsWithTransactionsOnDate(LocalDate date);
+    List<TransactionRecord> findByAgentIdAndCompletedDate(UUID agentId, LocalDate date);
 }

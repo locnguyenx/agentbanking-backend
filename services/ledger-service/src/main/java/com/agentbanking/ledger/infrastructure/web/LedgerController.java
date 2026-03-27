@@ -54,7 +54,9 @@ public class LedgerController {
                 request.agentCommission(),
                 request.bankShare(),
                 request.idempotencyKey(),
-                request.customerCardMasked()
+                request.customerCardMasked(),
+                request.geofenceLat(),
+                request.geofenceLng()
             );
 
             result.put("balance", getBalanceUseCase.getBalance(request.agentId()));
