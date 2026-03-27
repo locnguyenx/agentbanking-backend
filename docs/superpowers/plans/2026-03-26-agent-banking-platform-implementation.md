@@ -15,27 +15,15 @@
 **BDD Scenarios:** All — architecture compliance enables all scenarios
 **BRD Requirements:** C-8 (Hexagonal architecture per service), AGENTS.md ArchUnit enforcement
 
-### Task 0.1: Fix Rules Service Hexagonal Architecture
+### Task 0.1: Fix Rules Service Hexagonal Architecture [DONE]
 
-**BDD Scenarios:** BDD-R01 through BDD-R04 (all Rules scenarios)
-**BRD Requirements:** US-R01, US-R02, US-R03, US-R04, C-8
-
-**User-Facing:** NO
-
-**Files:**
-- Create: `services/rules-service/src/main/java/.../domain/port/in/FeeQueryUseCase.java`
-- Create: `services/rules-service/src/main/java/.../domain/port/in/VelocityCheckUseCase.java`
-- Create: `services/rules-service/src/main/java/.../domain/port/in/LimitEnforcementUseCase.java`
-- Create: `services/rules-service/src/main/java/.../application/usecase/FeeQueryUseCaseImpl.java`
-- Create: `services/rules-service/src/main/java/.../application/usecase/VelocityCheckUseCaseImpl.java`
-- Create: `services/rules-service/src/main/java/.../application/usecase/LimitEnforcementUseCaseImpl.java`
-- Modify: `services/rules-service/src/main/java/.../domain/service/FeeCalculationService.java` — remove `@Service`, `@Transactional`
-- Modify: `services/rules-service/src/main/java/.../domain/service/VelocityCheckService.java` — remove `@Service`, `@Transactional`
-- Modify: `services/rules-service/src/main/java/.../domain/service/LimitEnforcementService.java` — remove `@Service`, `@Transactional`
-- Modify: `services/rules-service/src/main/java/.../infrastructure/web/RulesController.java` — inject use cases, not domain services
-- Create: `services/rules-service/src/main/java/.../config/RulesServiceConfig.java`
-
-- [ ] **Step 1: Create inbound port interfaces (use case interfaces)**
+- [x] Step 1: Create inbound port interfaces (use case interfaces)
+- [x] Step 2: Create application-layer use case implementations
+- [x] Step 3: Remove framework annotations from domain services
+- [x] Step 4: Update controller to inject use cases
+- [x] Step 5: Run ArchUnit test to verify domain layer is clean
+- [x] Step 6: Run all Rules Service tests
+- [x] Step 7: Commit
 
 ```java
 // domain/port/in/FeeQueryUseCase.java
@@ -162,23 +150,14 @@ git commit -m "refactor(rules): fix hexagonal architecture — add inbound ports
 
 ---
 
-### Task 0.2: Fix Ledger Service Hexagonal Architecture
+### Task 0.2: Fix Ledger Service Hexagonal Architecture [DONE]
 
-**BDD Scenarios:** BDD-L01 through BDD-L04, BDD-W01, BDD-D01
-**BRD Requirements:** US-L01 through US-L04, US-L05, US-L07, C-8
-
-**User-Facing:** NO
-
-**Files:**
-- Create: `services/ledger-service/src/main/java/.../domain/port/in/ProcessWithdrawalUseCase.java`
-- Create: `services/ledger-service/src/main/java/.../domain/port/in/ProcessDepositUseCase.java`
-- Create: `services/ledger-service/src/main/java/.../domain/port/in/GetBalanceUseCase.java`
-- Create: `services/ledger-service/src/main/java/.../domain/port/in/ReverseTransactionUseCase.java`
-- Create: `services/ledger-service/src/main/java/.../application/usecase/`
-- Modify: `services/ledger-service/src/main/java/.../domain/service/LedgerService.java` — remove framework annotations
-- Modify: `services/ledger-service/src/main/java/.../infrastructure/web/LedgerController.java` — inject use cases, remove direct JPA injection
-
-- [ ] **Step 1: Create inbound port interfaces**
+- [x] Step 1: Create inbound port interfaces
+- [x] Step 2: Create application-layer use case implementations
+- [x] Step 3: Remove framework annotations from LedgerService.java
+- [x] Step 4: Fix LedgerController — remove direct JPA injection
+- [x] Step 5: Run tests and verify
+- [x] Step 6: Commit
 
 ```java
 // domain/port/in/ProcessWithdrawalUseCase.java
@@ -223,20 +202,16 @@ Expected: PASS
 
 ---
 
-### Task 0.3: Fix Onboarding, Switch Adapter, Biller Service Hexagonal Architecture
+### Task 0.3: Fix Onboarding, Switch Adapter, Biller Service Hexagonal Architecture [DONE]
 
-**BDD Scenarios:** BDD-O01 through BDD-O05, BDD-V01, BDD-B01 through BDD-B04, BDD-T01 through BDD-T03
-**BRD Requirements:** US-O01 through US-O05, US-V01, US-B01 through US-B05, US-T01 through US-T03, C-8
-
-**User-Facing:** NO
-
-**Files:**
-- Create inbound ports for each service
-- Create application-layer use case implementations for each service
-- Remove framework annotations from domain services in all 3 services
-- Update controllers to inject use cases
-
-- [ ] **Step 1: Onboarding Service — create inbound ports**
+- [x] Step 1: Onboarding Service — create inbound ports
+- [x] Step 2: Switch Adapter — create inbound ports
+- [x] Step 3: Biller Service — create inbound ports
+- [x] Step 4: Create application-layer use case implementations for all 3 services
+- [x] Step 5: Remove framework annotations from domain services
+- [x] Step 6: Update controllers
+- [x] Step 7: Run all tests
+- [x] Step 8: Commit
 
 ```java
 // domain/port/in/VerifyMyKadUseCase.java
@@ -301,239 +276,55 @@ Expected: PASS
 
 ---
 
-### Task 0.4: Rewrite ArchUnit Tests to Use Proper API
+### Task 0.4: Rewrite ArchUnit Tests to Use Proper API [DONE]
 
-**BDD Scenarios:** N/A (architecture validation)
-**BRD Requirements:** C-8, AGENTS.md ArchUnit enforcement
-
-**User-Facing:** NO
-
-**Files:**
-- Modify: All 5 `HexagonalArchitectureTest.java` files
-- Add to each `build.gradle`: `testImplementation 'com.tngtech.archunit:archunit-junit5:1.3.0'`
-
-- [ ] **Step 1: Add ArchUnit dependency to all service build.gradle files**
-
-```groovy
-// services/rules-service/build.gradle (and all other services)
-testImplementation 'com.tngtech.archunit:archunit-junit5:1.3.0'
-testImplementation 'com.tngtech.archunit:archunit-junit5-api:1.3.0'
-```
-
-- [ ] **Step 2: Rewrite HexagonalArchitectureTest using proper ArchUnit API**
-
-```java
-package com.agentbanking.rules.architecture;
-
-import com.tngtech.archunit.junit.AnalyzeClasses;
-import com.tngtech.archunit.junit.ArchTest;
-import com.tngtech.archunit.core.importer.ClassFileImporter;
-import com.tngtech.archunit.lang.ArchRule;
-import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes;
-import static com.tngtech.archunit.library.Architectures.layeredArchitecture;
-
-@AnalyzeClasses(packages = "com.agentbanking.rules")
-class HexagonalArchitectureTest {
-
-    @ArchTest
-    void domainLayerMustNotContainJpaAnnotations(Classes classes) {
-        classes().that().resideInAnyPackage("..domain..")
-            .should().notBeAnnotatedWith(jakarta.persistence.Entity.class)
-            .should().notBeAnnotatedWith(jakarta.persistence.Table.class)
-            .should().notBeAnnotatedWith(jakarta.persistence.Column.class)
-            .should().notBeAnnotatedWith(jakarta.persistence.Id.class);
-    }
-
-    @ArchTest
-    void domainLayerMustNotContainSpringAnnotations(Classes classes) {
-        classes().that().resideInAnyPackage("..domain..")
-            .should().notBeAnnotatedWith(org.springframework.stereotype.Service.class)
-            .should().notBeAnnotatedWith(org.springframework.stereotype.Repository.class)
-            .should().notBeAnnotatedWith(org.springframework.stereotype.Component.class)
-            .should().notBeAnnotatedWith(org.springframework.transaction.annotation.Transactional.class);
-    }
-
-    @ArchTest
-    void domainLayerMustNotUseEntityManager(Classes classes) {
-        classes().that().resideInAnyPackage("..domain..")
-            .should().notDependOnClassesThat()
-            .areAssignableFrom(jakarta.persistence.EntityManager.class);
-    }
-}
-```
-
-- [ ] **Step 3: Copy to all 5 services with appropriate package names**
-
-- [ ] **Step 4: Run all ArchUnit tests**
-
-Run: `./gradlew test --tests "*HexagonalArchitectureTest*"`
-Expected: ALL PASS
-
-- [ ] **Step 5: Commit**
+- [x] Step 1: Add ArchUnit dependency to all service build.gradle files
+- [x] Step 2: Rewrite HexagonalArchitectureTest using proper ArchUnit API
+- [x] Step 3: Copy to all 5 services with appropriate package names
+- [x] Step 4: Run all ArchUnit tests
+- [x] Step 5: Commit
 
 ---
 
 ## Phase 1: Infrastructure Configuration (Redis, Kafka, Feign)
 
-**BDD Scenarios:** BDD-L04-EC-02 (idempotency), BDD-W01-SMS (SMS notification), all commission scenarios
-**BRD Requirements:** FR-2.4 (idempotency), FR-18.2 (Store & Forward), C-4, C-5, C-9
+### Task 1.1: Create Spring Configuration Classes for All Services [DONE]
 
-### Task 1.1: Create Spring Configuration Classes for All Services
-
-**BDD Scenarios:** BDD-L04-EC-02 (idempotency caching)
-**BRD Requirements:** FR-2.4, C-4, C-5, C-9
-
-**User-Facing:** NO
-
-**Files:**
-- Create: `services/ledger-service/src/main/java/.../config/RedisConfig.java`
-- Create: `services/ledger-service/src/main/java/.../config/KafkaConfig.java`
-- Create: `services/ledger-service/src/main/java/.../config/FeignClientConfig.java`
-- Create: `services/rules-service/src/main/java/.../config/RedisConfig.java`
-- Create: `services/switch-adapter-service/src/main/java/.../config/KafkaConfig.java`
-- Create: `services/biller-service/src/main/java/.../config/FeignClientConfig.java`
-
-- [ ] **Step 1: Create Redis configuration for Ledger Service**
-
-```java
-// config/RedisConfig.java
-@Configuration
-@EnableRedisRepositories
-public class RedisConfig {
-    @Bean
-    public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory factory) {
-        RedisTemplate<String, Object> template = new RedisTemplate<>();
-        template.setConnectionFactory(factory);
-        template.setKeySerializer(new StringRedisSerializer());
-        template.setValueSerializer(new GenericJackson2JsonRedisSerializer());
-        return template;
-    }
-}
-```
-
-- [ ] **Step 2: Create Kafka configuration for Ledger Service**
-
-```java
-// config/KafkaConfig.java
-@Configuration
-public class KafkaConfig {
-    @Bean
-    public NewTopic transactionCompletedTopic() {
-        return TopicBuilder.name("transaction-completed")
-            .partitions(3)
-            .replicas(1)
-            .build();
-    }
-    
-    @Bean
-    public NewTopic reversalInitiatedTopic() {
-        return TopicBuilder.name("reversal-initiated")
-            .partitions(3)
-            .replicas(1)
-            .build();
-    }
-}
-```
-
-- [ ] **Step 3: Create Feign client configuration with Resilience4j**
-
-```java
-// config/FeignClientConfig.java
-@Configuration
-public class FeignClientConfig {
-    @Bean
-    public CircuitBreakerFactory circuitBreakerFactory() {
-        return new Resilience4JCircuitBreakerFactory();
-    }
-}
-```
-
-- [ ] **Step 4: Verify configuration loads**
-
-Run: `./gradlew :ledger-service:bootRun`
-Expected: Service starts without configuration errors
-
-- [ ] **Step 5: Commit**
+- [x] Step 1: Create Redis configuration for Ledger Service
+- [x] Step 2: Create Kafka configuration for Ledger Service
+- [x] Step 3: Create Feign client configuration with Resilience4j
+- [x] Step 4: Verify configuration loads
+- [x] Step 5: Commit
 
 ---
 
-### Task 1.2: Create Kafka Producer/Consumer Infrastructure
+### Task 1.2: Create Kafka Producer/Consumer Infrastructure [DONE]
 
-**BDD Scenarios:** BDD-W01-SMS (SMS notification), BDD-L02 (journal entries), BDD-EFM01 (EFM events)
-**BRD Requirements:** FR-2.2, C-5
-
-**User-Facing:** NO
-
-**Files:**
-- Create: `services/ledger-service/src/main/java/.../infrastructure/messaging/TransactionEventPublisher.java`
-- Create: `services/ledger-service/src/main/java/.../infrastructure/messaging/TransactionEvent.java`
-- Create: `services/ledger-service/src/main/java/.../infrastructure/messaging/ReversalEventPublisher.java`
-- Create: `services/ledger-service/src/main/java/.../infrastructure/messaging/ReversalEvent.java`
-
-- [ ] **Step 1: Create transaction event record**
-
-```java
-public record TransactionEvent(
-    String transactionId,
-    String transactionType,
-    BigDecimal amount,
-    String agentId,
-    String status,
-    String timestamp
-) {}
-```
-
-- [ ] **Step 2: Create Kafka producer**
-
-```java
-@Component
-public class TransactionEventPublisher {
-    private final KafkaTemplate<String, TransactionEvent> kafkaTemplate;
-    
-    public void publishCompleted(TransactionEvent event) {
-        kafkaTemplate.send("transaction-completed", event.transactionId(), event);
-    }
-}
-```
-
-- [ ] **Step 3: Wire publisher into use case implementation**
-
-In `ProcessWithdrawalUseCaseImpl`, after successful commit, call `transactionEventPublisher.publishCompleted(...)`.
-
-- [ ] **Step 4: Run tests**
-
-- [ ] **Step 5: Commit**
+- [x] Step 1: Create transaction event record
+- [x] Step 2: Create Kafka producer
+- [x] Step 3: Wire publisher into use case implementation
+- [x] Step 4: Run tests
+- [x] Step 5: Commit**
 
 ---
 
 ## Phase 2: Missing Core Features
 
-### Task 2.1: Implement Agent Management (CRUD)
+### Task 2.1: Implement Agent Management (CRUD) [DONE]
 
-**BDD Scenarios:** BDD-BO01, BDD-BO01-EC-01, BDD-BO01-EC-02, BDD-BO01-EC-03
-**BRD Requirements:** US-BO01, FR-13.1
-
-**User-Facing:** NO
-
-**Files:**
-- Create: `services/onboarding-service/src/main/java/.../domain/model/AgentRecord.java`
-- Create: `services/onboarding-service/src/main/java/.../domain/model/AgentStatus.java`
-- Create: `services/onboarding-service/src/main/java/.../domain/model/AgentTier.java`
-- Create: `services/onboarding-service/src/main/java/.../domain/port/in/CreateAgentUseCase.java`
-- Create: `services/onboarding-service/src/main/java/.../domain/port/in/UpdateAgentUseCase.java`
-- Create: `services/onboarding-service/src/main/java/.../domain/port/in/DeactivateAgentUseCase.java`
-- Create: `services/onboarding-service/src/main/java/.../domain/port/in/ListAgentsUseCase.java`
-- Create: `services/onboarding-service/src/main/java/.../domain/port/out/AgentRepository.java`
-- Create: `services/onboarding-service/src/main/java/.../domain/service/AgentService.java`
-- Create: `services/onboarding-service/src/main/java/.../infrastructure/persistence/entity/AgentEntity.java`
-- Create: `services/onboarding-service/src/main/java/.../infrastructure/persistence/repository/AgentJpaRepository.java`
-- Create: `services/onboarding-service/src/main/java/.../infrastructure/persistence/repository/AgentRepositoryImpl.java`
-- Create: `services/onboarding-service/src/main/java/.../infrastructure/persistence/mapper/AgentMapper.java`
-- Modify: `services/onboarding-service/src/main/java/.../infrastructure/web/OnboardingController.java`
-- Create: `services/onboarding-service/src/test/java/.../domain/service/AgentServiceTest.java`
-- Create: Flyway migration: `services/onboarding-service/src/main/resources/db/migration/V3__create_agent_table.sql`
-
-- [ ] **Step 1: Write failing test for agent creation (BDD-BO01)**
+- [x] Step 1: Write failing test for agent creation (BDD-BO01)
+- [x] Step 2: Run test to verify it fails
+- [x] Step 3: Create domain model, ports, service
+- [x] Step 4: Create Flyway migration
+- [x] Step 5: Create entity, JPA repo, mapper, repository impl
+- [x] Step 6: Update controller with agent CRUD endpoints
+- [x] Step 7: Run test to verify it passes
+- [x] Step 8: Write edge case test (duplicate MyKad - BDD-BO01-EC-01)
+- [x] Step 9: Implement duplicate check
+- [x] Step 10: Write edge case test (deactivate with pending - BDD-BO01-EC-02)
+- [x] Step 11: Implement pending transaction check
+- [x] Step 12: Run all tests
+- [x] Step 13: Commit
 
 ```java
 // AgentServiceTest.java
@@ -650,19 +441,13 @@ void shouldRejectDuplicateAgentCreation() {
 
 ---
 
-### Task 2.2: Implement Customer Balance Inquiry
+### Task 2.2: Implement Customer Balance Inquiry [DONE]
 
-**BDD Scenarios:** BDD-L04, BDD-L04-EC-01
-**BRD Requirements:** US-L04, FR-5.1
-
-**User-Facing:** NO
-
-**Files:**
-- Create: `services/ledger-service/src/main/java/.../domain/port/in/CustomerBalanceInquiryUseCase.java`
-- Create: `services/ledger-service/src/main/java/.../infrastructure/external/ExternalSwitchAdapter.java`
-- Modify: `services/ledger-service/src/main/java/.../infrastructure/web/LedgerController.java` — add POST /balance-inquiry endpoint
-
-- [ ] **Step 1: Write failing test for balance inquiry (BDD-L04)**
+- [x] Step 1: Write failing test for balance inquiry (BDD-L04)
+- [x] Step 2: Create inbound port
+- [x] Step 3: Implement — call Switch Adapter to get customer balance from card network
+- [x] Step 4: Run tests
+- [x] Step 5: Commit
 
 - [ ] **Step 2: Create inbound port**
 
@@ -683,18 +468,23 @@ public interface CustomerBalanceInquiryUseCase {
 
 ---
 
-### Task 2.3: Integrate Geofence Validation into Transaction Flow
+### Task 2.3: Integrate Geofence Validation into Transaction Flow [PENDING]
 
-**BDD Scenarios:** BDD-W01-EC-05, BDD-W01-EC-06
-**BRD Requirements:** NFR-4.2, FR-3.3
+- [ ] Step 1: Write failing test for geofence validation (BDD-W01-EC-05)
+- [ ] Step 2: Wire GeofenceChecker from common module into LedgerService
+- [ ] Step 3: Run test
+- [ ] Step 4: Write GPS unavailable test (BDD-W01-EC-06)
+- [ ] Step 5: Commit
 
-**User-Facing:** NO
+---
 
-**Files:**
-- Modify: `services/ledger-service/src/main/java/.../domain/service/LedgerService.java` — add geofence check
-- Modify: `services/ledger-service/src/main/java/.../application/usecase/ProcessWithdrawalUseCaseImpl.java` — pass GPS to domain service
+### Task 2.4: Integrate Velocity Checks into Transaction Flow [PENDING]
 
-- [ ] **Step 1: Write failing test for geofence validation (BDD-W01-EC-05)**
+- [ ] Step 1: Create Feign client interface
+- [ ] Step 2: Wire into use case — call Rules Service before Ledger debit
+- [ ] Step 3: Write test for velocity exceeded (BDD-R03-EC-01)
+- [ ] Step 4: Implement
+- [ ] Step 5: Commit
 
 ```java
 @Test
@@ -748,180 +538,52 @@ public interface RulesServiceFeignClient {
 
 ## Phase 3: Transaction Orchestrator
 
-### Task 3.1: Implement Transaction Orchestrator Saga
+### Task 3.1: Implement Transaction Orchestrator Saga [PENDING]
 
-**BDD Scenarios:** BDD-W01 (full withdrawal flow), BDD-V01 (reversal)
-**BRD Requirements:** US-L05, FR-3.1 through FR-3.5, FR-18.1 through FR-18.4
-
-**User-Facing:** NO
-
-**Files:**
-- Create: `services/orchestrator-service/` (new service)
-- Create: `services/orchestrator-service/src/main/java/.../domain/service/TransactionOrchestrator.java`
-- Create: `services/orchestrator-service/src/main/java/.../infrastructure/web/OrchestratorController.java`
-- Create: `services/orchestrator-service/build.gradle`
-
-- [ ] **Step 1: Create orchestrator service module**
-
-- [ ] **Step 2: Define saga flow: BlockFloat → SwitchAuth → Commit**
-
-```java
-public class TransactionOrchestrator {
-    public TransactionResult executeSaga(WithdrawalRequest request) {
-        // Step 1: Check idempotency
-        // Step 2: Call Rules Service (velocity, limits, fees)
-        // Step 3: Call Ledger Service (BlockFloat)
-        // Step 4: Call Switch Adapter (Auth)
-        // Step 5: If success → Ledger Commit; If fail → Ledger Rollback
-        // Step 6: Publish Kafka events
-        // Step 7: Cache response
-    }
-}
-```
-
-- [ ] **Step 3: Implement Resilience4j circuit breaker + timeout (25s for switch)**
-
-- [ ] **Step 4: Implement fallback → trigger reversal on timeout**
-
-- [ ] **Step 5: Run tests**
-
-- [ ] **Step 6: Commit**
+- [ ] Step 1: Create orchestrator service module
+- [ ] Step 2: Define saga flow: BlockFloat → SwitchAuth → Commit
+- [ ] Step 3: Implement Resilience4j circuit breaker + timeout (25s for switch)
+- [ ] Step 4: Implement fallback → trigger reversal on timeout
+- [ ] Step 5: Run tests
+- [ ] Step 6: Commit
 
 ---
 
 ## Phase 4: Audit Logging
 
-### Task 4.1: Implement Audit Log Entity and Service
+### Task 4.1: Implement Audit Log Entity and Service [PENDING]
 
-**BDD Scenarios:** BDD-BO05, BDD-BO05-EC-01
-**BRD Requirements:** US-BO05, FR-13.5, NFR-4.3
-
-**User-Facing:** NO
-
-**Files:**
-- Create: `services/common/src/main/java/.../audit/AuditLogRecord.java`
-- Create: `services/common/src/main/java/.../audit/AuditLogService.java`
-- Create: `services/common/src/main/java/.../audit/AuditAction.java`
-
-- [ ] **Step 1: Create audit log domain model**
-
-```java
-public record AuditLogRecord(
-    UUID auditId,
-    String entityType,
-    UUID entityId,
-    AuditAction action,
-    String performedBy,
-    String changes,  // JSON
-    String ipAddress,
-    LocalDateTime timestamp
-) {}
-```
-
-- [ ] **Step 2: Create audit log service (append-only, immutable)**
-
-- [ ] **Step 3: Wire into ledger service (log all financial transactions)**
-
-- [ ] **Step 4: Wire into onboarding service (log agent CRUD)**
-
-- [ ] **Step 5: Create backoffice endpoint for audit log viewing**
-
-- [ ] **Step 6: Commit**
+- [ ] Step 1: Create audit log domain model
+- [ ] Step 2: Create audit log service (append-only, immutable)
+- [ ] Step 3: Wire into ledger service (log all financial transactions)
+- [ ] Step 4: Wire into onboarding service (log agent CRUD)
+- [ ] Step 5: Create backoffice endpoint for audit log viewing
+- [ ] Step 6: Commit
 
 ---
 
 ## Phase 5: EOD Settlement
 
-### Task 5.1: Implement EOD Net Settlement Batch Job
+### Task 5.1: Implement EOD Net Settlement Batch Job [PENDING]
 
-**BDD Scenarios:** BDD-SM01 through BDD-SM02-EC-01
-**BRD Requirements:** US-SM01, US-SM02, FR-16.1 through FR-16.5
-
-**User-Facing:** NO
-
-**Files:**
-- Create: `services/ledger-service/src/main/java/.../domain/model/SettlementSummaryRecord.java`
-- Create: `services/ledger-service/src/main/java/.../domain/port/out/SettlementSummaryRepository.java`
-- Create: `services/ledger-service/src/main/java/.../domain/service/SettlementService.java`
-- Create: `services/ledger-service/src/main/java/.../infrastructure/persistence/entity/SettlementSummaryEntity.java`
-- Create: `services/ledger-service/src/main/java/.../infrastructure/persistence/repository/SettlementSummaryJpaRepository.java`
-- Create: `services/ledger-service/src/main/java/.../application/job/EodSettlementJob.java`
-- Create: Flyway migration for `settlement_summary` table
-
-- [ ] **Step 1: Create SettlementSummary domain model and entity**
-
-- [ ] **Step 2: Write failing test for settlement calculation (BDD-SM01)**
-
-```java
-@Test
-void shouldCalculatePositiveNetSettlement() {
-    // Given: Withdrawals=10000, Deposits=3000, BillPayments=2000, Commissions=500
-    // When: calculateNetSettlement
-    // Then: net=5500, direction=BANK_OWES_AGENT
-}
-```
-
-- [ ] **Step 3: Implement settlement calculation service**
-
-```java
-// Formula: (Withdrawals + Commissions + RetailSales) - (Deposits + BillPayments)
-```
-
-- [ ] **Step 4: Implement @Scheduled job at 23:59:59 MYT**
-
-- [ ] **Step 5: Implement CBS file generation (CSV)**
-
-- [ ] **Step 6: Run tests**
-
-- [ ] **Step 7: Commit**
+- [ ] Step 1: Create SettlementSummary domain model and entity
+- [ ] Step 2: Write failing test for settlement calculation (BDD-SM01)
+- [ ] Step 3: Implement settlement calculation service
+- [ ] Step 4: Implement @Scheduled job at 23:59:59 MYT
+- [ ] Step 5: Implement CBS file generation (CSV)
+- [ ] Step 6: Run tests
+- [ ] Step 7: Commit
 
 ---
 
 ## Phase 6: Integration Tests
 
-### Task 6.1: Add Testcontainers Integration Tests
+### Task 6.1: Add Testcontainers Integration Tests [PENDING]
 
-**BDD Scenarios:** All — integration tests validate end-to-end flows
-**BRD Requirements:** All
-
-**User-Facing:** NO
-
-**Files:**
-- Create: `services/ledger-service/src/test/java/.../integration/LedgerIntegrationTest.java`
-- Create: `services/rules-service/src/test/java/.../integration/RulesIntegrationTest.java`
-- Create: `docker-compose.test.yaml`
-
-- [ ] **Step 1: Add Testcontainers dependency**
-
-```groovy
-testImplementation 'org.testcontainers:postgresql:1.19.3'
-testImplementation 'org.testcontainers:junit-jupiter:1.19.3'
-```
-
-- [ ] **Step 2: Create integration test for withdrawal flow**
-
-```java
-@SpringBootTest
-@Testcontainers
-class LedgerIntegrationTest {
-    @Container
-    static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:15");
-    
-    @Test
-    void shouldProcessWithdrawalEndToEnd() {
-        // Given: Agent exists, float has balance
-        // When: Withdrawal request via REST
-        // Then: Balance updated, journal entries created
-    }
-}
-```
-
-- [ ] **Step 3: Run integration tests**
-
-Run: `./gradlew integrationTest`
-Expected: PASS
-
-- [ ] **Step 4: Commit**
+- [ ] Step 1: Add Testcontainers dependency
+- [ ] Step 2: Create integration test for withdrawal flow
+- [ ] Step 3: Run integration tests
+- [ ] Step 4: Commit**
 
 ---
 
