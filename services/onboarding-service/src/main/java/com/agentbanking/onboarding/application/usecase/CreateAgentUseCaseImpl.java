@@ -3,8 +3,10 @@ package com.agentbanking.onboarding.application.usecase;
 import com.agentbanking.onboarding.domain.model.AgentRecord;
 import com.agentbanking.onboarding.domain.port.in.CreateAgentUseCase;
 import com.agentbanking.onboarding.domain.service.AgentService;
+import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+@Service
 public class CreateAgentUseCaseImpl implements CreateAgentUseCase {
 
     private final AgentService agentService;

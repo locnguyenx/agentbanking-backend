@@ -3,11 +3,13 @@ package com.agentbanking.onboarding.application.usecase;
 import com.agentbanking.onboarding.domain.model.AgentRecord;
 import com.agentbanking.onboarding.domain.port.in.ListAgentsUseCase;
 import com.agentbanking.onboarding.domain.service.AgentService;
+import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+@Service
 public class ListAgentsUseCaseImpl implements ListAgentsUseCase {
 
     private final AgentService agentService;

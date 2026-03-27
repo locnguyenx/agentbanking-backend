@@ -57,6 +57,10 @@ project(':services:biller-service').tasks.named('bootJar') {
     enabled = true
 }
 
+project(':services:orchestrator-service').tasks.named('bootJar') {
+    enabled = true
+}
+
 project(':mock-server').tasks.named('bootJar') {
     enabled = true
 }

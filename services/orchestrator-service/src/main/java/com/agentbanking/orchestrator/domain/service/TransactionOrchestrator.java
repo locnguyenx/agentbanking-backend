@@ -1,6 +1,5 @@
 package com.agentbanking.orchestrator.domain.service;
 
-import com.agentbanking.orchestrator.domain.port.in.ExecuteWithdrawalSagaUseCase;
 import com.agentbanking.orchestrator.domain.port.in.ExecuteWithdrawalSagaUseCase.SagaResult;
 import com.agentbanking.orchestrator.domain.port.in.ExecuteWithdrawalSagaUseCase.WithdrawalSagaCommand;
 import com.agentbanking.orchestrator.domain.port.out.*;
@@ -11,7 +10,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
-public class TransactionOrchestrator implements ExecuteWithdrawalSagaUseCase {
+public class TransactionOrchestrator {
 
     private static final Logger log = LoggerFactory.getLogger(TransactionOrchestrator.class);
 
@@ -34,7 +33,6 @@ public class TransactionOrchestrator implements ExecuteWithdrawalSagaUseCase {
         this.eventPublisherPort = eventPublisherPort;
     }
 
-    @Override
     public SagaResult executeSaga(WithdrawalSagaCommand command) {
         log.info("Starting withdrawal saga for agent: {}, amount: {}", command.agentId(), command.amount());
 

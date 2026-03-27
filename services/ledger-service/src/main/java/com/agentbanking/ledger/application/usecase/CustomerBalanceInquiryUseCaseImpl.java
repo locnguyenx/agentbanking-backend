@@ -6,7 +6,9 @@ import com.agentbanking.ledger.domain.port.in.CustomerBalanceInquiryUseCase;
 import com.agentbanking.ledger.infrastructure.external.SwitchAdapterBalanceClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Service;
 
+@Service
 public class CustomerBalanceInquiryUseCaseImpl implements CustomerBalanceInquiryUseCase {
 
     private static final Logger log = LoggerFactory.getLogger(CustomerBalanceInquiryUseCaseImpl.class);

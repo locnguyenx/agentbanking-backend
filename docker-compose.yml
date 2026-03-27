@@ -96,6 +96,25 @@ services:
       timeout: 5s
       retries: 5
 
+  # PostgreSQL for Orchestrator Service
+  postgres-orchestrator:
+    image: postgres:16-alpine
+    profiles: [infra, all]
+    environment:
+      POSTGRES_DB: orchestrator_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5438:5432"
+    volumes:
+      - pgdata-orchestrator:/var/lib/postgresql/data
+    mem_limit: 256m
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
   # Redis for caching and idempotency
   redis:
     image: redis:7-alpine
@@ -191,6 +210,8 @@ services:
       SPRING_DATASOURCE_PASSWORD: postgres
       SPRING_DATA_REDIS_HOST: redis
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      RULES_SERVICE_URL: http://rules-service:8081
+      SWITCH_ADAPTER_SERVICE_URL: http://switch-adapter-service:8084
     depends_on:
       postgres-ledger:
         condition: service_healthy
@@ -280,6 +301,43 @@ services:
       timeout: 5s
       retries: 10
 
+  # Orchestrator Service (Transaction Saga)
+  orchestrator-service:
+    build:
+      context: .
+      dockerfile: ./services/orchestrator-service/Dockerfile
+    profiles: [backend, all]
+    ports:
+      - "8086:8086"
+    mem_limit: 384m
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-orchestrator:5432/orchestrator_db
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      LEDGER_SERVICE_URL: http://ledger-service:8082
+      RULES_SERVICE_URL: http://rules-service:8081
+      SWITCH_ADAPTER_SERVICE_URL: http://switch-adapter-service:8084
+    depends_on:
+      postgres-orchestrator:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      ledger-service:
+        condition: service_healthy
+      rules-service:
+        condition: service_healthy
+      switch-adapter-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8086/ || true"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
   # API Gateway
   gateway:
     build:
@@ -299,6 +357,8 @@ services:
       switch-adapter-service:
         condition: service_healthy
       biller-service:
+        condition: service_healthy
+      orchestrator-service:
         condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8080/ || true"]
@@ -325,3 +385,4 @@ volumes:
   pgdata-onboarding:
   pgdata-switch:
   pgdata-biller:
+  pgdata-orchestrator:
