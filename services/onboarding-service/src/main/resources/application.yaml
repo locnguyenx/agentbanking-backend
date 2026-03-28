@@ -12,3 +12,6 @@ spring:
 
 server:
   port: 8083
+
+aml-screening:
+  url: http://localhost:8090

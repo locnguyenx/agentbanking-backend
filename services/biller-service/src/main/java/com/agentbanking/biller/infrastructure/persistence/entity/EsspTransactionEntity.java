@@ -1,0 +1,56 @@
+package com.agentbanking.biller.infrastructure.persistence.entity;
+
+import com.agentbanking.biller.domain.model.PaymentStatus;
+import jakarta.persistence.*;
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.UUID;
+
+/**
+ * JPA Entity for eSSP certificate transactions
+ */
+@Entity
+@Table(name = "essp_transaction")
+public class EsspTransactionEntity {
+    @Id
+    private UUID transactionId;
+    
+    @Column(name = "internal_transaction_id")
+    private UUID internalTransactionId;
+    
+    @Column(name = "amount")
+    private BigDecimal amount;
+    
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status")
+    private PaymentStatus status;
+    
+    @Column(name = "essp_certificate_number")
+    private String esspCertificateNumber;
+    
+    @Column(name = "agent_reference")
+    private String agentReference;
+    
+    @Column(name = "created_at")
+    private LocalDateTime createdAt;
+    
+    @Column(name = "completed_at")
+    private LocalDateTime completedAt;
+
+    public UUID getTransactionId() { return transactionId; }
+    public void setTransactionId(UUID transactionId) { this.transactionId = transactionId; }
+    public UUID getInternalTransactionId() { return internalTransactionId; }
+    public void setInternalTransactionId(UUID internalTransactionId) { this.internalTransactionId = internalTransactionId; }
+    public BigDecimal getAmount() { return amount; }
+    public void setAmount(BigDecimal amount) { this.amount = amount; }
+    public PaymentStatus getStatus() { return status; }
+    public void setStatus(PaymentStatus status) { this.status = status; }
+    public String getEsspCertificateNumber() { return esspCertificateNumber; }
+    public void setEsspCertificateNumber(String esspCertificateNumber) { this.esspCertificateNumber = esspCertificateNumber; }
+    public String getAgentReference() { return agentReference; }
+    public void setAgentReference(String agentReference) { this.agentReference = agentReference; }
+    public LocalDateTime getCreatedAt() { return createdAt; }
+    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+    public LocalDateTime getCompletedAt() { return completedAt; }
+    public void setCompletedAt(LocalDateTime completedAt) { this.completedAt = completedAt; }
+}

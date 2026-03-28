@@ -1,7 +1,9 @@
 package com.agentbanking.ledger.domain.service;
 
+import com.agentbanking.common.efm.EfmEventPublisher;
 import com.agentbanking.ledger.domain.model.*;
 import com.agentbanking.ledger.domain.port.out.*;
+import com.agentbanking.onboarding.domain.model.AgentRecord;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -13,6 +15,7 @@ import java.math.BigDecimal;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -36,10 +39,23 @@ class LedgerServiceTest {
     @Mock
     private IdempotencyCache idempotencyCache;
     
+    @Mock
+    private SwitchServicePort switchService;
+    
+    @Mock
+    private AgentRepository agentRepository;
+    
+    @Mock
+    private MerchantTransactionService merchantTransactionService;
+    
+    @Mock
+    private EfmEventPublisher efmEventPublisher;
+    
     private LedgerService ledgerService;
     
     private UUID agentId;
     private AgentFloatRecord agentFloat;
+    private AgentRecord agentRecord;
     
     @BeforeEach
     void setUp() {
@@ -47,7 +63,11 @@ class LedgerServiceTest {
             agentFloatRepository,
             transactionRepository,
             journalEntryRepository,
-            idempotencyCache
+            idempotencyCache,
+            switchService,
+            agentRepository,
+            merchantTransactionService,
+            efmEventPublisher
         );
         agentId = UUID.randomUUID();
         agentFloat = new AgentFloatRecord(
@@ -59,6 +79,19 @@ class LedgerServiceTest {
             1L,
             null,
             null
+        );
+        agentRecord = new AgentRecord(
+            agentId,
+            "AGENT001",
+            "Test Agent",
+            com.agentbanking.onboarding.domain.model.AgentTier.STANDARD,
+            com.agentbanking.onboarding.domain.model.AgentStatus.ACTIVE,
+            new BigDecimal("3.1390"),
+            new BigDecimal("101.6869"),
+            "880101011234",
+            "0123456789",
+            java.time.LocalDateTime.now(),
+            java.time.LocalDateTime.now()
         );
     }
     
@@ -114,7 +147,7 @@ class LedgerServiceTest {
         when(idempotencyCache.exists(anyString())).thenReturn(false);
         when(agentFloatRepository.findByIdWithLock(agentId)).thenReturn(null);
         
-        assertThrows(IllegalArgumentException.class, () -> 
+        assertThrows(com.agentbanking.common.exception.LedgerException.class, () -> 
             ledgerService.processWithdrawal(
                 agentId,
                 new BigDecimal("1000.00"),
@@ -227,7 +260,7 @@ class LedgerServiceTest {
     void getBalance_withNonExistentAgent_throwsException() {
         when(agentFloatRepository.findByIdWithLock(agentId)).thenReturn(null);
         
-        assertThrows(IllegalArgumentException.class, () -> 
+        assertThrows(com.agentbanking.common.exception.LedgerException.class, () -> 
             ledgerService.getBalance(agentId)
         );
     }

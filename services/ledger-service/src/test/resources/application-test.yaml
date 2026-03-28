@@ -8,9 +8,18 @@ spring:
     exclude:
       - org.springframework.boot.autoconfigure.kafka.KafkaAutoConfiguration
       - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
+  flyway:
+    enabled: true
+    locations: filesystem:src/main/resources/db/migration
 
 rules-service:
   url: http://localhost:9999
 
+switch-adapter:
+  url: http://localhost:9998
+
 switch-adapter-service:
   url: http://localhost:9998
+
+onboarding-service:
+  url: http://localhost:9997

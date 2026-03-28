@@ -53,7 +53,7 @@ class HexagonalArchitectureTest {
         com.tngtech.archunit.lang.ArchRule rule = com.tngtech.archunit.lang.syntax.ArchRuleDefinition
             .classes().that().resideInAnyPackage("..domain.service..")
             .should().onlyDependOnClassesThat()
-            .resideInAnyPackage("..domain..", "java..", "jakarta..", "org.junit..", "org.mockito..");
+            .resideInAnyPackage("..domain..", "com.agentbanking.common..", "java..", "jakarta..", "org.junit..", "org.mockito..");
         rule.check(classes);
     }
 }

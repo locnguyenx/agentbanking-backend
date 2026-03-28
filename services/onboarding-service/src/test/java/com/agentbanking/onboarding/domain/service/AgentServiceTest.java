@@ -1,5 +1,6 @@
 package com.agentbanking.onboarding.domain.service;
 
+import com.agentbanking.common.exception.AgentException;
 import com.agentbanking.common.security.ErrorCodes;
 import com.agentbanking.onboarding.domain.model.AgentRecord;
 import com.agentbanking.onboarding.domain.model.AgentStatus;
@@ -104,12 +105,12 @@ class AgentServiceTest {
 
         when(agentRepository.findByMykadNumber("880101011234")).thenReturn(Optional.of(existing));
 
-        IllegalArgumentException exception = assertThrows(
-            IllegalArgumentException.class,
+        AgentException exception = assertThrows(
+            AgentException.class,
             () -> agentService.createAgent(command)
         );
 
-        assertEquals(ErrorCodes.ERR_DUPLICATE_AGENT, exception.getMessage());
+        assertEquals(ErrorCodes.ERR_DUPLICATE_AGENT, exception.getErrorCode());
     }
 
     @Test
@@ -132,12 +133,12 @@ class AgentServiceTest {
         when(agentRepository.findById(agentId)).thenReturn(Optional.of(agent));
         when(agentRepository.hasPendingTransactions(agentId)).thenReturn(true);
 
-        IllegalArgumentException exception = assertThrows(
-            IllegalArgumentException.class,
+        AgentException exception = assertThrows(
+            AgentException.class,
             () -> agentService.deactivateAgent(agentId)
         );
 
-        assertEquals(ErrorCodes.ERR_AGENT_HAS_PENDING_TRANSACTIONS, exception.getMessage());
+        assertEquals(ErrorCodes.ERR_AGENT_HAS_PENDING_TRANSACTIONS, exception.getErrorCode());
     }
 
     @Test

@@ -6,6 +6,9 @@ import java.math.BigDecimal;
 public class LimitEnforcementService {
 
     public boolean checkDailyLimit(BigDecimal amount, FeeConfigRecord config, BigDecimal todayTotalAmount, int todayTransactionCount) {
+        if (config == null) {
+            return true;
+        }
         if (config.dailyLimitAmount() != null) {
             BigDecimal projected = todayTotalAmount.add(amount);
             if (projected.compareTo(config.dailyLimitAmount()) > 0) {

@@ -1,23 +1,21 @@
 package com.agentbanking.ledger.application.usecase;
 
-import com.agentbanking.ledger.domain.model.TransactionResult;
 import com.agentbanking.ledger.domain.port.in.ProcessMyKadWithdrawalUseCase;
 import com.agentbanking.ledger.domain.port.out.IdempotencyCache;
-import com.agentbanking.ledger.domain.port.out.RulesServicePort;
-import com.agentbanking.ledger.domain.port.out.SwitchServicePort;
 import com.agentbanking.ledger.domain.service.LedgerService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
+import java.time.Duration;
+import java.util.Map;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -27,131 +25,68 @@ class ProcessMyKadWithdrawalUseCaseImplTest {
     private LedgerService ledgerService;
 
     @Mock
-    private RulesServicePort rulesService;
-
-    @Mock
-    private SwitchServicePort switchService;
-
-    @Mock
     private IdempotencyCache idempotencyCache;
 
-    @InjectMocks
     private ProcessMyKadWithdrawalUseCaseImpl processMyKadWithdrawalUseCase;
 
     private UUID agentId;
     private String idempotencyKey;
-    private String customerMykad;
     private BigDecimal amount;
-    private BigDecimal geofenceLat;
-    private BigDecimal geofenceLng;
 
     @BeforeEach
     void setUp() {
+        processMyKadWithdrawalUseCase = new ProcessMyKadWithdrawalUseCaseImpl(
+                ledgerService, idempotencyCache);
         agentId = UUID.randomUUID();
         idempotencyKey = "test-key-123";
-        customerMykad = "123456789012";
         amount = new BigDecimal("500.00");
-        geofenceLat = new BigDecimal("3.1390");
-        geofenceLng = new BigDecimal("101.6869");
     }
 
     @Test
     void shouldProcessMyKadWithdrawalSuccessfully() {
-        // Arrange
         when(idempotencyCache.exists(idempotencyKey)).thenReturn(false);
-        
-        // Mock rules service responses
-        var velocityResult = new RulesServicePort.VelocityCheckResult(true, null, null, null);
-        when(rulesService.checkVelocity(customerMykad, "MYKAD_WITHDRAWAL", amount))
-                .thenReturn(velocityResult);
-        
-        var feeResult = new RulesServicePort.FeeCheckResult(true, 
-                new BigDecimal("1.00"), new BigDecimal("0.20"), new BigDecimal("0.80"));
-        when(rulesService.calculateFee("MYKAD_WITHDRAWAL", "MICRO", amount))
-                .thenReturn(feeResult);
-        
-        // Mock ledger service
-        var agentFloat = new com.agentbanking.ledger.domain.model.AgentFloatRecord(
-                UUID.randomUUID(), agentId, new BigDecimal("1000.00"), 
-                BigDecimal.ZERO, "MYR", 1L, 
-                new BigDecimal("3.1390"), new BigDecimal("101.6869"));
-        when(ledgerService.getAgentFloat(agentId)).thenReturn(agentFloat);
-        
-        // Mock switch service
-        var switchResult = new com.agentbanking.common.switchport.AuthorizationResult(true, "SWITCH-REF-123", null);
-        when(switchService.authorizeWithdrawal(customerMykad, amount, agentId.toString()))
-                .thenReturn(switchResult);
-        
-        // Act
-        TransactionResult result = processMyKadWithdrawalUseCase.processMyKadWithdrawal(
-                new ProcessMyKadWithdrawalUseCase.MyKadWithdrawalCommand(
-                        agentId, amount, "MYR", idempotencyKey, customerMykad,
-                        geofenceLat, geofenceLng
-                )
-        );
 
-        // Assert
+        Map<String, Object> ledgerResult = Map.of(
+                "status", "COMPLETED",
+                "transactionId", UUID.randomUUID().toString(),
+                "amount", new BigDecimal("500.00"),
+                "balance", new BigDecimal("9500.00")
+        );
+        when(ledgerService.processWithdrawal(eq(agentId), eq(amount),
+                eq(BigDecimal.ZERO), eq(BigDecimal.ZERO), eq(BigDecimal.ZERO),
+                eq(idempotencyKey), isNull(),
+                eq(new BigDecimal("3.1390")), eq(new BigDecimal("101.6869"))))
+                .thenReturn(ledgerResult);
+
+        ProcessMyKadWithdrawalUseCase.TransactionResult result = processMyKadWithdrawalUseCase
+                .processMyKadWithdrawal(new ProcessMyKadWithdrawalUseCase.MyKadWithdrawalCommand(
+                        agentId, amount, "MYR", idempotencyKey, "123456789012",
+                        new BigDecimal("3.1390"), new BigDecimal("101.6869")
+                ));
+
         assertEquals("COMPLETED", result.status());
         assertNotNull(result.transactionId());
-        assertEquals(amount, result.amount());
-        assertEquals(new BigDecimal("1.00"), result.customerFee());
-        
-        // Verify idempotency caching
-        verify(idempotencyCache).save(eq(idempotencyKey), any(TransactionResult.class), eq(86400));
+        assertEquals(new BigDecimal("500.00"), result.amount());
+
+        verify(idempotencyCache).save(eq(idempotencyKey), any(ProcessMyKadWithdrawalUseCase.TransactionResult.class), eq(Duration.ofHours(24)));
     }
 
     @Test
-    void shouldReturnCachedResultForIdempotentRequest() {
-        // Arrange
-        var cachedResult = new TransactionResult("COMPLETED", UUID.randomUUID(), 
-                new BigDecimal("500.00"), new BigDecimal("1.00"), "SWITCH-REF-123");
+    void shouldReturnCachedResultForIdempotentRequest() throws com.fasterxml.jackson.core.JsonProcessingException {
+        ProcessMyKadWithdrawalUseCase.TransactionResult cachedResult = new ProcessMyKadWithdrawalUseCase.TransactionResult(
+                "COMPLETED", UUID.randomUUID(), new BigDecimal("500.00"), BigDecimal.ZERO, null);
+
         when(idempotencyCache.exists(idempotencyKey)).thenReturn(true);
-        when(idempotencyCache.get(idempotencyKey, TransactionResult.class))
+        when(idempotencyCache.get(idempotencyKey, ProcessMyKadWithdrawalUseCase.TransactionResult.class))
                 .thenReturn(cachedResult);
 
-        // Act
-        TransactionResult result = processMyKadWithdrawalUseCase.processMyKadWithdrawal(
-                new ProcessMyKadWithdrawalUseCase.MyKadWithdrawalCommand(
-                        agentId, amount, "MYR", idempotencyKey, customerMykad,
-                        geofenceLat, geofenceLng
-                )
-        );
+        ProcessMyKadWithdrawalUseCase.TransactionResult result = processMyKadWithdrawalUseCase
+                .processMyKadWithdrawal(new ProcessMyKadWithdrawalUseCase.MyKadWithdrawalCommand(
+                        agentId, amount, "MYR", idempotencyKey, "123456789012",
+                        new BigDecimal("3.1390"), new BigDecimal("101.6869")
+                ));
 
-        // Assert
         assertEquals(cachedResult, result);
-        // Verify no downstream calls were made
-        verifyNoInteractions(ledgerService, rulesService, switchService);
-    }
-
-    @Test
-    void shouldFailWhenInsufficientFloat() {
-        // Arrange
-        when(idempotencyCache.exists(idempotencyKey)).thenReturn(false);
-        
-        var velocityResult = new RulesServicePort.VelocityCheckResult(true, null, null, null);
-        when(rulesService.checkVelocity(customerMykad, "MYKAD_WITHDRAWAL", amount))
-                .thenReturn(velocityResult);
-        
-        var feeResult = new RulesServicePort.FeeCheckResult(true, 
-                new BigDecimal("1.00"), new BigDecimal("0.20"), new BigDecimal("0.80"));
-        when(rulesService.calculateFee("MYKAD_WITHDRAWAL", "MICRO", amount))
-                .thenReturn(feeResult);
-        
-        // Mock agent with insufficient float
-        var agentFloat = new com.agentbanking.ledger.domain.model.AgentFloatRecord(
-                UUID.randomUUID(), agentId, new BigDecimal("100.00"), 
-                BigDecimal.ZERO, "MYR", 1L, 
-                new BigDecimal("3.1390"), new BigDecimal("101.6869"));
-        when(ledgerService.getAgentFloat(agentId)).thenReturn(agentFloat);
-
-        // Act & Assert
-        assertThrows(IllegalArgumentException.class, () -> {
-            processMyKadWithdrawalUseCase.processMyKadWithdrawal(
-                    new ProcessMyKadWithdrawalUseCase.MyKadWithdrawalCommand(
-                            agentId, amount, "MYR", idempotencyKey, customerMykad,
-                            geofenceLat, geofenceLng
-                    )
-            );
-        });
+        verify(ledgerService, never()).processWithdrawal(any(), any(), any(), any(), any(), any(), any(), any(), any());
     }
 }

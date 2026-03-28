@@ -15,5 +15,6 @@ public enum TransactionType {
     SARAWAK_PAY_TOPUP,
     ESSP_PURCHASE,
     PIN_PURCHASE,
-    CASHLESS_PAYMENT
+    CASHLESS_PAYMENT,
+    CASH_BACK
 }

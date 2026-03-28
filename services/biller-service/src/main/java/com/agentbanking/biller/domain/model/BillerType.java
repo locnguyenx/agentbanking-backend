@@ -6,5 +6,7 @@ public enum BillerType {
     TM_RPN,
     EPF,
     CELCOM,
-    M1
+    M1,
+    SARAWAK_PAY,    // US-W01-W02
+    ESSP            // US-E01
 }

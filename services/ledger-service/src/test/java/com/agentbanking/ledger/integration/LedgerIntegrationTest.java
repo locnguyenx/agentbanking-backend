@@ -1,10 +1,12 @@
 package com.agentbanking.ledger.integration;
 
+import com.agentbanking.common.efm.EfmEventPublisher;
 import com.agentbanking.common.exception.LedgerException;
 import com.agentbanking.ledger.domain.port.in.CustomerBalanceInquiryUseCase;
 import com.agentbanking.ledger.domain.port.in.ProcessWithdrawalUseCase;
 import com.agentbanking.ledger.domain.port.out.*;
 import com.agentbanking.ledger.domain.service.LedgerService;
+import com.agentbanking.ledger.domain.service.MerchantTransactionService;
 import com.agentbanking.ledger.infrastructure.external.RulesServiceFeignClient;
 import com.agentbanking.ledger.infrastructure.messaging.ReversalEventPublisher;
 import com.agentbanking.ledger.infrastructure.messaging.TransactionEventPublisher;
@@ -87,15 +89,6 @@ class LedgerIntegrationTest {
                 }
             };
         }
-
-        @Bean
-        LedgerService ledgerService(AgentFloatRepository agentFloatRepository,
-                                    TransactionRepository transactionRepository,
-                                    JournalEntryRepository journalEntryRepository,
-                                    IdempotencyCache idempotencyCache) {
-            return new LedgerService(agentFloatRepository, transactionRepository,
-                    journalEntryRepository, idempotencyCache);
-        }
     }
 
     @Autowired
@@ -105,10 +98,40 @@ class LedgerIntegrationTest {
     private RulesServiceFeignClient rulesServiceFeignClient;
 
     @MockBean
+    private com.agentbanking.ledger.infrastructure.external.SwitchAdapterFeignClient switchAdapterFeignClient;
+
+    @MockBean
+    private com.agentbanking.ledger.infrastructure.external.SwitchAdapterBalanceClient switchAdapterBalanceClient;
+
+    @MockBean
+    private com.agentbanking.ledger.infrastructure.external.OnboardingServiceFeignClient onboardingServiceFeignClient;
+
+    @MockBean
     private TransactionEventPublisher transactionEventPublisher;
 
     @MockBean
     private ReversalEventPublisher reversalEventPublisher;
+
+    @MockBean
+    private SwitchServicePort switchServicePort;
+
+    @MockBean
+    private AgentRepository agentRepository;
+
+    @MockBean
+    private MerchantTransactionService merchantTransactionService;
+
+    @MockBean
+    private EfmEventPublisher efmEventPublisher;
+
+    @MockBean
+    private com.agentbanking.ledger.domain.port.out.DiscrepancyCaseRepository discrepancyCaseRepository;
+
+    @MockBean
+    private com.agentbanking.ledger.domain.service.SettlementService settlementService;
+
+    @MockBean
+    private com.agentbanking.ledger.domain.service.ReconciliationService reconciliationService;
 
     @MockBean
     @SuppressWarnings("rawtypes")

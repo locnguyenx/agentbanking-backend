@@ -51,80 +51,12 @@ service-name/
 
 ### Hexagonal Architecture Enforcement (REQUIRED)
 
-Each service MUST include ArchUnit tests that verify hexagonal architecture compliance:
-
-```java
-@ArchTest
-void domainLayerMustNotContainJpaAnnotations(Classes classes) {
-    classes().that().resideInAnyPackage("..domain..")
-        .should().notBeAnnotatedWith(Entity.class)
-        .should().notBeAnnotatedWith(Table.class)
-        .should().notBeAnnotatedWith(Column.class)
-        .should().notBeAnnotatedWith(Id.class);
-}
-
-@ArchTest
-void domainLayerMustNotContainSpringAnnotations(Classes classes) {
-    classes().that().resideInAnyPackage("..domain..")
-        .should().notBeAnnotatedWith(Service.class)
-        .should().notBeAnnotatedWith(Repository.class)
-        .should().notBeAnnotatedWith(Component.class)
-        .should().notBeAnnotatedWith(Transactional.class);
-}
-
-@ArchTest
-void domainLayerMustNotUseEntityManager(Classes classes) {
-    classes().that().resideInAnyPackage("..domain..")
-        .should().notDependOnClassesThat()
-        .areAssignableFrom(EntityManager.class);
-}
-
-@ArchTest
-void domainLayerMustOnlyAccessPorts(Classes classes) {
-    classes().that().resideInAnyPackage("..domain.service..")
-        .should().onlyDependOnClassesThat()
-        .resideInAnyPackage("..domain..", "java..", "jakarta..");
-}
-```
-
-Add ArchUnit dependency to each service's `build.gradle`:
-```groovy
-testImplementation 'com.tngtech.archunit:archunit-junit5:1.3.0'
-testImplementation 'com.tngtech.archunit:archunit-junit5-api:1.3.0'
-```
-
-**FAILURE TO COMPLY:** Any JPA/Spring annotation found in `domain/` layer will cause the build to fail.
-
-### Before Any PR: Architecture Check ⚠️
-
-**BEFORE creating a PR, you MUST run:**
-```bash
-./gradlew build
-```
-
-This will:
-1. Run all unit tests
-2. Execute HexagonalArchitectureTest in each service
-3. **FAIL** the build if domain layer contains JPA/Spring annotations
-
-**If you add a new service, you MUST:**
-1. Add ArchUnit dependency to build.gradle:
-   ```groovy
-   testImplementation 'com.tngtech.archunit:archunit-junit5:1.3.0'
-   ```
-2. Create `src/test/java/.../architecture/HexagonalArchitectureTest.java` (see templates)
-3. Verify tests pass before pushing
+- Service: MUST include ArchUnit tests that verify hexagonal architecture compliance:
+- Domain model: you MUST
+1. Follow the pattern in the template exactly - records go in `domain/model`, entities in `infrastructure/persistence/entity/`
+2. Create repository port in `domain/port/out/` and implementation in `infrastructure/persistence/repository/`
 
 **Template:** See `docs/templates/domain-model-template.md` for correct pattern
-
----
-
-## For AI Agents: Creating New Domain Models
-
-**BEFORE creating any new domain model, you MUST:**
-1. Read `docs/templates/domain-model-template.md`
-2. Follow the pattern exactly - records go in `domain/model`, entities in `infrastructure/persistence/entity/`
-3. Create repository port in `domain/port/out/` and implementation in `infrastructure/persistence/repository/`
 
 **Common mistakes that will fail the build:**
 - ❌ Adding `@Entity` or `@Table` in `domain/model/`
@@ -132,6 +64,8 @@ This will:
 - ❌ Skipping the record/entity separation
 
 **If unsure, check the template first.**
+
+**FAILURE TO COMPLY:** Any JPA/Spring annotation found in `domain/` layer will cause the build to fail.
 
 ## Technology Stack
 
@@ -250,9 +184,3 @@ Each microservice must follow: Controller → Service → Repository.
 ### Velocity Checks
 * Limit transactions per MyKad per day to prevent smurfing.
 * Configurable via VelocityRule entity.
-
-## Git Workflow
-
-## Database Guidelines
-
-## Test Infrastructure & Strategy

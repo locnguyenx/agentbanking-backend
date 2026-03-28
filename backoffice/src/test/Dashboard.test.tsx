@@ -28,29 +28,30 @@ const renderWithQuery = (ui: React.ReactElement) => {
 describe('Dashboard', () => {
   it('should render loading state initially', () => {
     renderWithQuery(<Dashboard />)
-    expect(screen.getByText('Loading...')).toBeInTheDocument()
+    expect(document.querySelector('.loading')).toBeInTheDocument()
   })
 
   it('should render dashboard data after loading', async () => {
     renderWithQuery(<Dashboard />)
     
     await waitFor(() => {
-      expect(screen.getByText('Today\'s Transactions')).toBeInTheDocument()
+      expect(screen.getByText('Total Agents')).toBeInTheDocument()
     })
     
-    expect(screen.getByText('150')).toBeInTheDocument()
-    expect(screen.getByText('RM 25000.00')).toBeInTheDocument()
-    expect(screen.getByText('45')).toBeInTheDocument()
+    expect(screen.getByText("Today's Volume")).toBeInTheDocument()
+    expect(screen.getByText('Transactions')).toBeInTheDocument()
+    expect(screen.getByText('Pending KYC')).toBeInTheDocument()
   })
 
   it('should render all metric cards', async () => {
     renderWithQuery(<Dashboard />)
     
     await waitFor(() => {
-      expect(screen.getByText('Today\'s Transactions')).toBeInTheDocument()
+      expect(screen.getByText('Total Agents')).toBeInTheDocument()
     })
     
-    expect(screen.getByText('Total Volume')).toBeInTheDocument()
-    expect(screen.getByText('Active Agents')).toBeInTheDocument()
+    expect(screen.getByText('2,847')).toBeInTheDocument()
+    expect(screen.getByText('RM 1.2M')).toBeInTheDocument()
+    expect(screen.getByText('4,521')).toBeInTheDocument()
   })
 })
