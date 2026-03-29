@@ -61,6 +61,10 @@ project(':services:orchestrator-service').tasks.named('bootJar') {
     enabled = true
 }
 
+project(':services:auth-iam-service').tasks.named('bootJar') {
+    enabled = true
+}
+
 project(':mock-server').tasks.named('bootJar') {
     enabled = true
 }
