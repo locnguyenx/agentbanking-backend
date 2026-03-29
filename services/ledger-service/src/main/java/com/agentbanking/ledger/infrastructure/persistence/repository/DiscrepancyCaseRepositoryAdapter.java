@@ -3,11 +3,13 @@ package com.agentbanking.ledger.infrastructure.persistence.repository;
 import com.agentbanking.ledger.domain.model.DiscrepancyCase;
 import com.agentbanking.ledger.domain.port.out.DiscrepancyCaseRepository;
 import com.agentbanking.ledger.infrastructure.persistence.mapper.DiscrepancyCaseMapper;
+import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+@Repository
 public class DiscrepancyCaseRepositoryAdapter implements DiscrepancyCaseRepository {
 
     private final DiscrepancyCaseJpaRepository jpaRepository;

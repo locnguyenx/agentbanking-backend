@@ -295,6 +295,110 @@ Download audit logs for external review:
 - CSV format
 - Date range selection
 
+#### View Audit Logs (API)
+
+```bash
+# List all audit logs
+curl http://localhost:8080/api/v1/backoffice/audit-logs?page=0&size=50
+
+# Filter by entity type
+curl http://localhost:8080/api/v1/backoffice/audit-logs?entityType=Agent
+
+# Filter by date range
+curl http://localhost:8080/api/v1/backoffice/audit-logs?fromDate=2026-03-01T00:00:00&toDate=2026-03-31T23:59:59
+```
+
+---
+
+### User Management (IT Admin)
+
+Manage backoffice user accounts.
+
+#### User Roles
+
+| Role | Permissions |
+|------|-------------|
+| USER | Read transactions only |
+| OPERATOR | Read and write transactions |
+| SUPERVISOR | Read, write, and approve transactions |
+| ADMIN | Full access including user management, audit logs, and system configuration |
+
+#### Create User (API)
+
+```bash
+curl -X POST http://localhost:8080/api/v1/backoffice/admin/users \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <token>" \
+  -d '{
+    "username": "john.doe",
+    "password": "SecureP@ss123",
+    "email": "john.doe@bank.com",
+    "fullName": "John Doe",
+    "role": "OPERATOR",
+    "createdBy": "admin"
+  }'
+```
+
+**Response:**
+```json
+{
+  "userId": "3b9df306-ac26-46ac-8fcf-f99baedf6804",
+  "username": "john.doe",
+  "email": "john.doe@bank.com",
+  "fullName": "John Doe",
+  "role": "OPERATOR",
+  "status": "ACTIVE",
+  "permissions": ["READ_TRANSACTIONS", "WRITE_TRANSACTIONS"],
+  "createdAt": "2026-03-29T02:02:34.806364"
+}
+```
+
+#### List Users (API)
+
+```bash
+# List all users (paginated)
+curl http://localhost:8080/api/v1/backoffice/admin/users?page=0&size=20
+
+# Get user by ID
+curl http://localhost:8080/api/v1/backoffice/admin/users/{userId}
+```
+
+#### Update User (API)
+
+```bash
+curl -X PUT http://localhost:8080/api/v1/backoffice/admin/users/{userId} \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <token>" \
+  -d '{
+    "fullName": "John Smith",
+    "role": "SUPERVISOR",
+    "status": "ACTIVE"
+  }'
+```
+
+#### Delete User (API)
+
+```bash
+curl -X DELETE http://localhost:8080/api/v1/backoffice/admin/users/{userId} \
+  -H "Authorization: Bearer <token>"
+```
+
+#### List Roles (API)
+
+```bash
+curl http://localhost:8080/api/v1/backoffice/admin/roles
+```
+
+**Response:**
+```json
+[
+  {"name": "USER", "permissions": ["READ_TRANSACTIONS"]},
+  {"name": "OPERATOR", "permissions": ["READ_TRANSACTIONS", "WRITE_TRANSACTIONS"]},
+  {"name": "SUPERVISOR", "permissions": ["READ_TRANSACTIONS", "WRITE_TRANSACTIONS", "APPROVE_TRANSACTIONS"]},
+  {"name": "ADMIN", "permissions": ["READ_TRANSACTIONS", "WRITE_TRANSACTIONS", "APPROVE_TRANSACTIONS", "MANAGE_USERS", "VIEW_AUDIT", "MANAGE_CONFIG"]}
+]
+```
+
 ---
 
 ## IT Administrator Guide
@@ -527,7 +631,7 @@ Bank Share = Fee - Agent Commission
 
 ### Onboarding Service
 
-**Purpose:** Agent registration, KYC verification
+**Purpose:** Agent registration, KYC verification, User Management
 
 #### API Endpoints
 
@@ -539,6 +643,9 @@ Bank Share = Fee - Agent Commission
 | `/api/onboarding/kyc/verify-mykad` | POST | Verify MyKad |
 | `/api/onboarding/kyc/biometric-match` | POST | Biometric match |
 | `/api/onboarding/audit-logs` | GET | Audit logs |
+| `/api/v1/backoffice/admin/users` | GET/POST | List/Create backoffice users |
+| `/api/v1/backoffice/admin/users/{id}` | GET/PUT/DELETE | Get/Update/Delete user |
+| `/api/v1/backoffice/admin/roles` | GET | List roles and permissions |
 
 ---
 
@@ -662,6 +769,34 @@ Authorization: Bearer <token>
 | ERR_VELOCITY_EXCEEDED | Daily limit hit | RETRY tomorrow |
 | ERR_KYC_PENDING | KYC not approved | REVIEW |
 | ERR_AML_FLAGGED | AML check failed | REVIEW |
+| ERR_AUTH_MISSING_TOKEN | Missing Authorization header | Add token |
+| ERR_AUTH_INVALID_TOKEN | Invalid JWT token | Refresh token |
+
+### Admin API Reference
+
+#### User Management
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/v1/backoffice/admin/users` | Create new backoffice user |
+| GET | `/api/v1/backoffice/admin/users` | List all users (paginated) |
+| GET | `/api/v1/backoffice/admin/users/{id}` | Get user by ID |
+| PUT | `/api/v1/backoffice/admin/users/{id}` | Update user |
+| DELETE | `/api/v1/backoffice/admin/users/{id}` | Delete user |
+| GET | `/api/v1/backoffice/admin/roles` | List available roles and permissions |
+
+#### Audit Logs
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/v1/backoffice/audit-logs` | Search audit logs |
+
+**Query Parameters:**
+- `entityType` (optional): Filter by entity type (e.g., "Agent", "User")
+- `fromDate` (optional): Start date (ISO 8601)
+- `toDate` (optional): End date (ISO 8601)
+- `page` (default: 0): Page number
+- `size` (default: 50): Page size
 
 ---
 

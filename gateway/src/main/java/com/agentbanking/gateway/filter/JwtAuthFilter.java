@@ -1,13 +1,13 @@
 package com.agentbanking.gateway.filter;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cloud.gateway.filter.GatewayFilter;
 import org.springframework.cloud.gateway.filter.factory.AbstractGatewayFilterFactory;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
-import org.springframework.security.core.context.ReactiveSecurityContextHolder;
-import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.jwt.ReactiveJwtDecoder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
@@ -20,6 +20,9 @@ import java.util.UUID;
 public class JwtAuthFilter extends AbstractGatewayFilterFactory<JwtAuthFilter.Config> {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
+
+    @Autowired
+    private ReactiveJwtDecoder reactiveJwtDecoder;
 
     public JwtAuthFilter() {
         super(Config.class);
@@ -37,9 +40,9 @@ public class JwtAuthFilter extends AbstractGatewayFilterFactory<JwtAuthFilter.Co
                 return onError(exchange, "Invalid Authorization header format", "ERR_AUTH_INVALID_TOKEN");
             }
 
-            return ReactiveSecurityContextHolder.getContext()
-                .filter(ctx -> ctx.getAuthentication() != null)
-                .map(ctx -> (Jwt) ctx.getAuthentication().getPrincipal())
+            String token = authHeader.substring(7);
+
+            return reactiveJwtDecoder.decode(token)
                 .flatMap(jwt -> {
                     String agentIdClaim = jwt.getClaimAsString("agent_id");
                     String agentId = (agentIdClaim != null && !agentIdClaim.isBlank()) 
@@ -62,7 +65,7 @@ public class JwtAuthFilter extends AbstractGatewayFilterFactory<JwtAuthFilter.Co
 
                     return chain.filter(modifiedExchange);
                 })
-                .switchIfEmpty(Mono.defer(() -> onError(exchange, "Invalid token", "ERR_AUTH_INVALID_TOKEN")));
+                .onErrorResume(e -> onError(exchange, "Invalid token: " + e.getMessage(), "ERR_AUTH_INVALID_TOKEN"));
         };
     }
 

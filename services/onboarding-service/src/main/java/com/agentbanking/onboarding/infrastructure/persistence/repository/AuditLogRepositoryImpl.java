@@ -3,6 +3,8 @@ package com.agentbanking.onboarding.infrastructure.persistence.repository;
 import com.agentbanking.common.audit.AuditLogRecord;
 import com.agentbanking.onboarding.domain.port.out.AuditLogRepository;
 import com.agentbanking.onboarding.infrastructure.persistence.entity.AuditLogEntity;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
@@ -22,6 +24,19 @@ public class AuditLogRepositoryImpl implements AuditLogRepository {
         AuditLogEntity entity = toEntity(record);
         AuditLogEntity saved = jpaRepository.save(entity);
         return toRecord(saved);
+    }
+
+    @Override
+    public Page<AuditLogRecord> searchAuditLogs(String entityType, LocalDateTime fromDate, LocalDateTime toDate, Pageable pageable) {
+        Page<AuditLogEntity> page;
+        
+        if (entityType == null && fromDate == null && toDate == null) {
+            page = jpaRepository.findAllOrderByTimestampDesc(pageable);
+        } else {
+            page = jpaRepository.searchAuditLogs(entityType, fromDate, toDate, pageable);
+        }
+        
+        return page.map(this::toRecord);
     }
 
     private AuditLogEntity toEntity(AuditLogRecord record) {

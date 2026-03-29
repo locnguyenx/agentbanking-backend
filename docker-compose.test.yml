@@ -1,0 +1,14 @@
+# Docker Compose Override for Testing
+# Usage: docker-compose --profile test --profile gateway up -d
+#
+# This override configures the gateway to use the mock JWT issuer
+# for testing happy path scenarios with valid JWT tokens.
+
+services:
+  gateway:
+    environment:
+      JWT_ISSUER_URI: http://mock-jwt-issuer:8090
+      JWT_JWK_SET_URI: http://mock-jwt-issuer:8090/.well-known/jwks.json
+    depends_on:
+      mock-jwt-issuer:
+        condition: service_healthy

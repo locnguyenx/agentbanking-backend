@@ -8,6 +8,28 @@ This project is an **Agent Banking Platform** facilitating financial services at
 * **Regulatory Compliance:** Bank Malaysia standards.
 * **Security:** Zero-trust architecture. No PII in logs. Hardware-level encryption for PINs.
 
+## External File Loading
+
+CRITICAL: When you encounter a file reference (e.g., @rules/general.md), use your Read tool to load it on a need-to-know basis. They're relevant to the SPECIFIC task at hand.
+
+Instructions:
+
+- Do NOT preemptively load all references - use lazy loading based on actual need
+- When loaded, treat content as mandatory instructions that override defaults
+- Follow references recursively when needed
+
+## Technology Stack
+
+**MUST NOT use technologies outside this list:**
+* **Language:** Java 21 (LTS)
+* **Framework:** Spring Boot 3.x, Spring Cloud
+* **Persistence:** Spring Data JPA (Hibernate) with PostgreSQL
+* **Caching:** Redis (Spring Data Redis)
+* **Messaging:** Apache Kafka (Spring Cloud Stream)
+* **Gateway:** Spring Cloud Gateway (Reactive)
+* **Testing:** JUnit 5, Mockito, ArchUnit
+* **Backoffice UI:** React + TypeScript + Vite
+
 ## Architecture
 
 ### 5-Tier System Architecture
@@ -43,16 +65,15 @@ service-name/
 └── config/                    # Spring configuration
 ```
 
-**ENFORCEMENT:**
+### Hexagonal Architecture Enforcement (REQUIRED)
 - `domain/` must have ZERO imports from Spring, JPA, Kafka, or any infrastructure framework
 - `infrastructure/` implements interfaces defined in `domain/port/`
 - Controllers accept DTOs, call use cases, return DTOs — NEVER expose entities
 - All financial calculations and state changes in `domain/service/`
+- Service: MUST include ArchUnit tests that verify hexagonal architecture compliance
 
-### Hexagonal Architecture Enforcement (REQUIRED)
-
-- Service: MUST include ArchUnit tests that verify hexagonal architecture compliance:
-- Domain model: you MUST
+#### Domain model
+you MUST:
 1. Follow the pattern in the template exactly - records go in `domain/model`, entities in `infrastructure/persistence/entity/`
 2. Create repository port in `domain/port/out/` and implementation in `infrastructure/persistence/repository/`
 
@@ -66,18 +87,6 @@ service-name/
 **If unsure, check the template first.**
 
 **FAILURE TO COMPLY:** Any JPA/Spring annotation found in `domain/` layer will cause the build to fail.
-
-## Technology Stack
-
-**MUST NOT use technologies outside this list:**
-* **Language:** Java 21 (LTS)
-* **Framework:** Spring Boot 3.x, Spring Cloud
-* **Persistence:** Spring Data JPA (Hibernate) with PostgreSQL
-* **Caching:** Redis (Spring Data Redis)
-* **Messaging:** Apache Kafka (Spring Cloud Stream)
-* **Gateway:** Spring Cloud Gateway (Reactive)
-* **Testing:** JUnit 5, Mockito, ArchUnit
-* **Backoffice UI:** React + TypeScript + Vite
 
 ## Architectural Laws (NON-NEGOTIABLE)
 
@@ -114,6 +123,53 @@ Each microservice must follow: Controller → Service → Repository.
 * **Database-per-service:** No shared databases. No cross-service joins.
 * **Internal OpenAPI specs:** Per-service at `<service-root>/docs/openapi-internal.yaml`.
 
+### Law V: Spring Bean Registration
+**EVERY new domain service MUST be registered as a bean.**
+
+When adding a class in `domain/service/`:
+1. Add bean to `DomainServiceConfig.java` in same commit
+2. Use constructor injection (no field injection)
+3. Do NOT add `@Service` to domain classes (use `@Bean` in config)
+
+Example in `DomainServiceConfig.java`:
+```java
+@Bean
+public MyNewService myNewService(RequiredPort port) {
+    return new MyNewService(port);
+}
+```
+
+### Law VI: Infrastructure Adapter Annotations
+**EVERY adapter MUST have the correct annotation:**
+- `infrastructure/persistence/` classes → `@Repository`
+- `infrastructure/web/` classes → `@RestController`
+- `infrastructure/external/` classes → `@FeignClient` (for remote calls)
+
+### Law VII: Feign URL Configuration
+**EVERY `@FeignClient(url = "${property}")` MUST have matching entry in `application.yaml`.**
+
+Before committing Feign client changes:
+1. Check all `url = "${...}"` properties in Feign clients
+2. Verify each property exists in `application.yaml`
+3. For Docker deployment, use service names: `http://service-name:port`
+
+### Law VIII: Cross-Service Dependencies
+**AVOID direct service dependencies.** If unavoidable:
+1. Use `compileOnly` scope (not `implementation`)
+2. Move shared models to `common` module
+3. Ensure Flyway migration files have unique version prefixes (e.g., `V1_ledger_init.sql`)
+
+### Law IX: Component Scanning
+**Components in `common` module MUST be scannable.**
+
+Add to main application class:
+```java
+@ComponentScan(basePackages = {"com.agentbanking.servicename", "com.agentbanking.common"})
+```
+
+### Law X: Pre-Commit Startup Validation
+**Before committing significant changes, validate ALL services start**
+
 ## Coding Standards
 
 ### Immutability
@@ -135,52 +191,15 @@ Each microservice must follow: Controller → Service → Repository.
 * Use Flyway for migrations.
 * No cross-service database access.
 
-## API Contract Enforcement
-
-**OpenAPI 3.0 Specification** is the single source of truth for all REST APIs.
-
-### Rules
-- **External API:** All backend REST endpoints exposed via Gateway MUST be documented in `docs/api/openapi.yaml`
-- **Internal API:** Each service's internal endpoints documented in `<service-root>/docs/openapi-internal.yaml`
-- **Frontend API clients and TypeScript types** MUST be generated from `openapi.yaml`
-- **No manual hand-written API mocks** — use generated mocks from OpenAPI spec
-- **CI validation**: Run `openapi-generator-cli validate` and diff check
-
 ## Documentation
 - `docs` - at project root
 - `docs/ideas` - high level requirements (ARCHITECTURE.md, BRD_SUMMARY.md)
-- `docs/superpowers/specs/agent-banking-platform/` - formal specs (BRD, BDD, Design)
+- `docs/superpowers/specs/agent-banking-platform/*.md` - formal specs (BRD, BDD, Design)
+- `docs/superpowers/specs/auth-iam-service/*.md` - specs for auth & iam service
 - `docs/api/openapi.yaml` - external API spec
 
-## Testing Guidelines
-* Unit tests: JUnit 5 + Mockito
-* Architecture tests: ArchUnit (enforce hexagonal rules)
-* Integration tests: Spring Boot Test + Testcontainers (PostgreSQL)
-* BDD scenarios in `*-bdd.md` are the acceptance criteria
+## Development Guidelines
 
-## Banking-Specific Guidelines
-
-### Money Handling
-* All monetary values use `BigDecimal` — NEVER use `float` or `double`.
-* Rounding: `HALF_UP` to 2 decimal places.
-* Currency: Always `MYR` — validate on all endpoints.
-
-### Audit Trail
-* Every financial transaction creates a JournalEntry (double-entry).
-* AuditLog entity records who, what, when, where for all operations.
-* Audit logs are immutable — append-only, no updates or deletes.
-
-### Security
-* PINs: Hardware-level encryption via HSM. DUKPT PIN blocks. Never decrypted outside HSM.
-* PAN: Masked in all responses and logs (first 6, last 4 digits).
-* MyKad: Encrypted at rest (AES-256). Never in plaintext logs.
-* TLS 1.2+ for all external traffic.
-* mTLS for internal service-to-service communication.
-
-### Geofencing
-* Transactions allowed only within 100m of registered Merchant GPS coordinate.
-* If GPS unavailable: reject transaction with `ERR_GPS_UNAVAILABLE`.
-
-### Velocity Checks
-* Limit transactions per MyKad per day to prevent smurfing.
-* Configurable via VelocityRule entity.
+For REST API design and error handling: @rules/api-standards.md
+For testing strategies and coverage requirements: @rules/testing-guidelines.md
+For Banking Specific Guidelines: @rules/banking-guidelines.md

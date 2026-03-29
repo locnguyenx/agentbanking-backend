@@ -22,10 +22,13 @@ export const api = {
   createAgent: (data: any) => client.post('/backoffice/agents', data).then((r) => r.data),
   getAgent: (id: string) => client.get(`/backoffice/agents/${id}`).then((r) => r.data),
   updateAgent: (id: string, data: any) => client.put(`/backoffice/agents/${id}`, data).then((r) => r.data),
+  deactivateAgent: (id: string) => client.delete(`/backoffice/agents/${id}`).then((r) => r.data),
   getTransactions: (params?: any) => client.get('/backoffice/transactions', { params }).then((r) => r.data),
   getSettlement: (params?: any) => client.get('/backoffice/settlement', { params }).then((r) => r.data),
   exportSettlement: (params?: any) => client.get('/backoffice/settlement/export', { params, responseType: 'blob' }).then((r) => r.data),
   getKycReviewQueue: (params?: any) => client.get('/backoffice/kyc/review-queue', { params }).then((r) => r.data),
+  approveKyc: (id: string) => client.post(`/backoffice/kyc/review-queue/${id}/approve`, {}).then((r) => r.data),
+  rejectKyc: (id: string, reason: string) => client.post(`/backoffice/kyc/review-queue/${id}/reject`, { reason }).then((r) => r.data),
 }
 
 export default api

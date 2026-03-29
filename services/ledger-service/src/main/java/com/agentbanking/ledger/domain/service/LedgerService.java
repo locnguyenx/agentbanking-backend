@@ -655,6 +655,144 @@ public class LedgerService {
           efmDetails.put("referenceNumber", authResult.getOrDefault("referenceNumber", ""));
           efmEventPublisher.publishEvent("CASH_BACK", transactionId, merchantId, efmDetails);
           
-          return response;
+           return response;
+      }
+
+     /**
+      * Process PIN voucher purchase
+      * Agent earns commission on PIN voucher sales
+      */
+     public Map<String, Object> processPinPurchase(UUID agentId, String productCode,
+                                                    BigDecimal amount, String idempotencyKey) {
+         if (idempotencyKey != null && idempotencyCache.exists(idempotencyKey)) {
+             try {
+                 return idempotencyCache.get(idempotencyKey, Map.class);
+             } catch (Exception e) {
+             }
+         }
+
+         amount = amount.setScale(2, RoundingMode.HALF_UP);
+
+         // Get agent for tier
+         Optional<AgentRecord> agentOpt = agentRepository.findById(agentId);
+         if (agentOpt.isEmpty()) {
+             throw new LedgerException(ErrorCodes.ERR_AGENT_NOT_FOUND, "DECLINE");
+         }
+         AgentRecord agent = agentOpt.get();
+         
+         // Map onboarding service tier to ledger service tier
+         String tierName = agent.tier().name();
+         AgentTier tier;
+         switch (tierName) {
+             case "BASIC":
+                 tier = AgentTier.MICRO;
+                 break;
+             case "STANDARD":
+                 tier = AgentTier.STANDARD;
+                 break;
+             case "PREMIUM":
+                 tier = AgentTier.PREMIER;
+                 break;
+             default:
+                 tier = AgentTier.MICRO;
+         }
+
+         // Calculate commission (agent earns commission on PIN sales)
+         BigDecimal commission = merchantTransactionService.calculatePinPurchaseCommission(amount, tier);
+
+         // Credit agent float with commission
+         AgentFloatRecord agentFloat = agentFloatRepository.findByIdWithLock(agentId);
+         if (agentFloat == null) {
+             throw new LedgerException(ErrorCodes.ERR_AGENT_FLOAT_NOT_FOUND, "RETRY");
+         }
+
+         if (!MYR_CURRENCY.equals(agentFloat.currency())) {
+             throw new LedgerException(ErrorCodes.ERR_INVALID_CURRENCY, "DECLINE",
+                 "Only MYR currency is supported");
+         }
+
+         BigDecimal newBalance = agentFloat.balance().add(commission).setScale(2, RoundingMode.HALF_UP);
+         AgentFloatRecord updatedFloat = new AgentFloatRecord(
+                 agentFloat.floatId(),
+                 agentFloat.agentId(),
+                 newBalance,
+                 agentFloat.reservedBalance(),
+                 agentFloat.currency(),
+                 agentFloat.version() + 1,
+                 agentFloat.merchantGpsLat(),
+                 agentFloat.merchantGpsLng()
+         );
+         agentFloatRepository.save(updatedFloat);
+
+         // Create transaction record
+         UUID transactionId = UUID.randomUUID();
+         LocalDateTime now = LocalDateTime.now();
+         TransactionRecord txn = new TransactionRecord(
+                 transactionId,
+                 idempotencyKey,
+                 agentId,
+                 TransactionType.PIN_PURCHASE,
+                 amount,
+                 BigDecimal.ZERO, // customer fee
+                 commission,
+                 BigDecimal.ZERO, // bank share
+                 TransactionStatus.COMPLETED,
+                 null,
+                 null,
+                 null,
+                 "",
+                 null,
+                 null,
+                 now,
+                 now
+         );
+         transactionRepository.save(txn);
+
+         // Create journal entries (double-entry)
+         List<JournalEntryRecord> entries = new ArrayList<>();
+         entries.add(new JournalEntryRecord(
+                 UUID.randomUUID(),
+                 transactionId,
+                 EntryType.CREDIT,
+                 "PIN_PURCHASE_COMMISSION",
+                 commission,
+                 "Commission earned for PIN voucher sale",
+                 now
+         ));
+         entries.add(new JournalEntryRecord(
+                 UUID.randomUUID(),
+                 transactionId,
+                 EntryType.DEBIT,
+                 "COMMISSION_EXPENSE",
+                 commission,
+                 "Commission expense for PIN voucher",
+                 now
+         ));
+         journalEntryRepository.saveAll(entries);
+
+         // Generate PIN code (mock - in real system this would come from PIN supplier)
+         String pinCode = "PIN-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+
+         // Build response
+         Map<String, Object> response = Map.of(
+                 "status", "COMPLETED",
+                 "transactionId", transactionId.toString(),
+                 "pinCode", pinCode,
+                 "commission", commission
+         );
+
+         if (idempotencyKey != null) {
+             idempotencyCache.save(idempotencyKey, response, IDEMPOTENCY_TTL);
+         }
+
+         // Publish EFM event
+         Map<String, Object> efmDetails = new HashMap<>();
+         efmDetails.put("transactionType", TransactionType.PIN_PURCHASE);
+         efmDetails.put("productCode", productCode);
+         efmDetails.put("amount", amount);
+         efmDetails.put("commission", commission);
+         efmEventPublisher.publishEvent("PIN_PURCHASE", transactionId, agentId, efmDetails);
+
+         return response;
      }
  }

@@ -1,0 +1,44 @@
+server:
+  port: 8080
+
+springdoc:
+  api-docs:
+    enabled: true
+    path: /v3/api-docs
+  swagger-ui:
+    enabled: true
+    path: /swagger-ui.html
+    urls:
+      - url: /v3/api-docs
+        name: All Services
+      - url: /docs/rules/v3/api-docs
+        name: Rules Service
+      - url: /docs/ledger/v3/api-docs
+        name: Ledger Service
+      - url: /docs/onboarding/v3/api-docs
+        name: Onboarding Service
+      - url: /docs/switch/v3/api-docs
+        name: Switch Adapter Service
+      - url: /docs/biller/v3/api-docs
+        name: Biller Service
+
+spring:
+  main:
+    allow-bean-definition-overriding: true
+    web-application-type: reactive
+  application:
+    name: api-gateway
+  config:
+    activate:
+      on-profile: test
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://localhost:8090
+          jwk-set-uri: http://localhost:8090/.well-known/jwks.json
+
+# Override JWT filter to skip validation for test profile
+jwt:
+  validation:
+    enabled: false

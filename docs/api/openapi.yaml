@@ -1,860 +1,829 @@
 openapi: 3.0.3
 info:
-  title: Agent Banking Platform - External API
-  description: |
-    REST API for POS terminals (Android/Flutter channel apps) connecting to the Agent Banking Platform.
-    All requests must include Bearer JWT token and X-Idempotency-Key header.
   version: 1.0.0
+  title: Agent Banking Platform API
+  description: Aggregated API from all microservices
   contact:
     name: Agent Banking Platform Team
-
 servers:
-  - url: https://api.agentbanking.example.com
-    description: Production
-  - url: https://sandbox.agentbanking.example.com
-    description: Sandbox
-  - url: http://localhost:8080
-    description: Local development (via Gateway)
-
-security:
-  - bearerAuth: []
-
-tags:
-  - name: Withdrawal
-    description: Cash withdrawal transactions
-  - name: Deposit
-    description: Cash deposit transactions
-  - name: Balance
-    description: Balance inquiry
-  - name: KYC
-    description: e-KYC and Onboarding
-  - name: Backoffice
-    description: Bank operator endpoints
-
+- description: Gateway
+  url: http://localhost:8080
+- description: Production
+  url: https://api.agentbanking.example.com
+- description: Sandbox
+  url: https://sandbox.agentbanking.example.com
 paths:
-  /api/v1/withdrawal:
+  /api/v1/transfer/duitnow:
     post:
-      tags: [Withdrawal]
-      summary: Cash withdrawal (EMV + PIN)
-      description: |
-        Process a cash withdrawal at an agent location.
-        Customer presents EMV card with PIN. Agent collects cash from float.
-        Requires geofence validation (within 100m of registered merchant GPS).
-      operationId: processWithdrawal
-      parameters:
-        - $ref: '#/components/parameters/XIdempotencyKey'
-        - $ref: '#/components/parameters/XPosTerminalId'
-        - $ref: '#/components/parameters/XGpsLatitude'
-        - $ref: '#/components/parameters/XGpsLongitude'
+      tags:
+      - switch-controller (switch-adapter-service)
+      operationId: duitNowTransfer
       requestBody:
-        required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/WithdrawalRequest'
-            example:
-              amount: 500.00
-              card_data: "encrypted_card_blob_from_pos"
-              pin_block: "dukpt_encrypted_pin_block"
-              currency: "MYR"
-      responses:
-        '200':
-          description: Withdrawal completed successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TransactionSuccessResponse'
-              example:
-                status: "COMPLETED"
-                transaction_id: "TXN-a1b2c3d4-e5f6"
-                amount: 500.00
-                customer_fee: 1.00
-                reference_number: "PAYNET-REF-789"
-                timestamp: "2026-03-25T14:30:00+08:00"
-        '400':
-          $ref: '#/components/responses/ValidationError'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '422':
-          description: Business logic failure
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-              examples:
-                insufficientFloat:
-                  value:
-                    status: "FAILED"
-                    error:
-                      code: "ERR_INSUFFICIENT_FLOAT"
-                      message: "Agent float balance insufficient"
-                      action_code: "DECLINE"
-                      trace_id: "trace-abc-123"
-                      timestamp: "2026-03-25T14:30:00+08:00"
-                limitExceeded:
-                  value:
-                    status: "FAILED"
-                    error:
-                      code: "ERR_LIMIT_EXCEEDED"
-                      message: "Daily withdrawal limit exceeded"
-                      action_code: "DECLINE"
-                      trace_id: "trace-abc-124"
-                      timestamp: "2026-03-25T14:30:00+08:00"
-                geofenceViolation:
-                  value:
-                    status: "FAILED"
-                    error:
-                      code: "ERR_GEOFENCE_VIOLATION"
-                      message: "Transaction outside 100m geofence"
-                      action_code: "DECLINE"
-                      trace_id: "trace-abc-125"
-                      timestamp: "2026-03-25T14:30:00+08:00"
-                velocityExceeded:
-                  value:
-                    status: "FAILED"
-                    error:
-                      code: "ERR_VELOCITY_COUNT_EXCEEDED"
-                      message: "Daily transaction count exceeded for this MyKad"
-                      action_code: "DECLINE"
-                      trace_id: "trace-abc-126"
-                      timestamp: "2026-03-25T14:30:00+08:00"
-        '503':
-          $ref: '#/components/responses/ServiceUnavailable'
-
-  /api/v1/deposit:
-    post:
-      tags: [Deposit]
-      summary: Cash deposit
-      description: |
-        Process a cash deposit at an agent location.
-        Validates destination account via ProxyEnquiry before crediting.
-        Agent receives cash from customer, float is credited.
-      operationId: processDeposit
-      parameters:
-        - $ref: '#/components/parameters/XIdempotencyKey'
-        - $ref: '#/components/parameters/XPosTerminalId'
-        - $ref: '#/components/parameters/XGpsLatitude'
-        - $ref: '#/components/parameters/XGpsLongitude'
-      requestBody:
+              $ref: '#/components/schemas/DuitNowRequest'
         required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/DepositRequest'
-            example:
-              amount: 1000.00
-              destination_account: "1234567890"
-              currency: "MYR"
       responses:
         '200':
-          description: Deposit completed successfully
+          description: OK
           content:
-            application/json:
+            '*/*':
               schema:
-                $ref: '#/components/schemas/TransactionSuccessResponse'
-        '400':
-          $ref: '#/components/responses/ValidationError'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '422':
-          description: Business logic failure
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-              examples:
-                invalidAccount:
-                  value:
-                    status: "FAILED"
-                    error:
-                      code: "ERR_INVALID_ACCOUNT"
-                      message: "Destination account not found"
-                      action_code: "DECLINE"
-                      trace_id: "trace-abc-200"
-                      timestamp: "2026-03-25T14:35:00+08:00"
-        '503':
-          $ref: '#/components/responses/ServiceUnavailable'
-
+                type: object
   /api/v1/balance-inquiry:
     post:
-      tags: [Balance]
-      summary: Customer balance inquiry
-      description: |
-        Check customer account balance via card + PIN authentication.
-        Card number is masked in all responses and logs.
-      operationId: customerBalanceInquiry
-      parameters:
-        - $ref: '#/components/parameters/XIdempotencyKey'
-        - $ref: '#/components/parameters/XPosTerminalId'
-        - $ref: '#/components/parameters/XGpsLatitude'
-        - $ref: '#/components/parameters/XGpsLongitude'
+      tags:
+      - ledger-controller (ledger-service)
+      operationId: balanceInquiry
       requestBody:
-        required: true
         content:
           application/json:
             schema:
               $ref: '#/components/schemas/BalanceInquiryRequest'
-            example:
-              card_data: "encrypted_card_blob"
-              pin_block: "dukpt_encrypted_pin_block"
+        required: true
       responses:
         '200':
-          description: Balance inquiry successful
+          description: OK
           content:
-            application/json:
+            '*/*':
               schema:
-                $ref: '#/components/schemas/BalanceInquiryResponse'
-              example:
-                status: "COMPLETED"
-                balance: 15000.00
-                currency: "MYR"
-                account_masked: "****7890"
-                timestamp: "2026-03-25T14:40:00+08:00"
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '422':
-          description: Balance inquiry failed
+                type: object
+                additionalProperties:
+                  type: object
+  /api/v1/topup:
+    post:
+      tags:
+      - biller-controller (biller-service)
+      operationId: topup
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties:
+                type: object
+        required: true
+      responses:
+        '200':
+          description: OK
           content:
-            application/json:
+            '*/*':
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
-
+                type: object
+                additionalProperties:
+                  type: object
+  /api/v1/bill/pay:
+    post:
+      tags:
+      - biller-controller (biller-service)
+      operationId: payBill
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties:
+                type: object
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: object
+                additionalProperties:
+                  type: object
+  /api/v1/ewallet/withdraw:
+    post:
+      tags:
+      - e-wallet-controller (biller-service)
+      operationId: withdrawal
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties:
+                type: object
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: object
+                additionalProperties:
+                  type: object
+  /api/v1/ewallet/topup:
+    post:
+      tags:
+      - e-wallet-controller (biller-service)
+      operationId: topup_1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties:
+                type: object
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: object
+                additionalProperties:
+                  type: object
+  /api/v1/essp/purchase:
+    post:
+      tags:
+      - essp-controller (biller-service)
+      operationId: purchase
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties:
+                type: object
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: object
+                additionalProperties:
+                  type: object
+  /api/v1/backoffice/discrepancy/{caseId}/maker-action:
+    post:
+      tags:
+      - reconciliation-controller (ledger-service)
+      operationId: makerPropose
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties:
+                type: object
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: object
+                additionalProperties:
+                  type: object
+  /api/v1/backoffice/discrepancy/{caseId}/checker-reject:
+    post:
+      tags:
+      - reconciliation-controller (ledger-service)
+      operationId: checkerReject
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties:
+                type: object
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: object
+                additionalProperties:
+                  type: object
+  /api/v1/backoffice/discrepancy/{caseId}/checker-approve:
+    post:
+      tags:
+      - reconciliation-controller (ledger-service)
+      operationId: checkerApprove
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties:
+                type: object
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: object
+                additionalProperties:
+                  type: object
+  /api/v1/retail/sale:
+    post:
+      tags:
+      - merchant-controller (ledger-service)
+      operationId: processRetailSale
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RetailSaleCommand'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/RetailSaleResponse'
+  /api/v1/retail/pin-purchase:
+    post:
+      tags:
+      - merchant-controller (ledger-service)
+      operationId: processPinPurchase
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PinPurchaseCommand'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/PinPurchaseResponse'
+  /api/v1/retail/cashback:
+    post:
+      tags:
+      - merchant-controller (ledger-service)
+      operationId: processCashBack
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CashBackCommand'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/CashBackResponse'
+  /api/v1/withdrawal:
+    post:
+      tags:
+      - ledger-controller (ledger-service)
+      operationId: debit
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WithdrawalRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: object
+                additionalProperties:
+                  type: object
+  /api/v1/deposit:
+    post:
+      tags:
+      - ledger-controller (ledger-service)
+      operationId: credit
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DepositRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: object
+                additionalProperties:
+                  type: object
   /api/v1/agent/balance:
     get:
-      tags: [Balance]
-      summary: Agent wallet balance
-      description: |
-        Check agent's virtual wallet balance.
-        Agent identity is extracted from JWT token.
-      operationId: agentBalanceInquiry
+      tags:
+      - ledger-controller (ledger-service)
+      operationId: getBalance
       parameters:
-        - $ref: '#/components/parameters/XIdempotencyKey'
-        - $ref: '#/components/parameters/XPosTerminalId'
-      responses:
-        '200':
-          description: Agent balance retrieved
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AgentBalanceResponse'
-              example:
-                status: "COMPLETED"
-                balance: 10000.00
-                reserved_balance: 500.00
-                available_balance: 9500.00
-                currency: "MYR"
-                timestamp: "2026-03-25T14:40:00+08:00"
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-
-  /api/v1/kyc/verify:
-    post:
-      tags: [KYC]
-      summary: MyKad verification via JPN
-      description: |
-        Verify customer identity via JPN API using 12-digit MyKad.
-        Returns citizen data and AML status.
-      operationId: verifyMyKad
-      parameters:
-        - $ref: '#/components/parameters/XIdempotencyKey'
-        - $ref: '#/components/parameters/XPosTerminalId'
-        - $ref: '#/components/parameters/XGpsLatitude'
-        - $ref: '#/components/parameters/XGpsLongitude'
-      requestBody:
+      - name: agentId
+        in: path
         required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/KycVerifyRequest'
-            example:
-              mykad_number: "123456789012"
+        schema:
+          type: string
+          format: uuid
       responses:
         '200':
-          description: Verification result
+          description: OK
           content:
-            application/json:
+            '*/*':
               schema:
-                $ref: '#/components/schemas/KycVerifyResponse'
-              examples:
-                autoApproved:
-                  value:
-                    status: "AUTO_APPROVED"
-                    verification_id: "KYC-uuid-789"
-                    full_name: "AHMAD BIN ABU"
-                    age: 35
-                    timestamp: "2026-03-25T14:45:00+08:00"
-                manualReview:
-                  value:
-                    status: "MANUAL_REVIEW"
-                    verification_id: "KYC-uuid-790"
-                    reason: "Biometric match failed — queued for manual review"
-                    timestamp: "2026-03-25T14:45:00+08:00"
-        '400':
-          $ref: '#/components/responses/ValidationError'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '422':
-          description: Verification failed
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-              examples:
-                mykadNotFound:
-                  value:
-                    status: "FAILED"
-                    error:
-                      code: "ERR_MYKAD_NOT_FOUND"
-                      message: "MyKad not found in JPN records"
-                      action_code: "DECLINE"
-                      trace_id: "trace-abc-300"
-                      timestamp: "2026-03-25T14:45:00+08:00"
-                invalidFormat:
-                  value:
-                    status: "FAILED"
-                    error:
-                      code: "ERR_INVALID_MYKAD_FORMAT"
-                      message: "MyKad must be exactly 12 digits"
-                      action_code: "DECLINE"
-                      trace_id: "trace-abc-301"
-                      timestamp: "2026-03-25T14:45:00+08:00"
-        '503':
-          $ref: '#/components/responses/ServiceUnavailable'
-
-  /api/v1/kyc/biometric:
-    post:
-      tags: [KYC]
-      summary: Biometric match-on-card
-      description: |
-        Perform biometric (thumbprint) match-on-card verification.
-        Must be called after /kyc/verify to link to a verification_id.
-        Auto-approves if: match=YES AND AML=CLEAN AND age>=18.
-      operationId: biometricMatch
-      parameters:
-        - $ref: '#/components/parameters/XIdempotencyKey'
-        - $ref: '#/components/parameters/XPosTerminalId'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/BiometricRequest'
-            example:
-              verification_id: "KYC-uuid-789"
-              biometric_data: "encrypted_thumbprint_blob"
-      responses:
-        '200':
-          description: Biometric match result
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/BiometricResponse'
-              example:
-                status: "AUTO_APPROVED"
-                verification_id: "KYC-uuid-789"
-                biometric_match: "MATCH"
-                timestamp: "2026-03-25T14:46:00+08:00"
-        '400':
-          $ref: '#/components/responses/ValidationError'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '422':
-          description: Biometric failed
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-
-  # --- Backoffice Endpoints ---
-  /api/v1/backoffice/agents:
+                type: object
+                additionalProperties:
+                  type: object
+  /api/v1/backoffice/transactions:
     get:
-      tags: [Backoffice]
-      summary: List agents
-      operationId: listAgents
+      tags:
+      - ledger-controller (ledger-service)
+      operationId: getTransactions
       parameters:
-        - name: status
-          in: query
-          schema:
-            type: string
-            enum: [ACTIVE, SUSPENDED, DEACTIVATED]
-        - name: tier
-          in: query
-          schema:
-            type: string
-            enum: [MICRO, STANDARD, PREMIER]
-        - name: page
-          in: query
-          schema:
-            type: integer
-            default: 0
-        - name: size
-          in: query
-          schema:
-            type: integer
-            default: 20
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 0
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 20
       responses:
         '200':
-          description: Agent list
+          description: OK
           content:
-            application/json:
+            '*/*':
               schema:
-                $ref: '#/components/schemas/AgentListResponse'
-    post:
-      tags: [Backoffice]
-      summary: Create agent
-      operationId: createAgent
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CreateAgentRequest'
-      responses:
-        '201':
-          description: Agent created
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AgentResponse'
-        '422':
-          description: Duplicate agent
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-
-  /api/v1/backoffice/agents/{agentId}:
+                type: object
+                additionalProperties:
+                  type: object
+  /api/v1/backoffice/settlement:
     get:
-      tags: [Backoffice]
-      summary: Get agent details
+      tags:
+      - ledger-controller (ledger-service)
+      operationId: getSettlement
+      parameters:
+      - name: date
+        in: query
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: object
+                additionalProperties:
+                  type: object
+  /api/v1/backoffice/dashboard:
+    get:
+      tags:
+      - ledger-controller (ledger-service)
+      operationId: getDashboard
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: object
+                additionalProperties:
+                  type: object
+  /api/v1/backoffice/agents/{id}:
+    get:
+      tags:
+      - agent-controller (onboarding-service)
       operationId: getAgent
       parameters:
-        - name: agentId
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
       responses:
         '200':
-          description: Agent details
+          description: OK
           content:
-            application/json:
+            '*/*':
               schema:
                 $ref: '#/components/schemas/AgentResponse'
     put:
-      tags: [Backoffice]
-      summary: Update agent
+      tags:
+      - agent-controller (onboarding-service)
       operationId: updateAgent
       parameters:
-        - name: agentId
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-      requestBody:
+      - name: id
+        in: path
         required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
         content:
           application/json:
             schema:
               $ref: '#/components/schemas/UpdateAgentRequest'
+        required: true
       responses:
         '200':
-          description: Agent updated
-        '422':
-          description: Cannot deactivate with pending transactions
-
-  /api/v1/backoffice/transactions:
-    get:
-      tags: [Backoffice]
-      summary: List transactions (monitoring)
-      operationId: listTransactions
-      parameters:
-        - name: status
-          in: query
-          schema:
-            type: string
-            enum: [PENDING, COMPLETED, FAILED, REVERSED]
-        - name: agentId
-          in: query
-          schema:
-            type: string
-            format: uuid
-        - name: transactionType
-          in: query
-          schema:
-            type: string
-        - name: fromDate
-          in: query
-          schema:
-            type: string
-            format: date
-        - name: toDate
-          in: query
-          schema:
-            type: string
-            format: date
-        - name: page
-          in: query
-          schema:
-            type: integer
-            default: 0
-        - name: size
-          in: query
-          schema:
-            type: integer
-            default: 50
-      responses:
-        '200':
-          description: Transaction list
+          description: OK
           content:
-            application/json:
+            '*/*':
               schema:
-                $ref: '#/components/schemas/TransactionListResponse'
-
-  /api/v1/backoffice/settlement:
-    get:
-      tags: [Backoffice]
-      summary: Settlement report
-      operationId: getSettlement
+                $ref: '#/components/schemas/AgentResponse'
+    delete:
+      tags:
+      - agent-controller (onboarding-service)
+      operationId: deactivateAgent
       parameters:
-        - name: date
-          in: query
-          required: true
-          schema:
-            type: string
-            format: date
-        - name: agentId
-          in: query
-          schema:
-            type: string
-            format: uuid
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
       responses:
         '200':
-          description: Settlement report
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/SettlementResponse'
-
-  /api/v1/backoffice/settlement/export:
-    get:
-      tags: [Backoffice]
-      summary: Export settlement CSV
-      operationId: exportSettlement
-      parameters:
-        - name: date
-          in: query
-          required: true
-          schema:
-            type: string
-            format: date
-      responses:
-        '200':
-          description: CSV file
-          content:
-            text/csv:
-              schema:
+          description: OK
+  /api/v1/kyc/verify:
+    post:
+      tags:
+      - onboarding-controller (onboarding-service)
+      operationId: verifyMyKad
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties:
                 type: string
-                format: binary
-
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: object
+                additionalProperties:
+                  type: object
+  /api/v1/kyc/biometric:
+    post:
+      tags:
+      - onboarding-controller (onboarding-service)
+      operationId: biometricMatch
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties:
+                type: string
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: object
+                additionalProperties:
+                  type: object
+  /api/v1/backoffice/agents:
+    get:
+      tags:
+      - agent-controller (onboarding-service)
+      operationId: listAgents
+      parameters:
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 0
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 20
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AgentResponse'
+    post:
+      tags:
+      - agent-controller (onboarding-service)
+      operationId: createAgent
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAgentRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/AgentResponse'
   /api/v1/backoffice/kyc/review-queue:
     get:
-      tags: [Backoffice]
-      summary: Manual KYC review queue
+      tags:
+      - onboarding-controller (onboarding-service)
       operationId: getKycReviewQueue
       parameters:
-        - name: page
-          in: query
-          schema:
-            type: integer
-            default: 0
-        - name: size
-          in: query
-          schema:
-            type: integer
-            default: 20
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 0
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 20
       responses:
         '200':
-          description: Review queue
+          description: OK
           content:
-            application/json:
+            '*/*':
               schema:
-                $ref: '#/components/schemas/KycReviewQueueResponse'
-
+                type: object
+                additionalProperties:
+                  type: object
+  /api/v1/backoffice/audit-logs:
+    get:
+      tags:
+      - audit-log-controller (onboarding-service)
+      operationId: getAuditLogs
+      parameters:
+      - name: entityType
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: fromDate
+        in: query
+        required: false
+        schema:
+          type: string
+          format: date-time
+      - name: toDate
+        in: query
+        required: false
+        schema:
+          type: string
+          format: date-time
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 0
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 50
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: object
+                additionalProperties:
+                  type: object
 components:
-  securitySchemes:
-    bearerAuth:
-      type: http
-      scheme: bearer
-      bearerFormat: JWT
-
-  parameters:
-    XIdempotencyKey:
-      name: X-Idempotency-Key
-      in: header
-      required: true
-      description: UUID v4 for request deduplication
-      schema:
-        type: string
-        format: uuid
-    XPosTerminalId:
-      name: X-POS-Terminal-Id
-      in: header
-      required: true
-      description: Terminal device identifier
-      schema:
-        type: string
-    XGpsLatitude:
-      name: X-GPS-Latitude
-      in: header
-      required: true
-      description: Current terminal GPS latitude
-      schema:
-        type: number
-        format: double
-    XGpsLongitude:
-      name: X-GPS-Longitude
-      in: header
-      required: true
-      description: Current terminal GPS longitude
-      schema:
-        type: number
-        format: double
-
   schemas:
-    # --- Request Schemas ---
+    ReversalRequest:
+      required:
+      - amount
+      - originalReference
+      - originalTransactionId
+      type: object
+      properties:
+        originalTransactionId:
+          type: string
+          format: uuid
+        originalReference:
+          type: string
+        amount:
+          type: number
+    DuitNowRequest:
+      required:
+      - amount
+      - internalTransactionId
+      - proxyType
+      - proxyValue
+      type: object
+      properties:
+        internalTransactionId:
+          type: string
+          format: uuid
+        proxyType:
+          type: string
+        proxyValue:
+          type: string
+        amount:
+          type: number
+    BalanceInquiryRequest:
+      required:
+      - encryptedCardData
+      - pinBlock
+      type: object
+      properties:
+        encryptedCardData:
+          type: string
+        pinBlock:
+          type: string
+    CardAuthRequest:
+      required:
+      - amount
+      - internalTransactionId
+      - pan
+      type: object
+      properties:
+        internalTransactionId:
+          type: string
+          format: uuid
+        pan:
+          type: string
+        amount:
+          type: number
+    RetailSaleCommand:
+      type: object
+      properties:
+        merchantId:
+          type: string
+          format: uuid
+        amount:
+          type: number
+        cardData:
+          type: string
+        pinBlock:
+          type: string
+        idempotencyKey:
+          type: string
+    RetailSaleResponse:
+      type: object
+      properties:
+        status:
+          type: string
+        transactionId:
+          type: string
+        amount:
+          type: number
+        mdrAmount:
+          type: number
+        netToMerchant:
+          type: number
+    PinPurchaseCommand:
+      type: object
+      properties:
+        agentId:
+          type: string
+          format: uuid
+        productCode:
+          type: string
+        amount:
+          type: number
+        idempotencyKey:
+          type: string
+    PinPurchaseResponse:
+      type: object
+      properties:
+        status:
+          type: string
+        transactionId:
+          type: string
+        pinCode:
+          type: string
+        commission:
+          type: number
+        timestamp:
+          type: string
+    CashBackCommand:
+      type: object
+      properties:
+        merchantId:
+          type: string
+          format: uuid
+        cashBackAmount:
+          type: number
+        cardData:
+          type: string
+        pinBlock:
+          type: string
+        idempotencyKey:
+          type: string
+    CashBackResponse:
+      type: object
+      properties:
+        status:
+          type: string
+        transactionId:
+          type: string
+        cashBackAmount:
+          type: number
+        commission:
+          type: number
     WithdrawalRequest:
       type: object
-      required: [amount, card_data, pin_block, currency]
       properties:
+        agentId:
+          type: string
+          format: uuid
         amount:
           type: number
-          format: decimal
-          minimum: 0.01
-          description: Withdrawal amount in RM
-        card_data:
+        customerFee:
+          type: number
+        agentCommission:
+          type: number
+        bankShare:
+          type: number
+        idempotencyKey:
           type: string
-          description: Encrypted card data blob from POS
-        pin_block:
+        customerCardMasked:
           type: string
-          description: DUKPT-encrypted PIN block
-        currency:
-          type: string
-          enum: [MYR]
-          default: MYR
-
+        geofenceLat:
+          type: number
+        geofenceLng:
+          type: number
     DepositRequest:
       type: object
-      required: [amount, destination_account, currency]
       properties:
-        amount:
-          type: number
-          format: decimal
-          minimum: 0.01
-          description: Deposit amount in RM
-        destination_account:
-          type: string
-          description: Destination account number (validated via ProxyEnquiry)
-        currency:
-          type: string
-          enum: [MYR]
-          default: MYR
-
-    BalanceInquiryRequest:
-      type: object
-      required: [card_data, pin_block]
-      properties:
-        card_data:
-          type: string
-        pin_block:
-          type: string
-
-    KycVerifyRequest:
-      type: object
-      required: [mykad_number]
-      properties:
-        mykad_number:
-          type: string
-          pattern: '^\d{12}$'
-          description: 12-digit MyKad number
-
-    BiometricRequest:
-      type: object
-      required: [verification_id, biometric_data]
-      properties:
-        verification_id:
+        agentId:
           type: string
           format: uuid
-        biometric_data:
-          type: string
-          description: Encrypted thumbprint blob
-
-    CreateAgentRequest:
-      type: object
-      required: [businessName, tier, mykadNumber, phoneNumber, merchantGpsLat, merchantGpsLng]
-      properties:
-        businessName:
-          type: string
-          maxLength: 200
-        tier:
-          type: string
-          enum: [MICRO, STANDARD, PREMIER]
-        mykadNumber:
-          type: string
-          pattern: '^\d{12}$'
-        phoneNumber:
-          type: string
-        merchantGpsLat:
+        amount:
           type: number
-          format: double
-        merchantGpsLng:
+        customerFee:
           type: number
-          format: double
-
+        agentCommission:
+          type: number
+        bankShare:
+          type: number
+        idempotencyKey:
+          type: string
+        destinationAccount:
+          type: string
     UpdateAgentRequest:
+      required:
+      - businessName
+      - merchantGpsLat
+      - merchantGpsLng
+      - phoneNumber
+      - tier
       type: object
       properties:
         businessName:
           type: string
         tier:
           type: string
-          enum: [MICRO, STANDARD, PREMIER]
-        status:
-          type: string
-          enum: [ACTIVE, SUSPENDED, DEACTIVATED]
-        phoneNumber:
-          type: string
+          enum:
+          - BASIC
+          - STANDARD
+          - PREMIUM
         merchantGpsLat:
           type: number
-          format: double
         merchantGpsLng:
           type: number
-          format: double
-
-    # --- Response Schemas ---
-    TransactionSuccessResponse:
-      type: object
-      properties:
-        status:
+        phoneNumber:
           type: string
-          enum: [COMPLETED]
-        transaction_id:
-          type: string
-          format: uuid
-        amount:
-          type: number
-          format: decimal
-        customer_fee:
-          type: number
-          format: decimal
-        reference_number:
-          type: string
-        timestamp:
-          type: string
-          format: date-time
-
-    ErrorResponse:
-      type: object
-      properties:
-        status:
-          type: string
-          enum: [FAILED]
-        error:
-          type: object
-          properties:
-            code:
-              type: string
-              description: Error code from registry (ERR_xxx)
-            message:
-              type: string
-              description: Human-readable error message
-            action_code:
-              type: string
-              enum: [DECLINE, RETRY, REVIEW]
-              description: Suggested action for the caller
-            trace_id:
-              type: string
-              description: Distributed trace ID for debugging
-            timestamp:
-              type: string
-              format: date-time
-
-    BalanceInquiryResponse:
-      type: object
-      properties:
-        status:
-          type: string
-          enum: [COMPLETED]
-        balance:
-          type: number
-          format: decimal
-        currency:
-          type: string
-        account_masked:
-          type: string
-          description: Masked account number (e.g., ****7890)
-        timestamp:
-          type: string
-          format: date-time
-
-    AgentBalanceResponse:
-      type: object
-      properties:
-        status:
-          type: string
-          enum: [COMPLETED]
-        balance:
-          type: number
-          format: decimal
-        reserved_balance:
-          type: number
-          format: decimal
-        available_balance:
-          type: number
-          format: decimal
-        currency:
-          type: string
-        timestamp:
-          type: string
-          format: date-time
-
-    KycVerifyResponse:
-      type: object
-      properties:
-        status:
-          type: string
-          enum: [AUTO_APPROVED, MANUAL_REVIEW, REJECTED]
-        verification_id:
-          type: string
-          format: uuid
-        full_name:
-          type: string
-        age:
-          type: integer
-        reason:
-          type: string
-        timestamp:
-          type: string
-          format: date-time
-
-    BiometricResponse:
-      type: object
-      properties:
-        status:
-          type: string
-          enum: [AUTO_APPROVED, MANUAL_REVIEW, REJECTED]
-        verification_id:
-          type: string
-          format: uuid
-        biometric_match:
-          type: string
-          enum: [MATCH, NO_MATCH]
-        timestamp:
-          type: string
-          format: date-time
-
     AgentResponse:
       type: object
       properties:
@@ -867,179 +836,49 @@ components:
           type: string
         tier:
           type: string
-          enum: [MICRO, STANDARD, PREMIER]
+          enum:
+          - BASIC
+          - STANDARD
+          - PREMIUM
         status:
-          type: string
-          enum: [ACTIVE, SUSPENDED, DEACTIVATED]
-        phoneNumber:
           type: string
         merchantGpsLat:
           type: number
-          format: double
         merchantGpsLng:
           type: number
-          format: double
+        phoneNumber:
+          type: string
         createdAt:
           type: string
-          format: date-time
-
-    AgentListResponse:
+        updatedAt:
+          type: string
+    CreateAgentRequest:
+      required:
+      - agentCode
+      - businessName
+      - merchantGpsLat
+      - merchantGpsLng
+      - mykadNumber
+      - phoneNumber
+      - tier
       type: object
       properties:
-        content:
-          type: array
-          items:
-            $ref: '#/components/schemas/AgentResponse'
-        totalElements:
-          type: integer
-        totalPages:
-          type: integer
-        page:
-          type: integer
-
-    TransactionListResponse:
-      type: object
-      properties:
-        content:
-          type: array
-          items:
-            $ref: '#/components/schemas/TransactionSummary'
-        totalElements:
-          type: integer
-        totalPages:
-          type: integer
-        page:
-          type: integer
-
-    TransactionSummary:
-      type: object
-      properties:
-        transactionId:
-          type: string
-          format: uuid
-        transactionType:
-          type: string
-        amount:
-          type: number
-          format: decimal
-        status:
-          type: string
-          enum: [PENDING, COMPLETED, FAILED, REVERSED]
         agentCode:
           type: string
-        customerCardMasked:
+        businessName:
           type: string
-        createdAt:
+        tier:
           type: string
-          format: date-time
-
-    SettlementResponse:
-      type: object
-      properties:
-        date:
+          enum:
+          - BASIC
+          - STANDARD
+          - PREMIUM
+        merchantGpsLat:
+          type: number
+        merchantGpsLng:
+          type: number
+        mykadNumber:
           type: string
-          format: date
-        totalDeposits:
-          type: number
-          format: decimal
-        totalWithdrawals:
-          type: number
-          format: decimal
-        totalCommissions:
-          type: number
-          format: decimal
-        netSettlement:
-          type: number
-          format: decimal
-        agentBreakdown:
-          type: array
-          items:
-            type: object
-            properties:
-              agentCode:
-                type: string
-              agentTier:
-                type: string
-              deposits:
-                type: number
-              withdrawals:
-                type: number
-              commissions:
-                type: number
-              netAmount:
-                type: number
-
-    KycReviewQueueResponse:
-      type: object
-      properties:
-        content:
-          type: array
-          items:
-            type: object
-            properties:
-              verificationId:
-                type: string
-                format: uuid
-              mykadMasked:
-                type: string
-              fullName:
-                type: string
-              amlStatus:
-                type: string
-              biometricMatch:
-                type: string
-              rejectionReason:
-                type: string
-              createdAt:
-                type: string
-                format: date-time
-        totalElements:
-          type: integer
-        totalPages:
-          type: integer
-
-  responses:
-    ValidationError:
-      description: Request validation failed
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-          example:
-            status: "FAILED"
-            error:
-              code: "ERR_VAL_INVALID_AMOUNT"
-              message: "Amount must be greater than zero"
-              action_code: "DECLINE"
-              trace_id: "trace-abc-100"
-              timestamp: "2026-03-25T14:30:00+08:00"
-
-    Unauthorized:
-      description: Authentication failed
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-          example:
-            status: "FAILED"
-            error:
-              code: "ERR_TOKEN_EXPIRED"
-              message: "JWT token has expired"
-              action_code: "RETRY"
-              trace_id: "trace-abc-101"
-              timestamp: "2026-03-25T14:30:00+08:00"
-
-    ServiceUnavailable:
-      description: Backend service unavailable
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-          example:
-            status: "FAILED"
-            error:
-              code: "ERR_SERVICE_UNAVAILABLE"
-              message: "Service temporarily unavailable"
-              action_code: "RETRY"
-              trace_id: "trace-abc-102"
-              timestamp: "2026-03-25T14:30:00+08:00"
+        phoneNumber:
+          type: string
+tags: []

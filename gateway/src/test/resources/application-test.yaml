@@ -1,0 +1,54 @@
+# Test Configuration for E2E Integration Tests
+# Configure auth credentials for getting real JWT tokens
+
+auth:
+  # Auth service endpoint (where tokens are issued)
+  token-endpoint: ${AUTH_TOKEN_ENDPOINT:https://auth.agentbanking.com/token}
+  
+  # POS Terminal authentication (agent)
+  agent:
+    client-id: ${TEST_AGENT_CLIENT_ID:pos-terminal-001}
+    client-secret: ${TEST_AGENT_CLIENT_SECRET:change-me}
+    # Or API key if that's the auth method
+    api-key: ${TEST_AGENT_API_KEY:}
+  
+  # Backoffice user authentication (bank operator)
+  operator:
+    username: ${TEST_OPERATOR_USERNAME:operator@agentbanking.com}
+    password: ${TEST_OPERATOR_PASSWORD:change-me}
+  
+  # IT Admin authentication
+  admin:
+    username: ${TEST_ADMIN_USERNAME:admin@agentbanking.com}
+    password: ${TEST_ADMIN_PASSWORD:change-me}
+  
+  # Compliance Officer
+  compliance:
+    username: ${TEST_COMPLIANCE_USERNAME:compliance@agentbanking.com}
+    password: ${TEST_COMPLIANCE_PASSWORD:change-me}
+  
+  # Maker (for discrepancy resolution)
+  maker:
+    username: ${TEST_MAKER_USERNAME:maker@agentbanking.com}
+    password: ${TEST_MAKER_PASSWORD:change-me}
+  
+  # Checker (for discrepancy resolution)
+  checker:
+    username: ${TEST_CHECKER_USERNAME:checker@agentbanking.com}
+    password: ${TEST_CHECKER_PASSWORD:change-me}
+  
+  # Supervisor
+  supervisor:
+    username: ${TEST_SUPERVISOR_USERNAME:supervisor@agentbanking.com}
+    password: ${TEST_SUPERVISOR_PASSWORD:change-me}
+
+# API Gateway
+gateway:
+  base-url: ${GATEWAY_BASE_URL:http://localhost:8080}
+
+# Test agent IDs
+test:
+  agents:
+    micro: AGT-01
+    standard: AGT-03
+    premier: AGT-02

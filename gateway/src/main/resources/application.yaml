@@ -1,6 +1,27 @@
 server:
   port: 8080
 
+springdoc:
+  api-docs:
+    enabled: true
+    path: /v3/api-docs
+  swagger-ui:
+    enabled: true
+    path: /swagger-ui.html
+    urls:
+      - url: /v3/api-docs
+        name: All Services
+      - url: /docs/rules/v3/api-docs
+        name: Rules Service
+      - url: /docs/ledger/v3/api-docs
+        name: Ledger Service
+      - url: /docs/onboarding/v3/api-docs
+        name: Onboarding Service
+      - url: /docs/switch/v3/api-docs
+        name: Switch Adapter Service
+      - url: /docs/biller/v3/api-docs
+        name: Biller Service
+
 spring:
   main:
     allow-bean-definition-overriding: true
@@ -11,11 +32,17 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          issuer-uri: ${JWT_ISSUER_URI:https://auth.agentbanking.com}
-          jwk-set-uri: ${JWT_JWK_SET_URI:https://auth.agentbanking.com/.well-known/jwks.json}
+          issuer-uri: ${JWT_ISSUER_URI:http://onboarding-service:8083}
+          jwk-set-uri: ${JWT_JWK_SET_URI:http://onboarding-service:8083/.well-known/jwks.json}
   cloud:
     gateway:
       routes:
+        # Auth Service (Token endpoint - public, no JWT required)
+        - id: auth-service
+          uri: http://onboarding-service:8083
+          predicates:
+            - Path=/token, /.well-known/jwks.json, /.well-known/openid-configuration, /health
+        
         # Rules Service
         - id: rules-service
           uri: http://rules-service:8081
@@ -63,7 +90,7 @@ spring:
             - Path=/api/v1/withdrawal
           filters:
             - JwtAuthFilter
-            - RewritePath=/api/v1/(?<segment>.*), /internal/debit
+            - RewritePath=/api/v1/withdrawal, /internal/debit
         
         - id: external-deposit
           uri: http://ledger-service:8082
@@ -71,15 +98,23 @@ spring:
             - Path=/api/v1/deposit
           filters:
             - JwtAuthFilter
-            - RewritePath=/api/v1/(?<segment>.*), /internal/credit
+            - RewritePath=/api/v1/deposit, /internal/credit
         
         - id: external-balance-inquiry
           uri: http://ledger-service:8082
           predicates:
-            - Path=/api/v1/balance-inquiry, /api/v1/agent/balance
+            - Path=/api/v1/balance-inquiry
           filters:
             - JwtAuthFilter
-            - RewritePath=/api/v1/(?<segment>.*), /internal/balance/${segment}
+            - RewritePath=/api/v1/balance-inquiry, /internal/balance-inquiry
+        
+        - id: external-agent-balance
+          uri: http://ledger-service:8082
+          predicates:
+            - Path=/api/v1/agent/balance
+          filters:
+            - JwtAuthFilter
+            - RewritePath=/api/v1/agent/balance, /internal/balance
         
         - id: external-kyc-verify
           uri: http://onboarding-service:8083
@@ -97,41 +132,219 @@ spring:
             - JwtAuthFilter
             - RewritePath=/api/v1/kyc/biometric, /internal/biometric
         
+        - id: external-bill-pay
+          uri: http://biller-service:8085
+          predicates:
+            - Path=/api/v1/bill/pay
+          filters:
+            - JwtAuthFilter
+            - RewritePath=/api/v1/bill/pay, /internal/pay-bill
+        
+        - id: external-topup
+          uri: http://biller-service:8085
+          predicates:
+            - Path=/api/v1/topup
+          filters:
+            - JwtAuthFilter
+            - RewritePath=/api/v1/topup, /internal/topup
+        
+        - id: external-duitnow
+          uri: http://switch-adapter-service:8084
+          predicates:
+            - Path=/api/v1/transfer/duitnow
+          filters:
+            - JwtAuthFilter
+            - RewritePath=/api/v1/transfer/duitnow, /internal/duitnow
+        
+        - id: external-retail-sale
+          uri: http://ledger-service:8082
+          predicates:
+            - Path=/api/v1/retail/sale
+          filters:
+            - JwtAuthFilter
+            - RewritePath=/api/v1/retail/sale, /internal/merchant/retail-sale
+        
+        - id: external-retail-pin-purchase
+          uri: http://ledger-service:8082
+          predicates:
+            - Path=/api/v1/retail/pin-purchase
+          filters:
+            - JwtAuthFilter
+            - RewritePath=/api/v1/retail/pin-purchase, /internal/merchant/pin-purchase
+        
+        - id: external-retail-cashback
+          uri: http://ledger-service:8082
+          predicates:
+            - Path=/api/v1/retail/cashback
+          filters:
+            - JwtAuthFilter
+            - RewritePath=/api/v1/retail/cashback, /internal/merchant/cash-back
+        
+        - id: external-ewallet-withdraw
+          uri: http://biller-service:8085
+          predicates:
+            - Path=/api/v1/ewallet/withdraw
+          filters:
+            - JwtAuthFilter
+            - RewritePath=/api/v1/ewallet/withdraw, /internal/ewallet/withdrawal
+        
+        - id: external-ewallet-topup
+          uri: http://biller-service:8085
+          predicates:
+            - Path=/api/v1/ewallet/topup
+          filters:
+            - JwtAuthFilter
+            - RewritePath=/api/v1/ewallet/topup, /internal/ewallet/topup
+        
+        - id: external-essp
+          uri: http://biller-service:8085
+          predicates:
+            - Path=/api/v1/essp/purchase
+          filters:
+            - JwtAuthFilter
+            - RewritePath=/api/v1/essp/purchase, /internal/essp/purchase
+        
         # Backoffice routes
         - id: backoffice-dashboard
           uri: http://ledger-service:8082
           predicates:
             - Path=/api/v1/backoffice/dashboard
           filters:
+            - JwtAuthFilter
             - RewritePath=/api/v1/backoffice/dashboard, /internal/backoffice/dashboard
         
-        - id: backoffice-agents
-          uri: http://ledger-service:8082
+        - id: backoffice-agents-list
+          uri: http://onboarding-service:8083
           predicates:
-            - Path=/api/v1/backoffice/agents/**
+            - Path=/api/v1/backoffice/agents
           filters:
-            - RewritePath=/api/v1/backoffice/(?<segment>.*), /internal/backoffice/${segment}
+            - JwtAuthFilter
+            - RewritePath=/api/v1/backoffice/agents, /backoffice/agents
+        
+        - id: backoffice-agents-detail
+          uri: http://onboarding-service:8083
+          predicates:
+            - Path=/api/v1/backoffice/agents/{id}
+          filters:
+            - JwtAuthFilter
+            - RewritePath=/api/v1/backoffice/agents/(?<segment>.*), /backoffice/agents/${segment}
         
         - id: backoffice-transactions
           uri: http://ledger-service:8082
           predicates:
             - Path=/api/v1/backoffice/transactions
           filters:
+            - JwtAuthFilter
             - RewritePath=/api/v1/backoffice/transactions, /internal/backoffice/transactions
         
         - id: backoffice-settlement
           uri: http://ledger-service:8082
           predicates:
-            - Path=/api/v1/backoffice/settlement/**
+            - Path=/api/v1/backoffice/settlement
           filters:
-            - RewritePath=/api/v1/backoffice/(?<segment>.*), /internal/backoffice/${segment}
+            - JwtAuthFilter
+            - RewritePath=/api/v1/backoffice/settlement, /internal/backoffice/settlement
         
         - id: backoffice-kyc-review
           uri: http://onboarding-service:8083
           predicates:
             - Path=/api/v1/backoffice/kyc/review-queue
           filters:
+            - JwtAuthFilter
             - RewritePath=/api/v1/backoffice/kyc/review-queue, /internal/kyc/review-queue
+        
+        - id: backoffice-discrepancy-maker
+          uri: http://ledger-service:8082
+          predicates:
+            - Path=/api/v1/backoffice/discrepancy/*/maker-action
+          filters:
+            - JwtAuthFilter
+            - RewritePath=/api/v1/backoffice/discrepancy/(?<caseId>.*)/maker-action, /internal/reconciliation/discrepancy/maker-propose
+        
+        - id: backoffice-discrepancy-checker-approve
+          uri: http://ledger-service:8082
+          predicates:
+            - Path=/api/v1/backoffice/discrepancy/*/checker-approve
+          filters:
+            - JwtAuthFilter
+            - RewritePath=/api/v1/backoffice/discrepancy/(?<caseId>.*)/checker-approve, /internal/reconciliation/discrepancy/checker-approve
+        
+        - id: backoffice-discrepancy-checker-reject
+          uri: http://ledger-service:8082
+          predicates:
+            - Path=/api/v1/backoffice/discrepancy/*/checker-reject
+          filters:
+            - JwtAuthFilter
+            - RewritePath=/api/v1/backoffice/discrepancy/(?<caseId>.*)/checker-reject, /internal/reconciliation/discrepancy/checker-reject
+        
+        - id: backoffice-audit-logs
+          uri: http://onboarding-service:8083
+          predicates:
+            - Path=/api/v1/backoffice/audit-logs
+          filters:
+            - JwtAuthFilter
+            - RewritePath=/api/v1/backoffice/audit-logs, /internal/audit-logs
+        
+        # Admin routes (User Management, Roles)
+        - id: admin-users-list
+          uri: http://onboarding-service:8083
+          predicates:
+            - Path=/api/v1/backoffice/admin/users
+          filters:
+            - JwtAuthFilter
+            - RewritePath=/api/v1/backoffice/admin/users, /internal/admin/users
+        
+        - id: admin-users-detail
+          uri: http://onboarding-service:8083
+          predicates:
+            - Path=/api/v1/backoffice/admin/users/*
+          filters:
+            - JwtAuthFilter
+            - RewritePath=/api/v1/backoffice/admin/users/(?<segment>.*), /internal/admin/users/${segment}
+        
+        - id: admin-roles
+          uri: http://onboarding-service:8083
+          predicates:
+            - Path=/api/v1/backoffice/admin/roles
+          filters:
+            - JwtAuthFilter
+            - RewritePath=/api/v1/backoffice/admin/roles, /internal/admin/roles
+        
+        # API Docs proxy routes
+        - id: docs-rules
+          uri: http://rules-service:8081
+          predicates:
+            - Path=/docs/rules/**
+          filters:
+            - RewritePath=/docs/rules/(?<segment>.*), /${segment}
+        
+        - id: docs-ledger
+          uri: http://ledger-service:8082
+          predicates:
+            - Path=/docs/ledger/**
+          filters:
+            - RewritePath=/docs/ledger/(?<segment>.*), /${segment}
+        
+        - id: docs-onboarding
+          uri: http://onboarding-service:8083
+          predicates:
+            - Path=/docs/onboarding/**
+          filters:
+            - RewritePath=/docs/onboarding/(?<segment>.*), /${segment}
+        
+        - id: docs-switch
+          uri: http://switch-adapter-service:8084
+          predicates:
+            - Path=/docs/switch/**
+          filters:
+            - RewritePath=/docs/switch/(?<segment>.*), /${segment}
+        
+        - id: docs-biller
+          uri: http://biller-service:8085
+          predicates:
+            - Path=/docs/biller/**
+          filters:
+            - RewritePath=/docs/biller/(?<segment>.*), /${segment}
 
 management:
   endpoints:
@@ -141,3 +354,9 @@ management:
   endpoint:
     health:
       show-details: always
+
+logging:
+  level:
+    org.springframework.security: DEBUG
+    org.springframework.security.oauth2: DEBUG
+    org.springframework.security.oauth2.jwt: DEBUG

@@ -13,5 +13,10 @@ spring:
 server:
   port: 8083
 
+# JWT Configuration for token generation
+jwt:
+  issuer: http://onboarding-service:8083
+  token-expiry: 3600  # 1 hour
+
 aml-screening:
   url: http://localhost:8090

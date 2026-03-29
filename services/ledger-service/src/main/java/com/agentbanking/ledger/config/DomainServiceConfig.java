@@ -9,6 +9,7 @@ import com.agentbanking.ledger.domain.port.out.SwitchServicePort;
 import com.agentbanking.ledger.domain.port.out.TransactionRepository;
 import com.agentbanking.ledger.domain.service.LedgerService;
 import com.agentbanking.ledger.domain.service.MerchantTransactionService;
+import com.agentbanking.ledger.domain.service.ReconciliationService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -31,5 +32,10 @@ public class DomainServiceConfig {
     @Bean
     public MerchantTransactionService merchantTransactionService() {
         return new MerchantTransactionService();
+    }
+
+    @Bean
+    public ReconciliationService reconciliationService() {
+        return new ReconciliationService();
     }
 }

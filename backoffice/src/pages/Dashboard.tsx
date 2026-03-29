@@ -6,60 +6,46 @@ import {
   ArrowLeftRight, 
   DollarSign,
   FileCheck,
-  AlertCircle
+  AlertCircle,
+  CheckCircle,
+  Clock,
+  XCircle
 } from 'lucide-react'
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import api from '../api/client'
 
-const mockChartData = [
-  { date: 'Mon', volume: 42000 },
-  { date: 'Tue', volume: 38000 },
-  { date: 'Wed', volume: 51000 },
-  { date: 'Thu', volume: 47000 },
-  { date: 'Fri', volume: 63000 },
-  { date: 'Sat', volume: 58000 },
-  { date: 'Sun', volume: 32000 },
-]
-
-const stats = [
-  { 
-    label: 'Total Agents', 
-    value: '2,847', 
-    change: '+12.5%', 
-    trend: 'up',
-    icon: Users,
-    color: '#1e3a5f'
-  },
-  { 
-    label: "Today's Volume", 
-    value: 'RM 1.2M', 
-    change: '+8.2%', 
-    trend: 'up',
-    icon: DollarSign,
-    color: '#0d9488'
-  },
-  { 
-    label: 'Transactions', 
-    value: '4,521', 
-    change: '-2.1%', 
-    trend: 'down',
-    icon: ArrowLeftRight,
-    color: '#f59e0b'
-  },
-  { 
-    label: 'Pending KYC', 
-    value: '23', 
-    change: '-15%', 
-    trend: 'up',
-    icon: FileCheck,
-    color: '#ef4444'
-  },
-]
+interface Transaction {
+  transactionId: string
+  transactionType: string
+  amount: number
+  status: string
+  agentId: string
+  createdAt: string
+}
 
 export function Dashboard() {
-  const { isLoading, error } = useQuery({
+  const { data: dashboard, isLoading, error } = useQuery({
     queryKey: ['dashboard'],
-    queryFn: api.getDashboard,
+    queryFn: async () => {
+      const response = await api.getDashboard()
+      return response as { totalVolume: number; totalTransactions: number; activeAgents: number; pendingKyc: number; totalAgents: number }
+    }
+  })
+
+  const { data: agents = [] } = useQuery({
+    queryKey: ['agents'],
+    queryFn: async () => {
+      const response = await api.getAgents()
+      return response as Array<{ status: string }>
+    }
+  })
+
+  const { data: transactionsResponse } = useQuery({
+    queryKey: ['transactions'],
+    queryFn: async () => {
+      const response = await api.getTransactions()
+      return response as { content: Transaction[] }
+    }
   })
 
   if (isLoading) {
@@ -80,6 +66,43 @@ export function Dashboard() {
     )
   }
 
+  const activeAgents = agents.filter(a => a.status === 'ACTIVE').length
+  const pendingKycCount = agents.filter(a => a.status !== 'ACTIVE').length
+  const transactions = transactionsResponse?.content || []
+  
+  const chartData = transactions.slice(0, 7).map((txn) => ({
+    date: new Date(txn.createdAt).toLocaleDateString('en-MY', { weekday: 'short' }),
+    volume: txn.amount
+  }))
+
+  const getTypeLabel = (type: string) => {
+    switch (type) {
+      case 'CASH_DEPOSIT': return 'Deposit'
+      case 'CASH_WITHDRAWAL': return 'Withdrawal'
+      case 'BILL_PAYMENT': return 'Bill Pay'
+      case 'PREPAID_TOPUP': return 'Topup'
+      case 'DUITNOW_TRANSFER': return 'DuitNow'
+      default: return type
+    }
+  }
+
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case 'COMPLETED': return 'Success'
+      case 'PENDING': return 'Pending'
+      case 'FAILED': return 'Failed'
+      default: return status
+    }
+  }
+
+  const formatAmount = (amount: number) => {
+    return 'RM ' + (amount / 100).toLocaleString('en-MY', { minimumFractionDigits: 2 })
+  }
+
+  const recentTxns = transactions.slice(0, 5)
+  const totalTxns = transactions.length
+  const successfulTxns = transactions.filter(t => t.status === 'COMPLETED').length
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
       {/* Stats Cards */}
@@ -88,7 +111,40 @@ export function Dashboard() {
         gridTemplateColumns: 'repeat(4, 1fr)', 
         gap: 24 
       }}>
-        {stats.map((stat, index) => {
+        {[
+          { 
+            label: 'Total Agents', 
+            value: agents.length.toString(), 
+            change: '+12.5%', 
+            trend: 'up',
+            icon: Users,
+            color: '#1e3a5f'
+          },
+          { 
+            label: "Today's Volume", 
+            value: formatAmount(dashboard?.totalVolume || 0), 
+            change: '+8.2%', 
+            trend: 'up',
+            icon: DollarSign,
+            color: '#0d9488'
+          },
+          { 
+            label: 'Transactions', 
+            value: totalTxns.toString(), 
+            change: '-2.1%', 
+            trend: 'down',
+            icon: ArrowLeftRight,
+            color: '#f59e0b'
+          },
+          { 
+            label: 'Pending KYC', 
+            value: pendingKycCount.toString(), 
+            change: '-15%', 
+            trend: 'up',
+            icon: FileCheck,
+            color: '#ef4444'
+          },
+        ].map((stat, index) => {
           const Icon = stat.icon
           return (
             <div 
@@ -185,7 +241,7 @@ export function Dashboard() {
           </div>
           <div style={{ height: 280 }}>
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={mockChartData}>
+              <AreaChart data={chartData}>
                 <defs>
                   <linearGradient id="volumeGradient" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#1e3a5f" stopOpacity={0.3}/>
@@ -232,9 +288,9 @@ export function Dashboard() {
           </h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
             {[
-              { label: 'Active Agents', value: '2,341', sub: '82% of total' },
-              { label: 'Pending Review', value: '47', sub: 'Requires attention' },
-              { label: 'Successful Txns', value: '98.2%', sub: 'Last 24 hours' },
+              { label: 'Active Agents', value: activeAgents.toString(), sub: `${((activeAgents / (agents.length || 1)) * 100).toFixed(0)}% of total` },
+              { label: 'Pending Review', value: pendingKycCount.toString(), sub: 'Requires attention' },
+              { label: 'Successful Txns', value: `${((successfulTxns / (totalTxns || 1)) * 100).toFixed(1)}%`, sub: 'Last 24 hours' },
             ].map((item, index) => (
               <div key={index} style={{
                 display: 'flex',
@@ -292,31 +348,33 @@ export function Dashboard() {
               </tr>
             </thead>
             <tbody>
-              {[
-                { id: 'TXN-001', agent: 'Ahmad Razak', type: 'Deposit', amount: 'RM 5,000', status: 'Success', time: '2 min ago' },
-                { id: 'TXN-002', agent: 'Siti Aminah', type: 'Withdrawal', amount: 'RM 2,500', status: 'Success', time: '5 min ago' },
-                { id: 'TXN-003', agent: 'Mohd Faisal', type: 'Bill Pay', amount: 'RM 150', status: 'Pending', time: '12 min ago' },
-                { id: 'TXN-004', agent: 'Lee Ming', type: 'Topup', amount: 'RM 100', status: 'Success', time: '18 min ago' },
-                { id: 'TXN-005', agent: 'Nurul Huda', type: 'Deposit', amount: 'RM 8,000', status: 'Failed', time: '25 min ago' },
-              ].map((txn, index) => (
-                <tr key={index}>
+              {recentTxns.map((txn) => (
+                <tr key={txn.transactionId}>
                   <td style={{ fontFamily: 'monospace', color: '#1e3a5f' }}>
-                    {txn.id}
+                    {txn.transactionId.substring(0, 8)}...
                   </td>
-                  <td>{txn.agent}</td>
+                  <td>{txn.agentId.substring(0, 8)}...</td>
                   <td>
-                    <span className="badge badge-info">{txn.type}</span>
+                    <span className="badge badge-info">{getTypeLabel(txn.transactionType)}</span>
                   </td>
-                  <td style={{ fontWeight: 500 }}>{txn.amount}</td>
+                  <td style={{ fontWeight: 500 }}>{formatAmount(txn.amount)}</td>
                   <td>
                     <span className={`badge ${
-                      txn.status === 'Success' ? 'badge-success' : 
-                      txn.status === 'Pending' ? 'badge-warning' : 'badge-error'
+                      txn.status === 'COMPLETED' ? 'badge-success' : 
+                      txn.status === 'PENDING' ? 'badge-warning' : 'badge-error'
                     }`}>
-                      {txn.status}
+                      {txn.status === 'COMPLETED' && <CheckCircle size={12} style={{ marginRight: 4 }} />}
+                      {txn.status === 'PENDING' && <Clock size={12} style={{ marginRight: 4 }} />}
+                      {txn.status === 'FAILED' && <XCircle size={12} style={{ marginRight: 4 }} />}
+                      {getStatusLabel(txn.status)}
                     </span>
                   </td>
-                  <td style={{ color: '#64748b' }}>{txn.time}</td>
+                  <td style={{ color: '#64748b' }}>
+                    {new Date(txn.createdAt).toLocaleString('en-MY', { 
+                      hour: '2-digit', 
+                      minute: '2-digit' 
+                    })}
+                  </td>
                 </tr>
               ))}
             </tbody>

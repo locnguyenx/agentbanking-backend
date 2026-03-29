@@ -2,6 +2,7 @@ package com.agentbanking.rules.config;
 
 import com.agentbanking.rules.domain.service.FeeCalculationService;
 import com.agentbanking.rules.domain.service.LimitEnforcementService;
+import com.agentbanking.rules.domain.service.StpDecisionService;
 import com.agentbanking.rules.domain.service.VelocityCheckService;
 import com.agentbanking.rules.domain.port.out.FeeConfigRepository;
 import com.agentbanking.rules.domain.port.out.VelocityRuleRepository;
@@ -24,5 +25,11 @@ public class DomainServiceConfig {
     @Bean
     public LimitEnforcementService limitEnforcementService() {
         return new LimitEnforcementService();
+    }
+
+    @Bean
+    public StpDecisionService stpDecisionService(VelocityCheckService velocityCheckService,
+                                                   LimitEnforcementService limitEnforcementService) {
+        return new StpDecisionService(velocityCheckService, limitEnforcementService);
     }
 }

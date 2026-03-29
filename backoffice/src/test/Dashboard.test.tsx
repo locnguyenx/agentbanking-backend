@@ -1,14 +1,27 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { MemoryRouter } from 'react-router-dom'
 import { Dashboard } from '../pages/Dashboard'
 
 vi.mock('../api/client', () => ({
   default: {
     getDashboard: vi.fn().mockResolvedValue({
+      totalVolume: 2500000,
       totalTransactions: 150,
-      totalVolume: '25000.00',
       activeAgents: 45,
+      pendingKyc: 5,
+      totalAgents: 50,
+    }),
+    getAgents: vi.fn().mockResolvedValue([
+      { status: 'ACTIVE' },
+      { status: 'ACTIVE' },
+    ]),
+    getTransactions: vi.fn().mockResolvedValue({
+      content: [
+        { status: 'COMPLETED' },
+        { status: 'COMPLETED' },
+      ]
     }),
   },
 }))
@@ -21,7 +34,9 @@ const queryClient = new QueryClient({
 
 const renderWithQuery = (ui: React.ReactElement) => {
   return render(
-    <QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>
+    <MemoryRouter>
+      <QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>
+    </MemoryRouter>
   )
 }
 

@@ -71,6 +71,18 @@ npm run dev
 - **External API:** `docs/api/openapi.yaml` (OpenAPI 3.0)
 - **Internal APIs:** `<service>/docs/openapi-internal.yaml`
 
+- **OpenAPI specs for API Gateway:**
+    - OpenAPI JSON: http://localhost:8080/v3/api-docs
+
+**Changes Made:**
+1. Added springdoc-openapi-starter-webmvc-ui to ledger-service and biller-service
+2. Updated gateway routes with all design endpoints
+3. Updated gateway aggregator with complete path mapping
+4. Generated docs/api/openapi.yaml from running services
+
+**To generate new spec:**
+./scripts/generate-openapi-specs.sh
+
 ## Specs
 
 - **BRD:** `docs/superpowers/specs/agent-banking-platform/*-brd.md`
@@ -173,6 +185,7 @@ docker compose --profile all up -d backoffice
 # Stop all services
 docker stop $(docker ps -q)
 # this not work: docker compose down
+docker-compose --profile all down
 
 # View service status
 docker compose ps
@@ -186,12 +199,15 @@ docker compose logs -f rules-service
 # Rebuild specific service
 docker compose build backoffice
 docker compose up -d backoffice
+# or use this cmd to start a container
+docker restart agentbanking-backend-backoffice-1
 
 # Restart specific service
 docker compose restart rules-service
 
 # Clean slate (remove containers + volumes)
-docker compose down -v
+# this not work if using profile: docker compose down -v
+docker-compose --profile all down -v
 
 # List available services
 docker compose config --services

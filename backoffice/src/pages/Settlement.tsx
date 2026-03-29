@@ -10,25 +10,37 @@ import {
 } from 'lucide-react'
 import api from '../api/client'
 
-const mockSettlement = {
-  totalDeposits: 1250000.00,
-  totalWithdrawals: 850000.00,
-  totalCommissions: 12500.00,
-  netSettlement: 387500.00,
-  transactions: [
-    { id: 'SET-001', agent: 'Ahmad Razak', deposits: 450000, withdrawals: 320000, commission: 4500, net: 125500 },
-    { id: 'SET-002', agent: 'Siti Aminah', deposits: 380000, withdrawals: 280000, commission: 3800, net: 96200 },
-    { id: 'SET-003', agent: 'Lee Ming Wei', deposits: 420000, withdrawals: 250000, commission: 4200, net: 165800 },
-  ]
+interface SettlementData {
+  totalCredits: number
+  totalDebits: number
+  netAmount: number
+  transactions: Array<{
+    transactionType: string
+    agentId: string
+    amount: number
+    transactionId: string
+    status: string
+  }>
 }
 
 export function Settlement() {
   const [date, setDate] = useState(new Date().toISOString().split('T')[0])
   
-  useQuery({
+  const { data: settlement } = useQuery({
     queryKey: ['settlement', date],
-    queryFn: () => api.getSettlement({ date }),
+    queryFn: async () => {
+      const response = await api.getSettlement({ date })
+      return response as SettlementData
+    }
   })
+
+  const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setDate(e.target.value)
+  }
+
+  const handleDownloadSettlement = (agentId: string) => {
+    console.log('Download settlement for agent:', agentId)
+  }
 
   const handleExport = async () => {
     try {
@@ -43,12 +55,30 @@ export function Settlement() {
     }
   }
 
+  const formatAmount = (amount: number) => {
+    return 'RM ' + amount.toLocaleString('en-MY', { minimumFractionDigits: 2 })
+  }
+
+  const stats = settlement ? [
+    { label: 'Total Deposits', value: formatAmount(settlement.totalCredits), icon: ArrowUpRight, color: '#10b981' },
+    { label: 'Total Withdrawals', value: formatAmount(settlement.totalDebits), icon: ArrowDownRight, color: '#ef4444' },
+    { label: 'Total Commissions', value: 'RM 0', icon: Calculator, color: '#f59e0b' },
+    { label: 'Net Settlement', value: formatAmount(settlement.netAmount), icon: DollarSign, color: '#1e3a5f' },
+  ] : [
+    { label: 'Total Deposits', value: 'RM 0', icon: ArrowUpRight, color: '#10b981' },
+    { label: 'Total Withdrawals', value: 'RM 0', icon: ArrowDownRight, color: '#ef4444' },
+    { label: 'Total Commissions', value: 'RM 0', icon: Calculator, color: '#f59e0b' },
+    { label: 'Net Settlement', value: 'RM 0', icon: DollarSign, color: '#1e3a5f' },
+  ]
+
+  const transactions = settlement?.transactions || []
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div>
-          <h2 style={{ fontSize: 20, fontWeight: 600, color: '#1e293b' }}>
+          <h2 style={{ fontSize: 20, fontWeight: 600, color: '#1e293b' }} data-testid="page-title">
             Settlement Report
           </h2>
           <p style={{ fontSize: 14, color: '#64748b' }}>
@@ -60,7 +90,7 @@ export function Settlement() {
             <Printer size={18} />
             Print
           </button>
-          <button className="btn btn-primary" onClick={handleExport}>
+          <button className="btn btn-primary" onClick={handleExport} data-testid="export-button">
             <Download size={18} />
             Export CSV
           </button>
@@ -73,10 +103,11 @@ export function Settlement() {
           <label className="input-label">Settlement Date</label>
           <input 
             type="date" 
-            className="input"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
+            className="input" 
             style={{ width: 180 }}
+            value={date}
+            onChange={handleDateChange}
+            data-testid="date-picker"
           />
         </div>
         <button className="btn btn-primary">
@@ -86,12 +117,7 @@ export function Settlement() {
 
       {/* Summary Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
-        {[
-          { label: 'Total Deposits', value: 'RM 1,250,000', icon: ArrowUpRight, color: '#10b981' },
-          { label: 'Total Withdrawals', value: 'RM 850,000', icon: ArrowDownRight, color: '#ef4444' },
-          { label: 'Total Commissions', value: 'RM 12,500', icon: Calculator, color: '#f59e0b' },
-          { label: 'Net Settlement', value: 'RM 387,500', icon: DollarSign, color: '#1e3a5f' },
-        ].map((stat, index) => {
+        {stats.map((stat, index) => {
           const Icon = stat.icon
           return (
             <div key={index} className="card" style={{ padding: 20, display: 'flex', alignItems: 'center', gap: 16 }}>
@@ -126,74 +152,49 @@ export function Settlement() {
           <table className="table">
             <thead>
               <tr>
-                <th>Agent</th>
-                <th>Deposits</th>
-                <th>Withdrawals</th>
-                <th>Commission</th>
-                <th>Net Settlement</th>
+                <th>Transaction ID</th>
+                <th>Type</th>
+                <th>Agent ID</th>
+                <th>Amount</th>
                 <th>Status</th>
                 <th>Actions</th>
               </tr>
             </thead>
             <tbody>
-              {mockSettlement.transactions.map((row, index) => (
-                <tr key={index}>
-                  <td>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                      <div style={{
-                        width: 36,
-                        height: 36,
-                        borderRadius: 8,
-                        background: 'linear-gradient(135deg, #1e3a5f 0%, #2d5a8a 100%)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        color: 'white',
-                        fontWeight: 600,
-                        fontSize: 13
-                      }}>
-                        {row.agent.split(' ').map(n => n[0]).join('')}
-                      </div>
-                      <div>
-                        <div style={{ fontWeight: 500 }}>{row.agent}</div>
-                        <div style={{ fontSize: 12, color: '#64748b' }}>{row.id}</div>
-                      </div>
-                    </div>
-                  </td>
-                  <td style={{ color: '#10b981', fontWeight: 500 }}>
-                    +RM {row.deposits.toLocaleString()}
-                  </td>
-                  <td style={{ color: '#ef4444', fontWeight: 500 }}>
-                    -RM {row.withdrawals.toLocaleString()}
-                  </td>
-                  <td style={{ color: '#f59e0b', fontWeight: 500 }}>
-                    RM {row.commission.toLocaleString()}
-                  </td>
-                  <td style={{ fontWeight: 700 }}>
-                    RM {row.net.toLocaleString()}
+              {transactions.map((txn) => (
+                <tr key={txn.transactionId}>
+                  <td style={{ fontFamily: 'monospace', color: '#1e3a5f', fontWeight: 500, fontSize: 13 }}>
+                    {txn.transactionId.substring(0, 8)}...
                   </td>
                   <td>
-                    <span className="badge badge-success">Settled</span>
+                    <span className="badge badge-info">{txn.transactionType}</span>
+                  </td>
+                  <td style={{ fontFamily: 'monospace', color: '#64748b', fontSize: 13 }}>
+                    {txn.agentId.substring(0, 8)}...
+                  </td>
+                  <td style={{ fontWeight: 600 }}>
+                    {formatAmount(txn.amount)}
                   </td>
                   <td>
-                    <button className="btn btn-outline btn-sm">
+                    <span className={`badge ${
+                      txn.status === 'COMPLETED' ? 'badge-success' : 
+                      txn.status === 'PENDING' ? 'badge-warning' : 'badge-error'
+                    }`}>
+                      {txn.status}
+                    </span>
+                  </td>
+                  <td>
+                    <button 
+                      className="btn btn-outline btn-sm"
+                      onClick={() => handleDownloadSettlement(txn.transactionId)}
+                      data-testid={`download-${txn.transactionId}-button`}
+                    >
                       <Download size={14} />
                     </button>
                   </td>
                 </tr>
               ))}
             </tbody>
-            <tfoot>
-              <tr style={{ background: '#f8fafc', fontWeight: 600 }}>
-                <td>Total</td>
-                <td style={{ color: '#10b981' }}>+RM 1,250,000</td>
-                <td style={{ color: '#ef4444' }}>-RM 850,000</td>
-                <td style={{ color: '#f59e0b' }}>RM 12,500</td>
-                <td>RM 387,500</td>
-                <td></td>
-                <td></td>
-              </tr>
-            </tfoot>
           </table>
         </div>
       </div>

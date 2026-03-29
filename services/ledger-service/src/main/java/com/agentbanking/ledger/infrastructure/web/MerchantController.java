@@ -1,6 +1,7 @@
 package com.agentbanking.ledger.infrastructure.web;
 
 import com.agentbanking.ledger.domain.port.in.ProcessCashBackUseCase;
+import com.agentbanking.ledger.domain.port.in.ProcessPinPurchaseUseCase;
 import com.agentbanking.ledger.domain.port.in.ProcessRetailSaleUseCase;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -14,11 +15,14 @@ public class MerchantController {
 
     private final ProcessRetailSaleUseCase processRetailSaleUseCase;
     private final ProcessCashBackUseCase processCashBackUseCase;
+    private final ProcessPinPurchaseUseCase processPinPurchaseUseCase;
 
     public MerchantController(ProcessRetailSaleUseCase processRetailSaleUseCase,
-                              ProcessCashBackUseCase processCashBackUseCase) {
+                              ProcessCashBackUseCase processCashBackUseCase,
+                              ProcessPinPurchaseUseCase processPinPurchaseUseCase) {
         this.processRetailSaleUseCase = processRetailSaleUseCase;
         this.processCashBackUseCase = processCashBackUseCase;
+        this.processPinPurchaseUseCase = processPinPurchaseUseCase;
     }
 
     /**
@@ -45,6 +49,21 @@ public class MerchantController {
             @RequestBody ProcessCashBackUseCase.CashBackCommand command) {
         try {
             var response = processCashBackUseCase.processCashBack(command);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(null);
+        }
+    }
+
+    /**
+     * Process PIN voucher purchase
+     * POST /internal/merchant/pin-purchase
+     */
+    @PostMapping("/pin-purchase")
+    public ResponseEntity<ProcessPinPurchaseUseCase.PinPurchaseResponse> processPinPurchase(
+            @RequestBody ProcessPinPurchaseUseCase.PinPurchaseCommand command) {
+        try {
+            var response = processPinPurchaseUseCase.processPinPurchase(command);
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(null);
