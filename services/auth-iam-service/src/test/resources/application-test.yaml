@@ -1,0 +1,43 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: auth-iam-service
+  datasource:
+    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    username: sa
+    password: 
+    driver-class-name: org.h2.Driver
+  jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
+    hibernate:
+      ddl-auto: none
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:schema-test.sql
+  h2:
+    console:
+      enabled: true
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://localhost:8081
+
+jwt:
+  secret: test-secret-key-for-testing-only-not-for-production
+  access-token-expiration-minutes: 15
+  refresh-token-expiration-minutes: 1440
+
+logging:
+  level:
+    com.agentbanking.auth: DEBUG
+    org.springframework.security: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE

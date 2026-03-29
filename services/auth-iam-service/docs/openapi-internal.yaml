@@ -1,0 +1,603 @@
+openapi: 3.0.3
+info:
+  title: Auth IAM Service - Internal API
+  description: Internal API for authentication, user management, roles, and permissions.
+  version: 1.0.0
+  contact:
+    name: Agent Banking Platform
+
+servers:
+  - url: http://localhost:8083
+    description: Local development
+
+paths:
+  /auth/token:
+    post:
+      operationId: authenticate
+      summary: Authenticate user
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthRequestDto'
+      responses:
+        '200':
+          description: Authentication successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponseDto'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/refresh:
+    post:
+      operationId: refreshToken
+      summary: Refresh access token
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshTokenDto'
+      responses:
+        '200':
+          description: Token refreshed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponseDto'
+        '400':
+          description: Validation error or invalid refresh token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Expired or revoked refresh token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/user:
+    post:
+      operationId: createUser
+      summary: Create a new user
+      tags:
+        - User Management
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserCreateDto'
+      responses:
+        '201':
+          description: User created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponseDto'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/user/{id}:
+    get:
+      operationId: getUserById
+      summary: Get user by ID
+      tags:
+        - User Management
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: User found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponseDto'
+        '404':
+          description: User not found
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    put:
+      operationId: updateUser
+      summary: Update user
+      tags:
+        - User Management
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserUpdateDto'
+      responses:
+        '200':
+          description: User updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponseDto'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: User not found
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    delete:
+      operationId: deleteUser
+      summary: Delete user
+      tags:
+        - User Management
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: User deleted successfully
+        '404':
+          description: User not found
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/user/{id}/lock:
+    post:
+      operationId: lockUser
+      summary: Lock a user account
+      tags:
+        - User Management
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: User locked successfully
+        '404':
+          description: User not found
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/user/{id}/unlock:
+    post:
+      operationId: unlockUser
+      summary: Unlock a user account
+      tags:
+        - User Management
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: User unlocked successfully
+        '404':
+          description: User not found
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/user/{id}/reset-password:
+    post:
+      operationId: resetPassword
+      summary: Reset user password
+      tags:
+        - User Management
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PasswordResetDto'
+      responses:
+        '200':
+          description: Password reset successfully
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: User not found
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/role/{id}:
+    get:
+      operationId: getRoleById
+      summary: Get role by ID
+      tags:
+        - Role Management
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Role found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoleRecord'
+        '404':
+          description: Role not found
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/role:
+    post:
+      operationId: createRole
+      summary: Create a new role
+      tags:
+        - Role Management
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RoleRecord'
+      responses:
+        '201':
+          description: Role created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoleRecord'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/permission/{id}:
+    get:
+      operationId: getPermissionById
+      summary: Get permission by ID
+      tags:
+        - Permission Management
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Permission found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PermissionRecord'
+        '404':
+          description: Permission not found
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/permission:
+    post:
+      operationId: createPermission
+      summary: Create a new permission
+      tags:
+        - Permission Management
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PermissionRecord'
+      responses:
+        '201':
+          description: Permission created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PermissionRecord'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+    AuthRequestDto:
+      type: object
+      required:
+        - username
+        - password
+      properties:
+        username:
+          type: string
+          minLength: 3
+          maxLength: 50
+        password:
+          type: string
+          minLength: 8
+
+    AuthResponseDto:
+      type: object
+      properties:
+        accessToken:
+          type: string
+        refreshToken:
+          type: string
+        expiresIn:
+          type: integer
+          format: int64
+        tokenType:
+          type: string
+          default: Bearer
+
+    RefreshTokenDto:
+      type: object
+      required:
+        - refreshToken
+      properties:
+        refreshToken:
+          type: string
+
+    UserCreateDto:
+      type: object
+      required:
+        - username
+        - email
+        - password
+        - fullName
+      properties:
+        username:
+          type: string
+          minLength: 3
+          maxLength: 50
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 8
+          maxLength: 128
+        fullName:
+          type: string
+          minLength: 2
+          maxLength: 100
+
+    UserUpdateDto:
+      type: object
+      required:
+        - username
+        - email
+        - fullName
+      properties:
+        username:
+          type: string
+          minLength: 3
+          maxLength: 50
+        email:
+          type: string
+          format: email
+        fullName:
+          type: string
+          minLength: 2
+          maxLength: 100
+
+    UserResponseDto:
+      type: object
+      properties:
+        userId:
+          type: string
+          format: uuid
+        username:
+          type: string
+        email:
+          type: string
+        fullName:
+          type: string
+        status:
+          type: string
+          enum:
+            - ACTIVE
+            - INACTIVE
+            - LOCKED
+            - DELETED
+        permissions:
+          type: array
+          items:
+            type: string
+        createdAt:
+          type: string
+          format: date-time
+        lastLoginAt:
+          type: string
+          format: date-time
+
+    PasswordResetDto:
+      type: object
+      required:
+        - newPassword
+      properties:
+        newPassword:
+          type: string
+          minLength: 8
+          maxLength: 128
+
+    RoleRecord:
+      type: object
+      properties:
+        roleId:
+          type: string
+          format: uuid
+        roleName:
+          type: string
+        description:
+          type: string
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        createdBy:
+          type: string
+
+    PermissionRecord:
+      type: object
+      properties:
+        permissionId:
+          type: string
+          format: uuid
+        permissionKey:
+          type: string
+        description:
+          type: string
+        resource:
+          type: string
+        action:
+          type: string
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        createdBy:
+          type: string
+
+    ErrorResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum:
+            - FAILED
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            action_code:
+              type: string
+              enum:
+                - DECLINE
+                - RETRY
+                - REVIEW
+            trace_id:
+              type: string
+            timestamp:
+              type: string
+              format: date-time
