@@ -115,6 +115,25 @@ services:
       timeout: 5s
       retries: 5
 
+  # PostgreSQL for Auth/IAM Service
+  postgres-auth:
+    image: postgres:16-alpine
+    profiles: [infra, all]
+    environment:
+      POSTGRES_DB: authdb
+      POSTGRES_USER: auth_user
+      POSTGRES_PASSWORD: auth_password
+    ports:
+      - "5439:5432"
+    volumes:
+      - pgdata-auth:/var/lib/postgresql/data
+    mem_limit: 256m
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U auth_user -d authdb"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
   # Redis for caching and idempotency
   redis:
     image: redis:7-alpine
@@ -338,6 +357,32 @@ services:
       timeout: 5s
       retries: 10
 
+  # Auth/IAM Service (Authentication & Identity Management)
+  auth-iam-service:
+    build:
+      context: .
+      dockerfile: ./services/auth-iam-service/Dockerfile
+    profiles: [backend, all]
+    ports:
+      - "8087:8087"
+    mem_limit: 384m
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-auth:5432/authdb
+      SPRING_DATASOURCE_USERNAME: auth_user
+      SPRING_DATASOURCE_PASSWORD: auth_password
+      SPRING_DATA_REDIS_HOST: redis
+      JWT_SECRET: your-super-secret-jwt-key-change-in-production-minimum-32-chars-long
+    depends_on:
+      postgres-auth:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8087/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
   # API Gateway
   gateway:
     build:
@@ -348,6 +393,8 @@ services:
       - "8080:8080"
     mem_limit: 256m
     depends_on:
+      auth-iam-service:
+        condition: service_healthy
       rules-service:
         condition: service_healthy
       ledger-service:
@@ -386,3 +433,4 @@ volumes:
   pgdata-switch:
   pgdata-biller:
   pgdata-orchestrator:
+  pgdata-auth:
