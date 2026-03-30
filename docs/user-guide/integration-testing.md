@@ -123,7 +123,13 @@ docker-compose --profile infra --profile backend --profile gateway up -d
 
 E2E Testing Infrastructure Complete!
 
-All 18 files committed in df11ef2. Here's how to run the E2E tests:
+Here's how to run the E2E tests:
+
+**Created:**
+- common.sh - Shared test helpers (assert_*, api_call, etc.)
+- 18 BDD section scripts (01-18)
+- Updated seed-test-data.sh for all service data
+- Updated run-all-e2e-tests.sh master orchestrator
 
 **Quick Start**
 ```bash
@@ -135,6 +141,8 @@ docker compose --profile all up -d
 # 2. Wait for services to be healthy (check http://localhost:8087/actuator/health)
 # 3. Seed test data
 ./scripts/e2e-tests/seed-test-data.sh
-# 4. Run BDD tests
+# 4. Run BDD tests for auth-iam
 ./scripts/e2e-tests/bdd-e2e-tests.sh
+# 5. Run single section:
+./scripts/e2e-tests/01-rules-fee-engine.sh
 ```
