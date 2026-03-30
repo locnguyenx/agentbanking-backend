@@ -12,7 +12,7 @@ import java.util.UUID;
  * REST controller for session management endpoints
  */
 @RestController
-@RequestMapping("/auth/session")
+@RequestMapping("/auth/sessions")
 public class SessionController {
 
     private final ManageSessionUseCaseImpl manageSessionUseCase;

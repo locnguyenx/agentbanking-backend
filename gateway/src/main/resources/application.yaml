@@ -11,6 +11,8 @@ springdoc:
     urls:
       - url: /v3/api-docs
         name: All Services
+      - url: /docs/auth/v3/api-docs
+        name: Auth/IAM Service
       - url: /docs/rules/v3/api-docs
         name: Rules Service
       - url: /docs/ledger/v3/api-docs
@@ -32,16 +34,60 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          issuer-uri: ${JWT_ISSUER_URI:http://onboarding-service:8083}
-          jwk-set-uri: ${JWT_JWK_SET_URI:http://onboarding-service:8083/.well-known/jwks.json}
+          issuer-uri: ${JWT_ISSUER_URI:http://auth-iam-service:8087}
+          jwk-set-uri: ${JWT_JWK_SET_URI:http://auth-iam-service:8087/.well-known/jwks.json}
   cloud:
     gateway:
       routes:
-        # Auth Service (Token endpoint - public, no JWT required)
-        - id: auth-service
-          uri: http://onboarding-service:8083
+        # Auth/IAM Service (public endpoints - no JWT required)
+        - id: auth-token
+          uri: http://auth-iam-service:8087
           predicates:
-            - Path=/token, /.well-known/jwks.json, /.well-known/openid-configuration, /health
+            - Path=/auth/token
+        - id: auth-refresh
+          uri: http://auth-iam-service:8087
+          predicates:
+            - Path=/auth/refresh
+        - id: auth-wellknown
+          uri: http://auth-iam-service:8087
+          predicates:
+            - Path=/.well-known/jwks.json, /.well-known/openid-configuration
+        
+        # Auth/IAM Service (protected endpoints - JWT required)
+        - id: auth-users
+          uri: http://auth-iam-service:8087
+          predicates:
+            - Path=/auth/users, /auth/users/*
+          filters:
+            - JwtAuthFilter
+            - RewritePath=/auth/users/(?<segment>.*), /auth/users/${segment}
+        - id: auth-roles
+          uri: http://auth-iam-service:8087
+          predicates:
+            - Path=/auth/roles, /auth/roles/*
+          filters:
+            - JwtAuthFilter
+            - RewritePath=/auth/roles/(?<segment>.*), /auth/roles/${segment}
+        - id: auth-permissions
+          uri: http://auth-iam-service:8087
+          predicates:
+            - Path=/auth/permissions, /auth/permissions/*
+          filters:
+            - JwtAuthFilter
+            - RewritePath=/auth/permissions/(?<segment>.*), /auth/permissions/${segment}
+        - id: auth-sessions
+          uri: http://auth-iam-service:8087
+          predicates:
+            - Path=/auth/sessions, /auth/sessions/*
+          filters:
+            - JwtAuthFilter
+            - RewritePath=/auth/sessions/(?<segment>.*), /auth/sessions/${segment}
+        - id: auth-audit
+          uri: http://auth-iam-service:8087
+          predicates:
+            - Path=/auth/audit/**
+          filters:
+            - JwtAuthFilter
         
         # Rules Service
         - id: rules-service
@@ -278,39 +324,46 @@ spring:
             - RewritePath=/api/v1/backoffice/discrepancy/(?<caseId>.*)/checker-reject, /internal/reconciliation/discrepancy/checker-reject
         
         - id: backoffice-audit-logs
-          uri: http://onboarding-service:8083
+          uri: http://auth-iam-service:8087
           predicates:
             - Path=/api/v1/backoffice/audit-logs
           filters:
             - JwtAuthFilter
-            - RewritePath=/api/v1/backoffice/audit-logs, /internal/audit-logs
+            - RewritePath=/api/v1/backoffice/audit-logs, /auth/audit/logs
         
-        # Admin routes (User Management, Roles)
+        # Admin routes (User Management, Roles) - now pointing to auth-iam-service
         - id: admin-users-list
-          uri: http://onboarding-service:8083
+          uri: http://auth-iam-service:8087
           predicates:
             - Path=/api/v1/backoffice/admin/users
           filters:
             - JwtAuthFilter
-            - RewritePath=/api/v1/backoffice/admin/users, /internal/admin/users
+            - RewritePath=/api/v1/backoffice/admin/users, /auth/users
         
         - id: admin-users-detail
-          uri: http://onboarding-service:8083
+          uri: http://auth-iam-service:8087
           predicates:
             - Path=/api/v1/backoffice/admin/users/*
           filters:
             - JwtAuthFilter
-            - RewritePath=/api/v1/backoffice/admin/users/(?<segment>.*), /internal/admin/users/${segment}
+            - RewritePath=/api/v1/backoffice/admin/users/(?<segment>.*), /auth/users/${segment}
         
         - id: admin-roles
-          uri: http://onboarding-service:8083
+          uri: http://auth-iam-service:8087
           predicates:
             - Path=/api/v1/backoffice/admin/roles
           filters:
             - JwtAuthFilter
-            - RewritePath=/api/v1/backoffice/admin/roles, /internal/admin/roles
+            - RewritePath=/api/v1/backoffice/admin/roles, /auth/roles
         
         # API Docs proxy routes
+        - id: docs-auth
+          uri: http://auth-iam-service:8087
+          predicates:
+            - Path=/docs/auth/**
+          filters:
+            - RewritePath=/docs/auth/(?<segment>.*), /${segment}
+        
         - id: docs-rules
           uri: http://rules-service:8081
           predicates:

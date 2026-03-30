@@ -12,7 +12,7 @@ import java.util.UUID;
  * REST controller for role management endpoints
  */
 @RestController
-@RequestMapping("/auth/role")
+@RequestMapping("/auth/roles")
 public class RoleController {
 
     private final ManageRoleUseCaseImpl manageRoleUseCase;

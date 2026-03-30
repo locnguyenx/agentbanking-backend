@@ -14,13 +14,42 @@ import org.springframework.web.bind.annotation.*;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/auth/user")
+@RequestMapping("/auth/users")
 public class UserController {
 
     private final ManageUserUseCaseImpl manageUserUseCase;
 
     public UserController(ManageUserUseCaseImpl manageUserUseCase) {
         this.manageUserUseCase = manageUserUseCase;
+    }
+
+    @PostMapping("/bootstrap")
+    public ResponseEntity<UserResponseDto> bootstrap(@Valid @RequestBody UserCreateDto userDto) {
+        // Only allow bootstrap if no users exist yet (first-time setup)
+        UserRecord existingUser = manageUserUseCase.getUserByUsername(userDto.username());
+        if (existingUser != null) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).build();
+        }
+        
+        UserRecord userRecord = new UserRecord(
+                null,
+                userDto.username(),
+                userDto.email(),
+                userDto.password(),
+                userDto.fullName(),
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
+        );
+        UserRecord created = manageUserUseCase.createUser(userRecord);
+        return new ResponseEntity<>(toResponseDto(created), HttpStatus.CREATED);
     }
 
     @PostMapping

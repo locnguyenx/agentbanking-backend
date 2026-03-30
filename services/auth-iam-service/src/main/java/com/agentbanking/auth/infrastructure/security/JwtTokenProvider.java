@@ -48,6 +48,7 @@ public class JwtTokenProvider implements TokenProvider {
     @Override
     public String generateAccessToken(UserRecord user) {
         Map<String, Object> claims = new HashMap<>();
+        claims.put("agent_id", user.userId().toString());
         claims.put("permissions", user.permissions());
         claims.put("email", user.email());
         claims.put("fullName", user.fullName());

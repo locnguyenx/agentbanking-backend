@@ -12,7 +12,7 @@ import java.util.UUID;
  * REST controller for permission management endpoints
  */
 @RestController
-@RequestMapping("/auth/permission")
+@RequestMapping("/auth/permissions")
 public class PermissionController {
 
     private final ManagePermissionUseCaseImpl managePermissionUseCase;
