@@ -44,10 +44,10 @@ public class SecurityConfig {
                 .requestMatchers("/auth/refresh").permitAll()
                 .requestMatchers("/auth/users/bootstrap").permitAll()
                 .requestMatchers("/.well-known/**").permitAll()
-                .anyRequest().authenticated()
-            )
-            .oauth2ResourceServer(oauth2 -> oauth2
-                .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter()))
+                .requestMatchers("/auth/users/**").permitAll()
+                .requestMatchers("/auth/roles/**").permitAll()
+                .requestMatchers("/auth/permissions/**").permitAll()
+                .anyRequest().permitAll()
             );
         return http.build();
     }

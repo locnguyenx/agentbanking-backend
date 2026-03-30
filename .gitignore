@@ -28,6 +28,13 @@ dist/
 .DS_Store
 Thumbs.db
 
+# Secrets
+secrets/
+*.p12
+*.jks
+*.pem
+*.key
+
 # Worktrees
 .worktrees/
 gradle/

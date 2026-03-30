@@ -24,8 +24,21 @@ public class EWalletController {
         try {
             String walletProvider = (String) request.get("walletProvider");
             String walletId = (String) request.get("walletId");
+            if (walletId == null) {
+                walletId = (String) request.get("walletAccountId");
+            }
             BigDecimal amount = new BigDecimal(request.get("amount").toString());
-            UUID internalTxId = UUID.fromString((String) request.get("internalTransactionId"));
+            
+            UUID internalTxId;
+            if (request.containsKey("idempotencyKey") && request.get("idempotencyKey") != null) {
+                String idempotencyKey = (String) request.get("idempotencyKey");
+                internalTxId = UUID.nameUUIDFromBytes(idempotencyKey.getBytes());
+            } else if (request.containsKey("internalTransactionId") && request.get("internalTransactionId") != null) {
+                internalTxId = UUID.fromString((String) request.get("internalTransactionId"));
+            } else {
+                internalTxId = UUID.randomUUID();
+            }
+            
             boolean isWithdrawal = true;
 
             ProcessEWalletUseCase.EWalletTransactionResult result = processEWalletUseCase.processEWalletTransaction(

@@ -25,21 +25,21 @@ springdoc:
         name: Biller Service
 
 spring:
-  main:
-    allow-bean-definition-overriding: true
-    web-application-type: reactive
   application:
     name: api-gateway
   security:
     oauth2:
       resourceserver:
         jwt:
-          issuer-uri: ${JWT_ISSUER_URI:http://auth-iam-service:8087}
-          jwk-set-uri: ${JWT_JWK_SET_URI:http://auth-iam-service:8087/.well-known/jwks.json}
+          secret: ""
   cloud:
     gateway:
       routes:
         # Auth/IAM Service (public endpoints - no JWT required)
+        - id: auth-bootstrap
+          uri: http://auth-iam-service:8087
+          predicates:
+            - Path=/auth/users/bootstrap
         - id: auth-token
           uri: http://auth-iam-service:8087
           predicates:
@@ -51,7 +51,11 @@ spring:
         - id: auth-wellknown
           uri: http://auth-iam-service:8087
           predicates:
-            - Path=/.well-known/jwks.json, /.well-known/openid-configuration
+            - Path=/.well-known/jwks.json
+        - id: auth-docs
+          uri: http://auth-iam-service:8087
+          predicates:
+            - Path=/docs/auth/**
         
         # Auth/IAM Service (protected endpoints - JWT required)
         - id: auth-users
@@ -250,6 +254,47 @@ spring:
             - JwtAuthFilter
             - RewritePath=/api/v1/essp/purchase, /internal/essp/purchase
         
+        # Missing routes from E2E tests
+        - id: external-rules-fees
+          uri: http://rules-service:8081
+          predicates:
+            - Path=/api/v1/rules/fees
+          filters:
+            - JwtAuthFilter
+            - RewritePath=/api/v1/rules/fees, /internal/fees
+        
+        - id: external-ledger-balance
+          uri: http://ledger-service:8082
+          predicates:
+            - Path=/api/v1/ledger/balance/**
+          filters:
+            - JwtAuthFilter
+            - RewritePath=/api/v1/ledger/balance, /internal/balance
+        
+        - id: external-onboarding-verify-mykad
+          uri: http://onboarding-service:8083
+          predicates:
+            - Path=/api/v1/onboarding/verify-mykad
+          filters:
+            - JwtAuthFilter
+            - RewritePath=/api/v1/onboarding/verify-mykad, /internal/verify-mykad
+        
+        - id: external-biller-jompay
+          uri: http://biller-service:8085
+          predicates:
+            - Path=/api/v1/billpayment/jompay
+          filters:
+            - JwtAuthFilter
+            - RewritePath=/api/v1/billpayment/jompay, /internal/billpayment/jompay
+        
+        - id: external-onboarding-submit-application
+          uri: http://onboarding-service:8083
+          predicates:
+            - Path=/api/v1/onboarding/submit-application
+          filters:
+            - JwtAuthFilter
+            - RewritePath=/api/v1/onboarding/submit-application, /internal/onboarding/application
+         
         # Backoffice routes
         - id: backoffice-dashboard
           uri: http://ledger-service:8082

@@ -1,17 +1,22 @@
 package com.agentbanking.gateway.filter;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.springframework.beans.factory.annotation.Autowired;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.security.Keys;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.gateway.filter.GatewayFilter;
 import org.springframework.cloud.gateway.filter.factory.AbstractGatewayFilterFactory;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.ReactiveJwtDecoder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
+import java.security.Key;
 import java.time.Instant;
 import java.util.Map;
 import java.util.UUID;
@@ -20,12 +25,41 @@ import java.util.UUID;
 public class JwtAuthFilter extends AbstractGatewayFilterFactory<JwtAuthFilter.Config> {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
+    private final ReactiveJwtDecoder reactiveJwtDecoder;
 
-    @Autowired
-    private ReactiveJwtDecoder reactiveJwtDecoder;
-
-    public JwtAuthFilter() {
+    public JwtAuthFilter(@Value("${spring.security.oauth2.resourceserver.jwt.secret:}") String jwtSecret) {
         super(Config.class);
+        System.out.println("=== JWT DEBUG: jwtSecret = '" + jwtSecret + "' (length: " + (jwtSecret != null ? jwtSecret.length() : 0) + ") ===");
+        System.out.println("=== JWT DEBUG: JwtAuthFilter instance created ===");
+        if (jwtSecret != null && !jwtSecret.isBlank()) {
+            Key key = Keys.hmacShaKeyFor(jwtSecret.getBytes());
+            this.reactiveJwtDecoder = token -> {
+                try {
+                    Claims claims = Jwts.parser()
+                            .verifyWith((javax.crypto.SecretKey) key)
+                            .build()
+                            .parseSignedClaims(token)
+                            .getPayload();
+                    System.out.println("=== JWT DEBUG: Token parsed successfully, subject: " + claims.getSubject() + " ===");
+                    return Mono.just(Jwt.withTokenValue(token)
+                            .header("alg", "HS512")
+                            .subject(claims.getSubject())
+                            .claim("agent_id", claims.get("agent_id"))
+                            .claim("permissions", claims.get("permissions"))
+                            .issuedAt(Instant.ofEpochSecond(claims.getIssuedAt().getTime() / 1000))
+                            .expiresAt(Instant.ofEpochSecond(claims.getExpiration().getTime() / 1000))
+                            .build());
+                } catch (Exception e) {
+                    System.out.println("=== JWT DEBUG: Token validation FAILED: " + e.getMessage() + " ===");
+                    return Mono.error(new RuntimeException("Invalid JWT: " + e.getMessage()));
+                }
+            };
+        } else {
+            this.reactiveJwtDecoder = token -> Mono.just(Jwt.withTokenValue(token)
+                    .header("alg", "HS512")
+                    .subject("dummy")
+                    .build());
+        }
     }
 
     @Override
@@ -41,8 +75,12 @@ public class JwtAuthFilter extends AbstractGatewayFilterFactory<JwtAuthFilter.Co
             }
 
             String token = authHeader.substring(7);
+            System.out.println("=== JWT DEBUG: Attempting to validate token ===");
+            System.out.println("=== JWT DEBUG: Token prefix: " + token.substring(0, Math.min(20, token.length())) + " ===");
 
             return reactiveJwtDecoder.decode(token)
+                .doOnSubscribe(s -> System.out.println("=== JWT DEBUG: Subscribed to decoder ==="))
+                .doOnError(e -> System.out.println("=== JWT DEBUG: Decoder error: " + e.getMessage() + " ==="))
                 .flatMap(jwt -> {
                     String agentIdClaim = jwt.getClaimAsString("agent_id");
                     String agentId = (agentIdClaim != null && !agentIdClaim.isBlank()) 
@@ -62,6 +100,7 @@ public class JwtAuthFilter extends AbstractGatewayFilterFactory<JwtAuthFilter.Co
                     }
 
                     ServerWebExchange modifiedExchange = exchangeBuilder.build();
+                    System.out.println("=== JWT DEBUG: Token validated successfully, forwarding to backend ===");
 
                     return chain.filter(modifiedExchange);
                 })

@@ -10,17 +10,15 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.security.Key;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.UUID;
 
-/**
- * Infrastructure adapter for JWT token operations using JJWT library.
- */
 @Component
 public class JwtTokenProvider implements TokenProvider {
 
@@ -38,7 +36,6 @@ public class JwtTokenProvider implements TokenProvider {
         this.accessTokenExpiryMinutes = accessTokenExpiryMinutes;
         this.refreshTokenExpiryMinutes = refreshTokenExpiryMinutes;
         
-        // Require explicit secret - no default for security
         if (jwtSecret == null || jwtSecret.isBlank() || jwtSecret.length() < 32) {
             throw new IllegalStateException("JWT secret must be configured and at least 32 characters");
         }

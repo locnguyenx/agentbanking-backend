@@ -1,7 +1,9 @@
 package com.agentbanking.rules.infrastructure.web;
 
 import com.agentbanking.rules.domain.model.AgentTier;
+import com.agentbanking.rules.domain.model.FeeType;
 import com.agentbanking.rules.domain.model.TransactionType;
+import com.agentbanking.rules.domain.port.in.CreateFeeConfigUseCase;
 import com.agentbanking.rules.domain.port.in.FeeQueryUseCase;
 import com.agentbanking.rules.domain.port.in.FeeQueryUseCase.FeeQueryResult;
 import com.agentbanking.rules.domain.port.in.VelocityCheckUseCase;
@@ -9,6 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.Map;
 
 @RestController
@@ -17,11 +20,14 @@ public class RulesController {
 
     private final FeeQueryUseCase feeQueryUseCase;
     private final VelocityCheckUseCase velocityCheckUseCase;
+    private final CreateFeeConfigUseCase createFeeConfigUseCase;
 
     public RulesController(FeeQueryUseCase feeQueryUseCase,
-                           VelocityCheckUseCase velocityCheckUseCase) {
+                           VelocityCheckUseCase velocityCheckUseCase,
+                           CreateFeeConfigUseCase createFeeConfigUseCase) {
         this.feeQueryUseCase = feeQueryUseCase;
         this.velocityCheckUseCase = velocityCheckUseCase;
+        this.createFeeConfigUseCase = createFeeConfigUseCase;
     }
 
     @PostMapping("/fees/calculate")
@@ -57,6 +63,44 @@ public class RulesController {
             "dailyLimitAmount", "10000.00",
             "dailyLimitCount", 10
         ));
+    }
+
+    @PostMapping("/fees")
+    public ResponseEntity<Map<String, Object>> createFeeConfig(@RequestBody Map<String, Object> request) {
+        try {
+            TransactionType transactionType = TransactionType.valueOf((String) request.get("transactionType"));
+            AgentTier agentTier = AgentTier.valueOf((String) request.get("agentTier"));
+            FeeType feeType = FeeType.valueOf((String) request.get("feeType"));
+            BigDecimal customerFeeValue = new BigDecimal(request.get("customerFeeValue").toString());
+            BigDecimal agentCommissionValue = new BigDecimal(request.get("agentCommissionValue").toString());
+            BigDecimal bankShareValue = new BigDecimal(request.get("bankShareValue").toString());
+            BigDecimal dailyLimitAmount = new BigDecimal(request.get("dailyLimitAmount").toString());
+            Integer dailyLimitCount = (Integer) request.get("dailyLimitCount");
+            LocalDate effectiveFrom = LocalDate.parse((String) request.get("effectiveFrom"));
+            LocalDate effectiveTo = request.containsKey("effectiveTo") && request.get("effectiveTo") != null 
+                ? LocalDate.parse((String) request.get("effectiveTo")) 
+                : null;
+
+            CreateFeeConfigUseCase.CreateFeeConfigCommand command = new CreateFeeConfigUseCase.CreateFeeConfigCommand(
+                transactionType, agentTier, feeType, customerFeeValue, 
+                agentCommissionValue, bankShareValue, dailyLimitAmount, 
+                dailyLimitCount, effectiveFrom, effectiveTo
+            );
+
+            CreateFeeConfigUseCase.CreateFeeConfigResult result = createFeeConfigUseCase.createFeeConfig(command);
+
+            return ResponseEntity.status(201).body(Map.of(
+                "feeConfigId", result.feeConfigId().toString(),
+                "transactionType", result.transactionType().name(),
+                "agentTier", result.agentTier().name(),
+                "status", result.status()
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of(
+                "status", "FAILED",
+                "error", Map.of("code", "ERR_FEE_CONFIG_CREATE_FAILED", "message", e.getMessage())
+            ));
+        }
     }
 
     @PostMapping("/check-velocity")

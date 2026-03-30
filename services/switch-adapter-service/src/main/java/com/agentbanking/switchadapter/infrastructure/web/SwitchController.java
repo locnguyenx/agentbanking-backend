@@ -87,7 +87,7 @@ public class SwitchController {
     public ResponseEntity<?> duitNowTransfer(@Valid @RequestBody DuitNowRequest request) {
         try {
             DuitNowTransferUseCase.DuitNowTransferResult txn = duitNowTransferUseCase.transferDuitNow(
-                request.internalTransactionId(),
+                request.getEffectiveTransactionId(),
                 request.proxyType(),
                 request.proxyValue(),
                 request.amount()

@@ -31,6 +31,7 @@ public class UserController {
             return ResponseEntity.status(HttpStatus.CONFLICT).build();
         }
         
+        // For bootstrap, pass "system" as createdBy to satisfy NOT NULL constraint
         UserRecord userRecord = new UserRecord(
                 null,
                 userDto.username(),
@@ -46,7 +47,7 @@ public class UserController {
                 null,
                 null,
                 null,
-                null
+                "system"
         );
         UserRecord created = manageUserUseCase.createUser(userRecord);
         return new ResponseEntity<>(toResponseDto(created), HttpStatus.CREATED);
@@ -54,6 +55,7 @@ public class UserController {
 
     @PostMapping
     public ResponseEntity<UserResponseDto> createUser(@Valid @RequestBody UserCreateDto userDto) {
+        // For now, use "admin" as createdBy - in production this would come from the authenticated user
         UserRecord userRecord = new UserRecord(
                 null,
                 userDto.username(),
@@ -69,7 +71,7 @@ public class UserController {
                 null,
                 null,
                 null,
-                null
+                "admin"
         );
         UserRecord created = manageUserUseCase.createUser(userRecord);
         return new ResponseEntity<>(toResponseDto(created), HttpStatus.CREATED);

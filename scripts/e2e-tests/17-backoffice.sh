@@ -17,32 +17,29 @@ IDEMPOTENCY_KEY=$(generate_uuid)
 AGENT_CODE="AGT_$(generate_uuid | cut -c1-8)"
 response=$(api_call "POST" "/api/v1/backoffice/agents" "$ADMIN_TOKEN" "{
   \"agentCode\": \"$AGENT_CODE\",
-  \"agentName\": \"Test Agent Store\",
-  \"agentType\": \"RETAIL\",
-  \"tier\": \"TIER_1\",
-  \"address\": \"123 Jalan Test, Kuala Lumpur\",
-  \"contactPerson\": \"Test User\",
-  \"contactPhone\": \"60123456789\",
-  \"floatLimit\": 50000.00,
-  \"idempotencyKey\": \"$IDEMPOTENCY_KEY\"
+  \"businessName\": \"Test Agent Store\",
+  \"tier\": \"STANDARD\",
+  \"mykadNumber\": \"970101011234\",
+  \"phoneNumber\": \"60123456789\",
+  \"merchantGpsLat\": 3.1390,
+  \"merchantGpsLng\": 101.6869,
+  \"email\": \"testagent@example.com\",
+  \"address\": \"123 Jalan Test, Kuala Lumpur\"
 }")
 assert_status "Create agent" "201" "$(get_status "$response")"
 assert_json_field_exists "Agent ID" "$(get_body "$response")" ".agentId"
 assert_json_field "Agent code" "$(get_body "$response")" ".agentCode" "$AGENT_CODE"
 assert_json_field "Agent status" "$(get_body "$response")" ".status" "ACTIVE"
 
-# ============================================================================
-# BDD-BO01-EC-01: Duplicate Agent
-# ============================================================================
-
 subsection "BDD-BO01-EC-01: Duplicate agent"
-IDEMPOTENCY_KEY=$(generate_uuid)
 response=$(api_call "POST" "/api/v1/backoffice/agents" "$ADMIN_TOKEN" "{
-  \"agentCode\": \"AGENT_001\",
-  \"agentName\": \"Duplicate Agent\",
-  \"agentType\": \"RETAIL\",
-  \"tier\": \"TIER_1\",
-  \"idempotencyKey\": \"$IDEMPOTENCY_KEY\"
+  \"agentCode\": \"AGT-001\",
+  \"businessName\": \"Duplicate Agent\",
+  \"tier\": \"MICRO\",
+  \"mykadNumber\": \"970101011234\",
+  \"phoneNumber\": \"60123456789\",
+  \"merchantGpsLat\": 3.1390,
+  \"merchantGpsLng\": 101.6869
 }")
 assert_status "Duplicate agent rejected" "409" "$(get_status "$response")"
 assert_json_field "Duplicate error" "$(get_body "$response")" ".error.code" "ERR_BIZ_AGENT_EXISTS"

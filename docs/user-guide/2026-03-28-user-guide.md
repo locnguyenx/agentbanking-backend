@@ -548,6 +548,168 @@ environment:
   - SPRING_DATA_REDIS_HOST=redis
 ```
 
+### Authentication & JWT Management
+
+The Agent Banking Platform uses JWT (JSON Web Tokens) for authentication. This section covers key management for IT administrators.
+
+#### JWT Configuration
+
+##### Auth-IAM Service (Token Issuer)
+
+The auth-iam-service generates JWT tokens for authentication.
+
+**Configuration Location:** `services/auth-iam-service/src/main/resources/application.yaml`
+
+```yaml
+jwt:
+  secret: ${JWT_SECRET:your-super-secret-jwt-key-change-in-production-minimum-32-chars-long}
+  access-token-expiration-minutes: 15
+  refresh-token-expiration-minutes: 1440
+```
+
+**Environment Variables:**
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `JWT_SECRET` | HMAC secret key for signing tokens | Must be 32+ characters |
+
+##### API Gateway (Token Validation)
+
+The gateway validates JWT tokens before forwarding requests to backend services.
+
+**Configuration Location:** `gateway/src/main/resources/application.yaml`
+
+```yaml
+spring:
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          secret: ${JWT_SECRET:your-super-secret-jwt-key-change-in-production-minimum-32-chars-long}
+```
+
+**Important:** Both auth-iam-service and gateway MUST use the same `JWT_SECRET`.
+
+#### Key Management Best Practices
+
+##### Development Environment
+
+For development, you can use any secret that's at least 32 characters:
+
+```bash
+# Generate a random secret
+openssl rand -base64 32
+```
+
+Set in docker-compose.yml or environment:
+```yaml
+environment:
+  - JWT_SECRET=your-super-secret-jwt-key-change-in-production-minimum-32-chars-long
+```
+
+##### Production Environment
+
+**CRITICAL SECURITY GUIDELINES:**
+
+1. **Use Strong Keys**
+   - Minimum 256-bit key (32 characters for HMAC-SHA256)
+   - Use cryptographically secure random generator:
+   ```bash
+   # Generate production key
+   openssl rand -base64 32 > secrets/jwt-secret.key
+   ```
+
+2. **Key Storage**
+   - Store keys in secrets management (HashiCorp Vault, AWS Secrets Manager, etc.)
+   - NEVER commit keys to version control
+   - Add to `.gitignore`:
+   ```
+   secrets/
+   *.key
+   *.pem
+   *.p12
+   ```
+
+3. **Key Rotation**
+   - Rotate keys periodically (recommended: every 90 days)
+   - Implement key rollover strategy with multiple active keys
+   - Keep previous key valid for existing tokens during transition
+
+4. **Key Distribution**
+   - Share key with gateway and any external consumers
+   - Use secure channel for key exchange
+   - Gateway fetches public key from: `http://auth-iam-service:8087/.well-known/jwks.json`
+
+#### RS256 (Asymmetric) Alternative
+
+For production with higher security requirements, consider using RS256 (RSA) instead of HMAC:
+
+1. **Generate RSA Keypair:**
+```bash
+# Generate private key
+openssl genrsa -out jwt-private.pem 2048
+
+# Extract public key
+openssl rsa -in jwt-private.pem -pubout -out jwt-public.pem
+
+# Create PKCS12 keystore
+openssl pkcs12 -export -in jwt-public.pem -inkey jwt-private.pem -out jwt-keystore.p12 -name agentbanking-jwt
+```
+
+2. **Configure auth-iam-service:**
+```yaml
+jwt:
+  key-store: file:/app/config/jwt-keystore.p12
+  key-store-password: ${JWT_KEYSTORE_PASSWORD}
+  key-alias: agentbanking-jwt
+  key-password: ${JWT_KEYSTORE_PASSWORD}
+  algorithm: RS256
+```
+
+3. **Benefits:**
+   - Private key stays in auth service
+   - Public key can be freely distributed
+   - Gateway fetches from JWKS endpoint
+   - Easier key rotation without service restarts
+
+#### Token Expiration
+
+| Token Type | Default TTL | Configuration |
+|------------|-------------|---------------|
+| Access Token | 15 minutes | `jwt.access-token-expiration-minutes` |
+| Refresh Token | 24 hours | `jwt.refresh-token-expiration-minutes` |
+
+#### Troubleshooting Authentication Issues
+
+**Common Issues:**
+
+1. **401 Unauthorized Errors**
+   - Check JWT_SECRET matches between auth-iam-service and gateway
+   - Verify token not expired
+   - Check `Authorization: Bearer <token>` header format
+
+2. **Token Validation Failures**
+   - Ensure gateway has correct JWT_SECRET
+   - Check token algorithm matches (HS512 vs RS256)
+
+3. **Redis Session Issues**
+   - Verify Redis is running: `docker ps | grep redis`
+   - Check Redis connectivity from auth service
+
+#### Monitoring Authentication
+
+Check auth service logs:
+```bash
+docker logs agentbanking-backend-auth-iam-service-1 | grep -i jwt
+```
+
+Test authentication endpoint:
+```bash
+curl -X POST http://localhost:8080/auth/token \
+  -H "Content-Type: application/json" \
+  -d '{"username":"admin","password":"AdminPass123!"}'
+```
+
 ### Monitoring
 
 #### Service Health

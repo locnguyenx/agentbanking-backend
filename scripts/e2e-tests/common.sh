@@ -38,6 +38,11 @@ TOTAL=0
 PASSED=0
 FAILED=0
 SKIPPED=0
+MISSING_APIS=""
+
+# Missing API report file
+MISSING_API_REPORT="/tmp/e2e_missing_apis.txt"
+FAILED_TESTS_REPORT="/tmp/e2e_failed_tests.txt"
 
 # ============================================================================
 # Logging Functions
@@ -61,6 +66,87 @@ subsection() {
 }
 
 # ============================================================================
+# Missing API Tracking
+# ============================================================================
+
+track_missing_api() {
+    local endpoint="$1"
+    local method="$2"
+    local key="$method:$endpoint"
+    
+    if ! echo "$MISSING_APIS" | grep -q "$key"; then
+        MISSING_APIS="$MISSING_APIS|$key"
+        echo "404|$method|$endpoint" >> "$MISSING_API_REPORT"
+    fi
+}
+
+track_failed_test() {
+    local test_name="$1"
+    local expected="$2"
+    local actual="$3"
+    local endpoint="$4"
+    local method="$5"
+    
+    # Only track if it's a test failure (not auth issue)
+    if [ "$expected" != "$actual" ]; then
+        echo "$actual|$method|$endpoint|$test_name|expected:$expected" >> "$FAILED_TESTS_REPORT"
+    fi
+}
+
+print_missing_api_report() {
+    echo ""
+    echo "╔════════════════════════════════════════════════════════════════════╗"
+    echo "║  API Test Failure Report                                      ║"
+    echo "╚════════════════════════════════════════════════════════════════════╝"
+    echo ""
+    
+    # Show failed tests (any non-matching status code)
+    if [ -s "$FAILED_TESTS_REPORT" ]; then
+        echo -e "${RED}Failed Tests:${NC}"
+        echo "------------------------------------------------------------"
+        while IFS='|' read -r actual method endpoint test_name expected; do
+            if [ "$actual" = "404" ]; then
+                echo -e "  ${YELLOW}404${NC}  $method $endpoint - $test_name"
+            elif [ "$actual" = "401" ]; then
+                echo -e "  ${RED}401${NC}  $method $endpoint - $test_name (Auth required)"
+            elif [ "$actual" = "500" ]; then
+                echo -e "  ${RED}500${NC}  $method $endpoint - $test_name (Server error)"
+            else
+                echo -e "  ${RED}$actual${NC}  $method $endpoint - $test_name (expected: $expected)"
+            fi
+        done < "$FAILED_TESTS_REPORT"
+        echo ""
+        echo "Total failed tests: $(wc -l < "$FAILED_TESTS_REPORT")"
+    fi
+    
+    # Summary by status code
+    if [ -s "$FAILED_TESTS_REPORT" ]; then
+        echo ""
+        echo "Summary by Status Code:"
+        echo "------------------------------------------------------------"
+        cut -d'|' -f1 "$FAILED_TESTS_REPORT" | sort | uniq -c | sort -rn | while read count status; do
+            case $status in
+                404) echo -e "  ${YELLOW}$count x 404${NC} - Endpoint not found / Not implemented" ;;
+                401) echo -e "  ${RED}$count x 401${NC} - Authentication required" ;;
+                500) echo -e "  ${RED}$count x 500${NC} - Server error" ;;
+                *)   echo -e "  ${RED}$count x $status${NC} - Other error" ;;
+            esac
+        done
+        echo ""
+    fi
+}
+
+subsection() {
+    echo ""
+    echo -e "${YELLOW}--- $1 ---${NC}"
+}
+
+# Last API call info (used for tracking missing endpoints)
+LAST_ENDPOINT=""
+LAST_METHOD=""
+LAST_ENDPOINT_FILE="/tmp/last_endpoint.txt"
+
+# ============================================================================
 # Assertion Functions
 # ============================================================================
 
@@ -69,7 +155,23 @@ assert_status() {
     local expected="$2"
     local actual="$3"
     
+    # Read last endpoint from file (set by api_call in same command group)
+    if [ -f "$LAST_ENDPOINT_FILE" ]; then
+        LAST_ENDPOINT=$(head -1 "$LAST_ENDPOINT_FILE")
+        LAST_METHOD=$(tail -1 "$LAST_ENDPOINT_FILE")
+    fi
+    
     TOTAL=$((TOTAL + 1))
+    
+    # Track missing APIs (404 responses)
+    if [ "$actual" = "404" ] && [ -n "$LAST_ENDPOINT" ]; then
+        track_missing_api "$LAST_ENDPOINT" "$LAST_METHOD"
+    fi
+    
+    # Track all failed tests
+    if [ "$expected" != "$actual" ]; then
+        track_failed_test "$test_name" "$expected" "$actual" "$LAST_ENDPOINT" "$LAST_METHOD"
+    fi
     
     if [ "$expected" = "$actual" ]; then
         echo -e "  ${GREEN}✓${NC} $test_name"
@@ -189,6 +291,9 @@ api_call() {
     local token="$3"
     local body="$4"
     
+    # Write endpoint info to temp file for tracking
+    echo -e "$endpoint\n$method" > "$LAST_ENDPOINT_FILE"
+    
     local curl_cmd="curl -s -w '\n%{http_code}' -X $method"
     
     if [ -n "$token" ]; then
@@ -251,8 +356,9 @@ wait_for_service() {
     log_info "Waiting for $name to be ready..."
     
     while [ $attempt -le $max_attempts ]; do
-        if curl -s -o /dev/null -w "%{http_code}" "$url" 2>/dev/null | grep -q "200\|401"; then
-            log_success "$name is ready"
+        local http_code=$(curl -s -o /dev/null -w "%{http_code}" "$url" 2>/dev/null)
+        if [ "$http_code" != "000" ]; then
+            log_success "$name is ready (HTTP $http_code)"
             return 0
         fi
         echo -n "."
@@ -271,8 +377,13 @@ wait_for_service() {
 generate_uuid() {
     if command -v uuidgen &> /dev/null; then
         uuidgen | tr '[:upper:]' '[:lower:]'
+    elif [ -f /proc/sys/kernel/random/uuid ]; then
+        cat /proc/sys/kernel/random/uuid 2>/dev/null
+    elif command -v powershell &> /dev/null; then
+        powershell -Command "[guid]::NewGuid().ToString()"
     else
-        cat /proc/sys/kernel/random/uuid 2>/dev/null || python3 -c "import uuid; print(uuid.uuid4())"
+        echo "uuid-generation-failed"
+        return 1
     fi
 }
 
@@ -324,12 +435,6 @@ reset_counters() {
 # Export
 # ============================================================================
 
-export GATEWAY_URL TOKEN_FILE TEST_RESULTS_FILE
+# Note: export -f doesn't work on Windows/Git Bash
+export GATEWAY_URL TOKEN_FILE TEST_RESULTS_FILE MISSING_API_REPORT FAILED_TESTS_REPORT
 export RED GREEN YELLOW BLUE NC
-export -f log_info log_success log_error log_warn section subsection
-export -f assert_status assert_contains assert_not_contains assert_json_field
-export -f assert_json_field_exists assert_json_field_number
-export -f api_call get_status get_body
-export -f get_token load_tokens wait_for_service
-export -f generate_uuid random_mykad
-export -f print_summary reset_counters

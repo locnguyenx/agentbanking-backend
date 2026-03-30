@@ -1,13 +1,16 @@
 package com.agentbanking.onboarding.infrastructure.web;
 
 import com.agentbanking.onboarding.domain.model.AgentOnboardingRecord;
+import com.agentbanking.onboarding.domain.model.AgentTier;
 import com.agentbanking.onboarding.domain.model.OnboardingDecision;
 import com.agentbanking.onboarding.domain.port.in.EvaluateMicroAgentOnboardingUseCase;
 import com.agentbanking.onboarding.domain.port.in.StartMicroAgentOnboardingUseCase;
 import com.agentbanking.onboarding.domain.port.in.StartStandardPremierOnboardingUseCase;
+import com.agentbanking.onboarding.domain.port.in.SubmitApplicationUseCase;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.util.Map;
 import java.util.UUID;
 
@@ -15,26 +18,67 @@ import java.util.UUID;
  * REST controller for agent onboarding endpoints
  */
 @RestController
-@RequestMapping("/internal/onboarding/agent")
+@RequestMapping("/internal/onboarding")
 public class AgentOnboardingController {
 
     private final StartMicroAgentOnboardingUseCase startMicroAgentOnboardingUseCase;
     private final EvaluateMicroAgentOnboardingUseCase evaluateMicroAgentOnboardingUseCase;
     private final StartStandardPremierOnboardingUseCase startStandardPremierOnboardingUseCase;
+    private final SubmitApplicationUseCase submitApplicationUseCase;
 
     public AgentOnboardingController(StartMicroAgentOnboardingUseCase startMicroAgentOnboardingUseCase,
                                      EvaluateMicroAgentOnboardingUseCase evaluateMicroAgentOnboardingUseCase,
-                                     StartStandardPremierOnboardingUseCase startStandardPremierOnboardingUseCase) {
+                                     StartStandardPremierOnboardingUseCase startStandardPremierOnboardingUseCase,
+                                     SubmitApplicationUseCase submitApplicationUseCase) {
         this.startMicroAgentOnboardingUseCase = startMicroAgentOnboardingUseCase;
         this.evaluateMicroAgentOnboardingUseCase = evaluateMicroAgentOnboardingUseCase;
         this.startStandardPremierOnboardingUseCase = startStandardPremierOnboardingUseCase;
+        this.submitApplicationUseCase = submitApplicationUseCase;
+    }
+
+    /**
+     * Submit agent application
+     * POST /internal/onboarding/application
+     */
+    @PostMapping("/application")
+    public ResponseEntity<Map<String, Object>> submitApplication(@RequestBody Map<String, Object> request) {
+        try {
+            String mykadNumber = (String) request.get("mykadNumber");
+            String extractedName = (String) request.get("extractedName");
+            String ssmBusinessName = (String) request.get("ssmBusinessName");
+            String ssmOwnerName = (String) request.get("ssmOwnerName");
+            AgentTier agentTier = AgentTier.valueOf((String) request.get("agentTier"));
+            BigDecimal merchantGpsLat = request.containsKey("merchantGpsLat") 
+                ? new BigDecimal(request.get("merchantGpsLat").toString()) : null;
+            BigDecimal merchantGpsLng = request.containsKey("merchantGpsLng") 
+                ? new BigDecimal(request.get("merchantGpsLng").toString()) : null;
+            String phoneNumber = (String) request.get("phoneNumber");
+
+            SubmitApplicationUseCase.SubmitApplicationCommand command = new SubmitApplicationUseCase.SubmitApplicationCommand(
+                mykadNumber, extractedName, ssmBusinessName, ssmOwnerName, 
+                agentTier, merchantGpsLat, merchantGpsLng, phoneNumber
+            );
+
+            SubmitApplicationUseCase.SubmitApplicationResult result = submitApplicationUseCase.submitApplication(command);
+
+            return ResponseEntity.status(201).body(Map.of(
+                "applicationId", result.applicationId().toString(),
+                "status", result.status(),
+                "message", result.message()
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of(
+                "status", "FAILED",
+                "error", Map.of("code", "ERR_APPLICATION_SUBMIT_FAILED", "message", e.getMessage())
+            ));
+        }
     }
 
     /**
      * Start micro-agent onboarding (Conditional STP)
      * POST /internal/onboarding/agent/micro/start
      */
-    @PostMapping("/micro/start")
+    @PostMapping("/agent/micro/start")
     public ResponseEntity<Map<String, Object>> startMicroAgentOnboarding(@RequestBody Map<String, String> request) {
         try {
             String mykadNumber = request.get("mykadNumber");
@@ -60,7 +104,7 @@ public class AgentOnboardingController {
      * Evaluate micro-agent onboarding (auto-approval or manual review)
      * POST /internal/onboarding/agent/micro/evaluate
      */
-    @PostMapping("/micro/evaluate")
+    @PostMapping("/agent/micro/evaluate")
     public ResponseEntity<Map<String, Object>> evaluateMicroAgentOnboarding(@RequestBody Map<String, String> request) {
         try {
             UUID onboardingId = UUID.fromString(request.get("onboardingId"));
@@ -87,7 +131,7 @@ public class AgentOnboardingController {
      * Start standard/premier agent onboarding (Non-STP - for human review)
      * POST /internal/onboarding/agent/standard/start
      */
-    @PostMapping("/standard/start")
+    @PostMapping("/agent/standard/start")
     public ResponseEntity<Map<String, Object>> startStandardPremierOnboarding(@RequestBody Map<String, String> request) {
         try {
             String mykadNumber = request.get("mykadNumber");

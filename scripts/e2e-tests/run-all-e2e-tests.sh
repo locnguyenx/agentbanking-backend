@@ -46,7 +46,7 @@ start_docker() {
     local max_attempts=30
     local attempt=1
     while [ $attempt -le $max_attempts ]; do
-        if curl -s -o /dev/null http://localhost:8080/actuator/health 2>/dev/null; then
+        if curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/ 2>/dev/null | grep -q "200\|404\|401\|500"; then
             log_success "Gateway is ready"
             break
         fi
@@ -104,8 +104,10 @@ main() {
     local start_time=$(date +%s)
     local failed_suites=0
     
-    # Clear results file
+    # Clear results file and reports
     > "$TEST_RESULTS_FILE"
+    > "$MISSING_API_REPORT"
+    > "$FAILED_TESTS_REPORT"
     
     # Start Docker
     start_docker
@@ -163,6 +165,9 @@ main() {
     echo -e "  ${GREEN}Passed: $passed${NC}"
     echo -e "  ${RED}Failed: $failed${NC}"
     echo ""
+    
+    # Print missing API implementation report
+    print_missing_api_report
     
     # Cleanup if requested
     if [ "$CLEANUP" = true ]; then

@@ -378,7 +378,7 @@ services:
       redis:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8087/actuator/health || exit 1"]
+      test: ["CMD-SHELL", "nc -z localhost 8087 || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -392,6 +392,8 @@ services:
     ports:
       - "8080:8080"
     mem_limit: 256m
+    environment:
+      JWT_SECRET: your-super-secret-jwt-key-change-in-production-minimum-32-chars-long
     depends_on:
       auth-iam-service:
         condition: service_healthy

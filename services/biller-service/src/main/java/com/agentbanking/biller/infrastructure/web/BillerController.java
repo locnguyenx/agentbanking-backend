@@ -3,6 +3,7 @@ package com.agentbanking.biller.infrastructure.web;
 import com.agentbanking.biller.domain.port.in.ValidateBillUseCase;
 import com.agentbanking.biller.domain.port.in.PayBillUseCase;
 import com.agentbanking.biller.domain.port.in.ProcessTopupUseCase;
+import com.agentbanking.biller.domain.port.in.JomPayUseCase;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -17,13 +18,16 @@ public class BillerController {
     private final ValidateBillUseCase validateBillUseCase;
     private final PayBillUseCase payBillUseCase;
     private final ProcessTopupUseCase processTopupUseCase;
+    private final JomPayUseCase jomPayUseCase;
 
     public BillerController(ValidateBillUseCase validateBillUseCase,
                             PayBillUseCase payBillUseCase,
-                            ProcessTopupUseCase processTopupUseCase) {
+                            ProcessTopupUseCase processTopupUseCase,
+                            JomPayUseCase jomPayUseCase) {
         this.validateBillUseCase = validateBillUseCase;
         this.payBillUseCase = payBillUseCase;
         this.processTopupUseCase = processTopupUseCase;
+        this.jomPayUseCase = jomPayUseCase;
     }
 
     @PostMapping("/validate-ref")
@@ -73,7 +77,16 @@ public class BillerController {
             String telco = (String) request.get("telco");
             String phoneNumber = (String) request.get("phoneNumber");
             BigDecimal amount = new BigDecimal(request.get("amount").toString());
-            UUID internalTxId = UUID.fromString((String) request.get("internalTransactionId"));
+            
+            UUID internalTxId;
+            if (request.containsKey("idempotencyKey") && request.get("idempotencyKey") != null) {
+                String idempotencyKey = (String) request.get("idempotencyKey");
+                internalTxId = UUID.nameUUIDFromBytes(idempotencyKey.getBytes());
+            } else if (request.containsKey("internalTransactionId") && request.get("internalTransactionId") != null) {
+                internalTxId = UUID.fromString((String) request.get("internalTransactionId"));
+            } else {
+                internalTxId = UUID.randomUUID();
+            }
 
             ProcessTopupUseCase.ProcessTopupResult topup = processTopupUseCase.processTopup(telco, phoneNumber, amount, internalTxId);
 
@@ -87,6 +100,47 @@ public class BillerController {
             return ResponseEntity.badRequest().body(Map.of(
                 "status", "FAILED",
                 "error", Map.of("code", "ERR_TOPUP_FAILED", "message", e.getMessage())
+            ));
+        }
+    }
+
+    @PostMapping("/billpayment/jompay")
+    public ResponseEntity<Map<String, Object>> jomPay(@RequestBody Map<String, Object> request) {
+        try {
+            String billerCode = (String) request.get("billerCode");
+            String billerName = (String) request.get("billerName");
+            String ref1 = (String) request.get("ref1");
+            String ref2 = (String) request.get("ref2");
+            BigDecimal amount = new BigDecimal(request.get("amount").toString());
+            String currency = (String) request.get("currency");
+            
+            UUID internalTxId;
+            if (request.containsKey("idempotencyKey") && request.get("idempotencyKey") != null) {
+                String idempotencyKey = (String) request.get("idempotencyKey");
+                internalTxId = UUID.nameUUIDFromBytes(idempotencyKey.getBytes());
+            } else if (request.containsKey("internalTransactionId") && request.get("internalTransactionId") != null) {
+                internalTxId = UUID.fromString((String) request.get("internalTransactionId"));
+            } else {
+                internalTxId = UUID.randomUUID();
+            }
+
+            JomPayUseCase.JomPayCommand command = new JomPayUseCase.JomPayCommand(
+                billerCode, billerName, ref1, ref2, amount, currency, internalTxId
+            );
+
+            JomPayUseCase.JomPayResult result = jomPayUseCase.processJomPay(command);
+
+            return ResponseEntity.ok(Map.of(
+                "status", result.status(),
+                "paymentId", result.paymentId().toString(),
+                "receiptNo", result.receiptNo(),
+                "billerReference", result.billerReference(),
+                "amount", result.amount()
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of(
+                "status", "FAILED",
+                "error", Map.of("code", "ERR_JOMPAY_FAILED", "message", e.getMessage())
             ));
         }
     }

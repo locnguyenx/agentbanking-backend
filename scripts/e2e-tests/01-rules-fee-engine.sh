@@ -47,7 +47,9 @@ response=$(api_call "POST" "/api/v1/withdrawal" "$AGENT_TOKEN" "{
   \"amount\": 500.00,
   \"currency\": \"MYR\",
   \"idempotencyKey\": \"$IDEMPOTENCY_KEY\",
-  \"agentType\": \"UNKNOWN\"
+  \"customerCard\": \"4111111111111111\",
+  \"customerPin\": \"1234\",
+  \"location\": {\"latitude\": 3.1390, \"longitude\": 101.6869}
 }")
 assert_status "Withdrawal without fee config" "402" "$(get_status "$response")"
 assert_json_field "Error code present" "$(get_body "$response")" ".error.code" "ERR_BIZ_FEE_NOT_CONFIGURED"
@@ -67,7 +69,9 @@ withdraw_response=$(api_call "POST" "/api/v1/withdrawal" "$AGENT_TOKEN" "{
   \"amount\": 100.00,
   \"currency\": \"MYR\",
   \"idempotencyKey\": \"$IDEMPOTENCY_KEY\",
-  \"agentType\": \"STANDARD\"
+  \"customerCard\": \"4111111111111111\",
+  \"customerPin\": \"1234\",
+  \"location\": {\"latitude\": 3.1390, \"longitude\": 101.6869}
 }")
 assert_status "Withdrawal with expired fee" "402" "$(get_status "$withdraw_response")"
 
@@ -76,11 +80,14 @@ assert_status "Withdrawal with expired fee" "402" "$(get_status "$withdraw_respo
 # ============================================================================
 
 subsection "BDD-R02: Daily transaction limit check passes"
-response=$(api_call "POST" "/api/v1/withdrawal" "$AGENT_TOKEN" '{
-  "amount": 100.00,
-  "currency": "MYR",
-  "idempotencyKey": "'$(generate_uuid)'"
-}')
+response=$(api_call "POST" "/api/v1/withdrawal" "$AGENT_TOKEN" "{
+  \"amount\": 100.00,
+  \"currency\": \"MYR\",
+  \"idempotencyKey\": \"$(generate_uuid)\",
+  \"customerCard\": \"4111111111111111\",
+  \"customerPin\": \"1234\",
+  \"location\": {\"latitude\": 3.1390, \"longitude\": 101.6869}
+}")
 actual_status=$(get_status "$response")
 if [ "$actual_status" = "200" ] || [ "$actual_status" = "201" ]; then
     assert_json_field "Daily limit check passes" "$(get_body "$response")" ".status" "SUCCESS"
@@ -89,38 +96,50 @@ else
 fi
 
 subsection "BDD-R02-EC-01: Daily limit exceeded"
-response=$(api_call "POST" "/api/v1/withdrawal" "$AGENT_TOKEN" '{
-  "amount": 10000.00,
-  "currency": "MYR",
-  "idempotencyKey": "'$(generate_uuid)'"
-}')
+response=$(api_call "POST" "/api/v1/withdrawal" "$AGENT_TOKEN" "{
+  \"amount\": 10000.00,
+  \"currency\": \"MYR\",
+  \"idempotencyKey\": \"$(generate_uuid)\",
+  \"customerCard\": \"4111111111111111\",
+  \"customerPin\": \"1234\",
+  \"location\": {\"latitude\": 3.1390, \"longitude\": 101.6869}
+}")
 assert_status "Daily limit exceeded" "403" "$(get_status "$response")"
 assert_json_field "Error code for limit exceeded" "$(get_body "$response")" ".error.code" "ERR_BIZ_DAILY_LIMIT_EXCEEDED"
 
 subsection "BDD-R02-EC-02: Daily count limit exceeded"
-response=$(api_call "POST" "/api/v1/withdrawal" "$AGENT_TOKEN" '{
-  "amount": 50.00,
-  "currency": "MYR",
-  "idempotencyKey": "'$(generate_uuid)'"
-}')
+response=$(api_call "POST" "/api/v1/withdrawal" "$AGENT_TOKEN" "{
+  \"amount\": 50.00,
+  \"currency\": \"MYR\",
+  \"idempotencyKey\": \"$(generate_uuid)\",
+  \"customerCard\": \"4111111111111111\",
+  \"customerPin\": \"1234\",
+  \"location\": {\"latitude\": 3.1390, \"longitude\": 101.6869}
+}")
 assert_status "Daily count limit" "403" "$(get_status "$response")"
 assert_json_field "Error code for count limit" "$(get_body "$response")" ".error.code" "ERR_BIZ_DAILY_COUNT_EXCEEDED"
 
 subsection "BDD-R02-EC-03: Zero amount"
-response=$(api_call "POST" "/api/v1/withdrawal" "$AGENT_TOKEN" '{
-  "amount": 0,
-  "currency": "MYR",
-  "idempotencyKey": "'$(generate_uuid)'"
-}')
+response=$(api_call "POST" "/api/v1/withdrawal" "$AGENT_TOKEN" "{
+  \"amount\": 0,
+  \"currency\": \"MYR\",
+  \"idempotencyKey\": \"$(generate_uuid)\",
+  \"customerCard\": \"4111111111111111\",
+  \"customerPin\": \"1234\",
+  \"location\": {\"latitude\": 3.1390, \"longitude\": 101.6869}
+}")
 assert_status "Zero amount validation" "400" "$(get_status "$response")"
 assert_json_field "Error for zero amount" "$(get_body "$response")" ".error.code" "ERR_VAL_AMOUNT_ZERO"
 
 subsection "BDD-R02-EC-04: Negative amount"
-response=$(api_call "POST" "/api/v1/withdrawal" "$AGENT_TOKEN" '{
-  "amount": -100.00,
-  "currency": "MYR",
-  "idempotencyKey": "'$(generate_uuid)'"
-}')
+response=$(api_call "POST" "/api/v1/withdrawal" "$AGENT_TOKEN" "{
+  \"amount\": -100.00,
+  \"currency\": \"MYR\",
+  \"idempotencyKey\": \"$(generate_uuid)\",
+  \"customerCard\": \"4111111111111111\",
+  \"customerPin\": \"1234\",
+  \"location\": {\"latitude\": 3.1390, \"longitude\": 101.6869}
+}")
 assert_status "Negative amount validation" "400" "$(get_status "$response")"
 assert_json_field "Error for negative amount" "$(get_body "$response")" ".error.code" "ERR_VAL_AMOUNT_NEGATIVE"
 
@@ -129,11 +148,14 @@ assert_json_field "Error for negative amount" "$(get_body "$response")" ".error.
 # ============================================================================
 
 subsection "BDD-R03: Velocity check passes"
-response=$(api_call "POST" "/api/v1/withdrawal" "$AGENT_TOKEN" '{
-  "amount": 50.00,
-  "currency": "MYR",
-  "idempotencyKey": "'$(generate_uuid)'"
-}')
+response=$(api_call "POST" "/api/v1/withdrawal" "$AGENT_TOKEN" "{
+  \"amount\": 50.00,
+  \"currency\": \"MYR\",
+  \"idempotencyKey\": \"$(generate_uuid)\",
+  \"customerCard\": \"4111111111111111\",
+  \"customerPin\": \"1234\",
+  \"location\": {\"latitude\": 3.1390, \"longitude\": 101.6869}
+}")
 actual_status=$(get_status "$response")
 if [ "$actual_status" = "200" ] || [ "$actual_status" = "201" ]; then
     assert_json_field "Velocity check passes" "$(get_body "$response")" ".status" "SUCCESS"
@@ -142,11 +164,14 @@ else
 fi
 
 subsection "BDD-R03-EC-01: Velocity count exceeded"
-response=$(api_call "POST" "/api/v1/withdrawal" "$AGENT_TOKEN" '{
-  "amount": 50.00,
-  "currency": "MYR",
-  "idempotencyKey": "'$(generate_uuid)'"
-}')
+response=$(api_call "POST" "/api/v1/withdrawal" "$AGENT_TOKEN" "{
+  \"amount\": 50.00,
+  \"currency\": \"MYR\",
+  \"idempotencyKey\": \"$(generate_uuid)\",
+  \"customerCard\": \"4111111111111111\",
+  \"customerPin\": \"1234\",
+  \"location\": {\"latitude\": 3.1390, \"longitude\": 101.6869}
+}")
 assert_status "Velocity count exceeded" "429" "$(get_status "$response")"
 assert_json_field "Error for velocity exceeded" "$(get_body "$response")" ".error.code" "ERR_BIZ_VELOCITY_EXCEEDED"
 
@@ -155,11 +180,14 @@ assert_json_field "Error for velocity exceeded" "$(get_body "$response")" ".erro
 # ============================================================================
 
 subsection "BDD-R04: Percentage-based fee calculation with rounding"
-response=$(api_call "POST" "/api/v1/withdrawal" "$AGENT_TOKEN" '{
-  "amount": 1000.00,
-  "currency": "MYR",
-  "idempotencyKey": "'$(generate_uuid)'"
-}')
+response=$(api_call "POST" "/api/v1/withdrawal" "$AGENT_TOKEN" "{
+  \"amount\": 1000.00,
+  \"currency\": \"MYR\",
+  \"idempotencyKey\": \"$(generate_uuid)\",
+  \"customerCard\": \"4111111111111111\",
+  \"customerPin\": \"1234\",
+  \"location\": {\"latitude\": 3.1390, \"longitude\": 101.6869}
+}")
 assert_status "Fee calculation request" "200" "$(get_status "$response")"
 assert_json_field_exists "Fee field present" "$(get_body "$response")" ".fee"
 assert_json_field_number "Fee is numeric" "$(get_body "$response")" ".fee"
