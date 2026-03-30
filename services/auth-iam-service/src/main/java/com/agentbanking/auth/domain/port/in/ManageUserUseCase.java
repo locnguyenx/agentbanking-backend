@@ -1,7 +1,7 @@
 package com.agentbanking.auth.domain.port.in;
 
 import com.agentbanking.auth.domain.model.UserRecord;
-
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -72,4 +72,10 @@ public interface ManageUserUseCase {
      * @return true if reset, false if not found
      */
     boolean resetPassword(UUID userId, String newPasswordHash);
+
+    /**
+     * Get all users
+     * @return list of all users
+     */
+    List<UserRecord> getAllUsers();
 }

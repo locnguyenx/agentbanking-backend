@@ -232,18 +232,50 @@ PREMIER_AGENT_ID=AGT-03
 EOF
     
     log_success "Tokens saved to $TOKEN_FILE"
-    
+
     # ========================================================================
-    # 2. Summary
+    # 2. Deposit Test Data (requires ledger DB access)
     # ========================================================================
-    section "2. Seed Complete"
+    section "2. Deposit Test Data Setup"
+    echo ""
+    log_info "Cash deposit tests require a linked agent_float record in the ledger DB."
+    log_info "The auth user's UUID must match the agent_float.agent_id."
+    log_info "Running setup-deposit-test-data.sh..."
+    echo ""
+
+    if [ -f "$SCRIPT_DIR/setup-deposit-test-data.sh" ]; then
+        # Run deposit setup (uses its own user, avoids conflicts with generic agent001)
+        bash "$SCRIPT_DIR/setup-deposit-test-data.sh" "$GATEWAY_URL" || log_warn "Deposit setup had issues (ledger DB may not be accessible)"
+
+        # Merge deposit tokens into main token file
+        local deposit_config="/tmp/e2e_deposit_test.env"
+        if [ -f "$deposit_config" ]; then
+            # Append DEPOSIT_AGENT tokens to main token file
+            grep "^DEPOSIT_" "$deposit_config" >> "$TOKEN_FILE" 2>/dev/null || true
+            log_success "Deposit tokens merged into $TOKEN_FILE"
+        fi
+    else
+        log_warn "setup-deposit-test-data.sh not found - deposit tests may not work"
+        log_warn "Run manually: ./scripts/e2e-tests/setup-deposit-test-data.sh"
+    fi
+
+    # ========================================================================
+    # 3. Summary
+    # ========================================================================
+    section "3. Seed Complete"
     echo ""
     echo "Users: admin, agent001, operator001, auditor001, teller001,"
     echo "       maker001, checker001, compliance001, supervisor001"
+    echo "       deposit_agent_01 (for cash deposit E2E tests)"
     echo ""
     echo "Agents: AGT-01 (MICRO), AGT-02 (PREMIER), AGT-03 (STANDARD)"
+    echo "         AGT-E2E-D01 (deposit test agent with MYR 100K float)"
     echo ""
     echo "Tokens: source $TOKEN_FILE"
+    echo ""
+    echo "Next steps:"
+    echo "  1. Run deposit tests: ./scripts/e2e-tests/04-cash-deposit-e2e.sh"
+    echo "  2. Run all tests:     ./scripts/e2e-tests/run-all-e2e-tests.sh"
     echo ""
 }
 

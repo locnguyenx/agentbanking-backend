@@ -33,7 +33,9 @@ public class UserMapper {
             entity.getCreatedAt(),
             entity.getUpdatedAt(),
             entity.getLastLoginAt(),
-            entity.getCreatedBy()
+            entity.getCreatedBy(),
+            null, // agentId - will be populated via separate service/linking
+            null  // agentCode - will be populated via separate service/linking
         );
     }
 

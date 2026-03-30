@@ -122,7 +122,7 @@ main() {
     run_test_script "01-rules-fee-engine.sh" "Section 1: Rules & Fee Engine" || failed_suites=$((failed_suites + 1))
     run_test_script "02-ledger-float.sh" "Section 2: Ledger & Float" || failed_suites=$((failed_suites + 1))
     run_test_script "03-cash-withdrawal.sh" "Section 3: Cash Withdrawal" || failed_suites=$((failed_suites + 1))
-    run_test_script "04-cash-deposit.sh" "Section 4: Cash Deposit" || failed_suites=$((failed_suites + 1))
+    run_test_script "04-cash-deposit-e2e.sh" "Section 4: Cash Deposit" || failed_suites=$((failed_suites + 1))
     run_test_script "05-ekyc-onboarding.sh" "Section 5: e-KYC & Onboarding" || failed_suites=$((failed_suites + 1))
     run_test_script "06-bill-payments.sh" "Section 6: Bill Payments" || failed_suites=$((failed_suites + 1))
     run_test_script "07-prepaid-topup.sh" "Section 7: Prepaid Top-up" || failed_suites=$((failed_suites + 1))

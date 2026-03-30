@@ -7,11 +7,12 @@ import com.agentbanking.auth.infrastructure.web.dto.UserCreateDto;
 import com.agentbanking.auth.infrastructure.web.dto.UserResponseDto;
 import com.agentbanking.auth.infrastructure.web.dto.UserUpdateDto;
 import jakarta.validation.Valid;
+import java.util.List;
+import java.util.UUID;
+import java.util.stream.Collectors;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.UUID;
 
 @RestController
 @RequestMapping("/auth/users")
@@ -33,21 +34,23 @@ public class UserController {
         
         // For bootstrap, pass "system" as createdBy to satisfy NOT NULL constraint
         UserRecord userRecord = new UserRecord(
-                null,
+                null, // userId
                 userDto.username(),
                 userDto.email(),
                 userDto.password(),
                 userDto.fullName(),
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                "system"
+                null, // status
+                null, // permissions
+                null, // failedLoginAttempts
+                null, // lockedUntil
+                null, // passwordChangedAt
+                null, // passwordExpiresAt
+                null, // createdAt
+                null, // updatedAt
+                null, // lastLoginAt
+                "system", // createdBy
+                null, // agentId
+                null    // agentCode
         );
         UserRecord created = manageUserUseCase.createUser(userRecord);
         return new ResponseEntity<>(toResponseDto(created), HttpStatus.CREATED);
@@ -57,21 +60,23 @@ public class UserController {
     public ResponseEntity<UserResponseDto> createUser(@Valid @RequestBody UserCreateDto userDto) {
         // For now, use "admin" as createdBy - in production this would come from the authenticated user
         UserRecord userRecord = new UserRecord(
-                null,
+                null, // userId
                 userDto.username(),
                 userDto.email(),
                 userDto.password(),
                 userDto.fullName(),
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                "admin"
+                null, // status
+                null, // permissions
+                null, // failedLoginAttempts
+                null, // lockedUntil
+                null, // passwordChangedAt
+                null, // passwordExpiresAt
+                null, // createdAt
+                null, // updatedAt
+                null, // lastLoginAt
+                "admin", // createdBy
+                null, // agentId
+                null    // agentCode
         );
         UserRecord created = manageUserUseCase.createUser(userRecord);
         return new ResponseEntity<>(toResponseDto(created), HttpStatus.CREATED);
@@ -83,24 +88,35 @@ public class UserController {
         return user != null ? ResponseEntity.ok(toResponseDto(user)) : ResponseEntity.notFound().build();
     }
 
+    @GetMapping
+    public ResponseEntity<List<UserResponseDto>> getAllUsers() {
+        List<UserRecord> users = manageUserUseCase.getAllUsers();
+        List<UserResponseDto> userDtos = users.stream()
+                .map(this::toResponseDto)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(userDtos);
+    }
+
     @PutMapping("/{id}")
     public ResponseEntity<UserResponseDto> updateUser(@PathVariable UUID id, @Valid @RequestBody UserUpdateDto userDto) {
         UserRecord userRecord = new UserRecord(
                 id,
                 userDto.username(),
                 userDto.email(),
-                null,
+                null, // passwordHash (will be set by service)
                 userDto.fullName(),
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null
+                null, // status
+                null, // permissions
+                null, // failedLoginAttempts
+                null, // lockedUntil
+                null, // passwordChangedAt
+                null, // passwordExpiresAt
+                null, // createdAt
+                null, // updatedAt
+                null, // lastLoginAt
+                null, // createdBy (will be set by service)
+                null, // agentId
+                null    // agentCode
         );
         UserRecord updated = manageUserUseCase.updateUser(id, userRecord);
         return updated != null ? ResponseEntity.ok(toResponseDto(updated)) : ResponseEntity.notFound().build();

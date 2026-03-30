@@ -22,5 +22,7 @@ public record UserRecord(
     LocalDateTime createdAt,
     LocalDateTime updatedAt,
     LocalDateTime lastLoginAt,
-    String createdBy
+    String createdBy,
+    UUID agentId,
+    String agentCode
 ) {}

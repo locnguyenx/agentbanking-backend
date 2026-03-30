@@ -52,7 +52,9 @@ public class ManageUserUseCaseImpl implements ManageUserUseCase {
                 LocalDateTime.now(), // createdAt
                 LocalDateTime.now(), // updatedAt
                 null, // lastLoginAt
-                userRecord.createdBy()
+                userRecord.createdBy(),
+                null, // agentId - to be set later via onboarding/linking service
+                null    // agentCode - to be set later via onboarding/linking service
         );
 
         return userRepository.save(newUser);
@@ -106,7 +108,9 @@ public class ManageUserUseCaseImpl implements ManageUserUseCase {
                 existing.createdAt(),
                 LocalDateTime.now(),
                 existing.lastLoginAt(),
-                existing.createdBy()
+                existing.createdBy(),
+                null, // agentId - preserve existing
+                null    // agentCode - preserve existing
         );
 
         return userRepository.save(updatedUser);
@@ -206,5 +210,10 @@ public class ManageUserUseCaseImpl implements ManageUserUseCase {
 
         userRepository.save(updatedUser);
         return true;
+    }
+
+    @Override
+    public List<UserRecord> getAllUsers() {
+        return userRepository.findAll();
     }
 }

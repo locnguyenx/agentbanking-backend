@@ -120,3 +120,60 @@ bash scripts/e2e-tests/seed-test-data.sh
 # View failed tests
 cat /tmp/e2e_failed_tests.txt
 ```
+# TROUBLESHOOTING
+
+## Summary of Remaining Issues
+
+Based on our debugging session, here's what we've accomplished and what remains to be fixed:
+
+✅ COMPLETED:
+1. JWT Authentication Fixed - Gateway properly validates JWTs with 0 auth errors
+2. Endpoint Routing Fixed - 0 x 404 errors after adding routes
+3. OpenAPI.yaml Updated - Explicit schemas with required properties
+4. Gateway Transformation Implemented - RequestTransformFilterFactory created
+5. Auth Service Extended - UserRecord now has agentId/agentCode fields, JWT uses agent_id if present
+
+❌ REMAINING ISSUES:
+Issue 1: Request Transform Filter Not Being Applied
+- Status: The RequestTransformFilterFactory is not being invoked by Spring Cloud Gateway
+- Evidence: No transformation debug logs appear when testing withdrawal
+- Root Cause: Unknown - could be class loading issue or configuration problem
+- Impact: Gateway passes raw request body to ledger-service without transformation
+Issue 2: Ledger Service Deserialization Error
+- Status: Ledger service returns 500 when receiving transformed requests
+- Evidence: No static resource . error in ledger-service logs
+- Root Cause: Request body being dropped or transformed incorrectly
+- Impact: All transaction operations fail with 500 errors
+Issue 3: Test Data Mismatch - Hardcoded UUIDs vs Real Agent IDs
+- Status: E2E test data uses hardcoded "MERCH_001" instead of actual agent UUIDs
+- Evidence: Previous UUID deserialization errors
+- Root Cause: Test data not linked to actual onboarding service agent records
+- Impact: Tests fail even if transformation works
+Issue 4: Agent ID Linking Missing
+- Status: Auth users have UUIDs, onboarding agents have different UUIDs
+- Evidence: JWT contains auth user UUID, not onboarding agent UUID
+- Root Cause: No linkage between auth service users and onboarding service agents
+- Impact: JWT agent_id claim is wrong
+Issue 5: Onboarding Service AML Screening Mock Missing
+- Status: AML screening endpoint not available on mock server
+- Evidence: Connection refused when onboarding service tries to call /screen
+- Root Cause: Mock server doesn't implement /screen endpoint
+- Impact: Agent creation fails during onboarding
+
+---
+
+**Root Causes:**
+1. Issue 1-2: RequestTransformFilterFactory bean is not being picked up by Spring Cloud Gateway - no debug logs appear
+2. Issue 3-4: No synchronization between auth service (user UUIDs) and onboarding service (agent UUIDs)
+3. Issue 5: Mock server only implements /mock/* paths, but onboarding service expects /screen
+
+**Priority Order for Fixing:**
+1. 🔴 Fix Request Transform Filter (highest priority - blocks all transformations)
+2. 🟡 Fix AML screening mock (allows agent creation flow)
+3. 🟡 Fix test data with real agent IDs (enables E2E tests)
+4. 🟢 Link auth users to onboarding agents (proper JWT content)
+
+**Test Results:**
+- Auth tests: ✅ passing
+- Onboarding tests: ❌ AML screening fails
+- Transaction tests: ❌ 500 errors (transformation not working)

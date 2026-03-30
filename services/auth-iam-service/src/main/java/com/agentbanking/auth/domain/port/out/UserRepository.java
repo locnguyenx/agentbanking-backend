@@ -1,7 +1,7 @@
 package com.agentbanking.auth.domain.port.out;
 
 import com.agentbanking.auth.domain.model.UserRecord;
-
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -14,4 +14,5 @@ public interface UserRepository {
     Optional<UserRecord> findByEmail(String email);
     UserRecord save(UserRecord userRecord);
     boolean deleteById(UUID userId);
+    List<UserRecord> findAll();
 }

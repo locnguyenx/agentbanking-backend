@@ -45,7 +45,8 @@ public class JwtTokenProvider implements TokenProvider {
     @Override
     public String generateAccessToken(UserRecord user) {
         Map<String, Object> claims = new HashMap<>();
-        claims.put("agent_id", user.userId().toString());
+        // Use agent_id from user record if available, otherwise fall back to userId
+        claims.put("agent_id", (user.agentId() != null) ? user.agentId().toString() : user.userId().toString());
         claims.put("permissions", user.permissions());
         claims.put("email", user.email());
         claims.put("fullName", user.fullName());
@@ -55,7 +56,7 @@ public class JwtTokenProvider implements TokenProvider {
 
         return Jwts.builder()
                 .claims(claims)
-                .subject(user.userId().toString())
+                .subject((user.agentId() != null) ? user.agentId().toString() : user.userId().toString())
                 .issuedAt(now)
                 .expiration(expiry)
                 .id(UUID.randomUUID().toString())

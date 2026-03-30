@@ -132,14 +132,15 @@ spring:
             - Path=/internal/validate-ref, /internal/pay-bill, /internal/topup
           filters:
             - RewritePath=/internal/(?<segment>.*), /internal/${segment}
-        
-        # External API routes (through JWT filter)
+         
+        # External API routes (through JWT filter + transformation)
         - id: external-withdrawal
           uri: http://ledger-service:8082
           predicates:
             - Path=/api/v1/withdrawal
           filters:
             - JwtAuthFilter
+            - RequestTransform=withdrawal
             - RewritePath=/api/v1/withdrawal, /internal/debit
         
         - id: external-deposit
@@ -148,6 +149,7 @@ spring:
             - Path=/api/v1/deposit
           filters:
             - JwtAuthFilter
+            - RequestTransform=deposit
             - RewritePath=/api/v1/deposit, /internal/credit
         
         - id: external-balance-inquiry
@@ -196,6 +198,7 @@ spring:
             - Path=/api/v1/topup
           filters:
             - JwtAuthFilter
+            - RequestTransform=topup
             - RewritePath=/api/v1/topup, /internal/topup
         
         - id: external-duitnow
@@ -236,6 +239,7 @@ spring:
             - Path=/api/v1/ewallet/withdraw
           filters:
             - JwtAuthFilter
+            - RequestTransform=ewallet
             - RewritePath=/api/v1/ewallet/withdraw, /internal/ewallet/withdrawal
         
         - id: external-ewallet-topup
@@ -244,6 +248,7 @@ spring:
             - Path=/api/v1/ewallet/topup
           filters:
             - JwtAuthFilter
+            - RequestTransform=ewallet
             - RewritePath=/api/v1/ewallet/topup, /internal/ewallet/topup
         
         - id: external-essp
@@ -285,6 +290,7 @@ spring:
             - Path=/api/v1/billpayment/jompay
           filters:
             - JwtAuthFilter
+            - RequestTransform=jompay
             - RewritePath=/api/v1/billpayment/jompay, /internal/billpayment/jompay
         
         - id: external-onboarding-submit-application
@@ -293,6 +299,7 @@ spring:
             - Path=/api/v1/onboarding/submit-application
           filters:
             - JwtAuthFilter
+            - RequestTransform=onboarding
             - RewritePath=/api/v1/onboarding/submit-application, /internal/onboarding/application
          
         # Backoffice routes
