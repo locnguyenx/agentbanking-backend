@@ -109,89 +109,32 @@ Backoffice Tests:
 API Docs Tests:
 - openapi-specs ✓
 - openapi-specs-trailing-slash ✓
-To run tests:
+
+**To run tests:**
+
+```bash
 # Start services
 docker-compose --profile infra --profile backend --profile gateway up -d
 # Run tests
 ./gradlew :gateway:test --tests "ExternalApiIntegrationTest"
+```
 
 # Integration testing
 
-**Summary: BDD-Aligned Integration Tests Created**
+E2E Testing Infrastructure Complete!
 
-BddAlignedIntegrationTest test classe with ~160 test methods covering all 120 BDD scenarios plus additional RBAC tests. All tests compile successfully.
+All 18 files committed in df11ef2. Here's how to run the E2E tests:
 
-**Role Coverage**
-
-Role	Token Generator Method	Test Coverage
-Agent (MICRO)	getMicroAgentToken()	All transaction tests
-Agent (STANDARD)	getStandardAgentToken()	All transaction tests
-Agent (PREMIER)	getPremierAgentToken()	High-volume tests
-Bank Operator	getBankOperatorToken()	Backoffice tests
-IT Admin	getItAdminToken()	User management tests
-Compliance Officer	getComplianceOfficerToken()	Terminal unfreeze tests
-Maker	getMakerToken()	Dispute/discrepancy tests
-Checker	getCheckerToken()	Approval tests
-Supervisor	getSupervisorToken()	SLA escalation tests
-
-## Summary
-
-**Created Files**
-
-| File	| Purpose	|
-| mock-jwt-issuer/	| Mock JWT issuer service for testing	|
-| mock-jwt-issuer/build.gradle	| Build configuration	|
-| mock-jwt-issuer/src/main/java/com/agentbanking/mock/MockJwtIssuerApplication.java	| Spring Boot application	|
-| mock-jwt-issuer/src/main/java/com/agentbanking/mock/MockJwtController.java	| JWT token generation endpoints	|
-| mock-jwt-issuer/src/main/resources/application.yaml	| Configuration	|
-| mock-jwt-issuer/Dockerfile	| Docker image	|
-| docker-compose.test.yml	| Docker Compose override for testing	|
-| gateway/src/test/java/com/agentbanking/gateway/integration/BddAlignedIntegrationTest.java	| BDD-aligned tests	|
-
-**Modified Files**
-| File	| Change	|
-| gateway/build.gradle	| Excluded spring-boot-starter-web from common module	|
-| gateway/src/main/java/com/agentbanking/gateway/config/SecurityConfig.java	| Added JWT decoder configuration	|
-| gateway/src/main/java/com/agentbanking/gateway/filter/JwtAuthFilter.java	| Updated to validate JWT directly	|
-| docker-compose.yml	| Added mock-jwt-issuer service	|
-
----
-
-## Running Options
-
-**Option 1: Production Mode (Real JWT Issuer)**
+**Quick Start**
 ```bash
-docker-compose --profile infra --profile backend --profile gateway up -d
-```
-- Gateway uses https://auth.agentbanking.com for JWT validation
-- Real JWT tokens required
-
-**Option 2: Testing Mode (Mock JWT Issuer)**
-```bash
-docker-compose --profile infra --profile backend --profile gateway --profile test up -d
-```
-- Gateway uses http://mock-jwt-issuer:8090 for JWT validation
-- Mock JWT issuer available at http://localhost:8091
-
-**Get Test Tokens**
-```bash
-# Agent token
-curl -s 'http://localhost:8091/token/agent?agentId=AGT-01&tier=MICRO' | jq -r '.access_token'
-# Bank operator token
-curl -s 'http://localhost:8091/token/operator?userId=OPERATOR-01' | jq -r '.access_token'
-# IT admin token
-curl -s 'http://localhost:8091/token/admin?userId=ADMIN-01' | jq -r '.access_token'
-# Maker token
-curl -s 'http://localhost:8091/token/maker?userId=OFFICER-01' | jq -r '.access_token'
-# Checker token
-curl -s 'http://localhost:8091/token/checker?userId=OFFICER-02' | jq -r '.access_token'
-```
-
-**Run Tests**
-```bash
-# Run all tests (works with or without mock JWT issuer)
-./gradlew :gateway:test
-# Run specific test class
-./gradlew :gateway:test --tests "BddAlignedIntegrationTest"
-./gradlew :gateway:test --tests "ExternalApiIntegrationTest"
+# Option 1: Full automated test (starts Docker, seeds data, runs tests)
+./scripts/e2e-tests/run-all-e2e-tests.sh
+# Option 2: Manual steps
+# 1. Start services
+docker compose --profile all up -d
+# 2. Wait for services to be healthy (check http://localhost:8087/actuator/health)
+# 3. Seed test data
+./scripts/e2e-tests/seed-test-data.sh
+# 4. Run BDD tests
+./scripts/e2e-tests/bdd-e2e-tests.sh
 ```

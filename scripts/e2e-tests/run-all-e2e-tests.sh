@@ -1,33 +1,28 @@
 #!/bin/bash
 #
 # Master E2E Test Runner
-# Orchestrates: Docker startup → Seed data → Run tests
+# Orchestrates: Docker startup → Seed data → Run all BDD tests
 #
-# Usage: ./run-all-e2e-tests.sh [--skip-docker]
+# Usage: ./run-all-e2e-tests.sh [--skip-docker] [--cleanup]
 
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
+source "$SCRIPT_DIR/common.sh"
 
 SKIP_DOCKER=false
-if [ "$1" = "--skip-docker" ]; then
-    SKIP_DOCKER=true
-fi
+CLEANUP=false
 
-# Colors
-GREEN='\033[0;32m'
-RED='\033[0;31m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m'
-
-log_info() { echo -e "${BLUE}[INFO]${NC} $1"; }
-log_success() { echo -e "${GREEN}[OK]${NC} $1"; }
-log_error() { echo -e "${RED}[ERROR]${NC} $1"; }
+for arg in "$@"; do
+    case $arg in
+        --skip-docker) SKIP_DOCKER=true ;;
+        --cleanup) CLEANUP=true ;;
+    esac
+done
 
 # ============================================================================
-# Step 1: Start Docker containers
+# Docker Management
 # ============================================================================
 
 start_docker() {
@@ -39,24 +34,20 @@ start_docker() {
     log_info "Starting Docker containers..."
     cd "$PROJECT_DIR"
     
-    # Build first
     log_info "Building containers..."
     docker compose --profile all build
     
-    # Start services
     log_info "Starting services..."
     docker compose --profile all up -d
     
-    # Wait for services to be healthy
     log_info "Waiting for services to start..."
     sleep 10
     
-    # Check auth service specifically
     local max_attempts=30
     local attempt=1
     while [ $attempt -le $max_attempts ]; do
-        if curl -s -o /dev/null http://localhost:8087/actuator/health 2>/dev/null; then
-            log_success "Auth/IAM service is ready"
+        if curl -s -o /dev/null http://localhost:8080/actuator/health 2>/dev/null; then
+            log_success "Gateway is ready"
             break
         fi
         echo -n "."
@@ -65,53 +56,36 @@ start_docker() {
     done
     
     if [ $attempt -gt $max_attempts ]; then
-        log_error "Auth/IAM service failed to start"
-        docker compose logs auth-iam-service
+        log_error "Services failed to start"
+        docker compose logs gateway
         exit 1
     fi
     
     log_success "All services started"
 }
 
-# ============================================================================
-# Step 2: Seed test data
-# ============================================================================
-
-seed_data() {
-    log_info "Seeding test data..."
-    cd "$SCRIPT_DIR"
-    bash ./seed-test-data.sh http://localhost:8080
+stop_docker() {
+    log_info "Stopping Docker containers..."
+    cd "$PROJECT_DIR"
+    docker compose --profile all down
+    log_success "Cleanup complete"
 }
 
 # ============================================================================
-# Step 3: Run E2E tests
+# Run Test Suite
 # ============================================================================
 
-run_tests() {
-    log_info "Running E2E tests..."
-    cd "$SCRIPT_DIR"
+run_test_script() {
+    local script="$1"
+    local name="$2"
     
-    # Run basic E2E tests
-    log_info ""
-    log_info "=== Phase 1: Basic API Gateway Tests ==="
-    bash ./run-e2e-tests.sh http://localhost:8080
-    
-    # Run BDD scenario tests
-    log_info ""
-    log_info "=== Phase 2: BDD Scenario Tests ==="
-    bash ./bdd-e2e-tests.sh http://localhost:8080
-}
-
-# ============================================================================
-# Step 4: Cleanup (optional)
-# ============================================================================
-
-cleanup() {
-    if [ "$1" = "--cleanup" ]; then
-        log_info "Stopping Docker containers..."
-        cd "$PROJECT_DIR"
-        docker compose --profile all down
-        log_success "Cleanup complete"
+    log_info "Running: $name"
+    if bash "$SCRIPT_DIR/$script" 2>&1; then
+        log_success "$name: PASSED"
+        return 0
+    else
+        log_error "$name: FAILED"
+        return 1
     fi
 }
 
@@ -122,31 +96,85 @@ cleanup() {
 main() {
     echo ""
     echo "╔════════════════════════════════════════════════════════════╗"
-    echo "║  Agent Banking Platform - Full E2E Test Suite             ║"
+    echo "║  Agent Banking Platform - Full BDD E2E Test Suite          ║"
+    echo "║  179 Scenarios across 18 sections                          ║"
     echo "╚════════════════════════════════════════════════════════════╝"
     echo ""
     
     local start_time=$(date +%s)
+    local failed_suites=0
     
-    # Run steps
+    # Clear results file
+    > "$TEST_RESULTS_FILE"
+    
+    # Start Docker
     start_docker
-    seed_data
-    run_tests
     
+    # Seed data
+    section "Seeding Test Data"
+    bash "$SCRIPT_DIR/seed-test-data.sh"
+    
+    # Run all BDD section tests
+    section "Running BDD Tests"
+    
+    run_test_script "01-rules-fee-engine.sh" "Section 1: Rules & Fee Engine" || failed_suites=$((failed_suites + 1))
+    run_test_script "02-ledger-float.sh" "Section 2: Ledger & Float" || failed_suites=$((failed_suites + 1))
+    run_test_script "03-cash-withdrawal.sh" "Section 3: Cash Withdrawal" || failed_suites=$((failed_suites + 1))
+    run_test_script "04-cash-deposit.sh" "Section 4: Cash Deposit" || failed_suites=$((failed_suites + 1))
+    run_test_script "05-ekyc-onboarding.sh" "Section 5: e-KYC & Onboarding" || failed_suites=$((failed_suites + 1))
+    run_test_script "06-bill-payments.sh" "Section 6: Bill Payments" || failed_suites=$((failed_suites + 1))
+    run_test_script "07-prepaid-topup.sh" "Section 7: Prepaid Top-up" || failed_suites=$((failed_suites + 1))
+    run_test_script "08-duitnow-jompay.sh" "Section 8: DuitNow & JomPAY" || failed_suites=$((failed_suites + 1))
+    run_test_script "09-ewallet-essp.sh" "Section 9: e-Wallet & eSSP" || failed_suites=$((failed_suites + 1))
+    run_test_script "10-agent-onboarding.sh" "Section 10: Agent Onboarding" || failed_suites=$((failed_suites + 1))
+    run_test_script "11-reversals-disputes.sh" "Section 11: Reversals & Disputes" || failed_suites=$((failed_suites + 1))
+    run_test_script "12-merchant-services.sh" "Section 12: Merchant Services" || failed_suites=$((failed_suites + 1))
+    run_test_script "13-aml-fraud-velocity.sh" "Section 13: AML/Fraud & Velocity" || failed_suites=$((failed_suites + 1))
+    run_test_script "14-eod-settlement.sh" "Section 14: EOD Net Settlement" || failed_suites=$((failed_suites + 1))
+    run_test_script "15-discrepancy-resolution.sh" "Section 15: Discrepancy Resolution" || failed_suites=$((failed_suites + 1))
+    run_test_script "16-api-gateway.sh" "Section 16: API Gateway" || failed_suites=$((failed_suites + 1))
+    run_test_script "17-backoffice.sh" "Section 17: Backoffice" || failed_suites=$((failed_suites + 1))
+    run_test_script "18-stp-processing.sh" "Section 18: STP Processing" || failed_suites=$((failed_suites + 1))
+    
+    # Print overall summary
     local end_time=$(date +%s)
     local duration=$((end_time - start_time))
     
     echo ""
     echo "╔════════════════════════════════════════════════════════════╗"
-    echo "║  E2E Test Suite Complete                                   ║"
+    echo "║  Final Summary                                              ║"
     echo "╚════════════════════════════════════════════════════════════╝"
     echo ""
     echo "  Duration: ${duration}s"
+    echo "  Failed suites: $failed_suites / 18"
+    echo ""
+    
+    # Aggregate results
+    local total=0 passed=0 failed=0
+    if [ -f "$TEST_RESULTS_FILE" ]; then
+        while IFS='|' read -r name t p f s; do
+            total=$((total + t))
+            passed=$((passed + p))
+            failed=$((failed + f))
+        done < "$TEST_RESULTS_FILE"
+    fi
+    
+    echo "  Total tests: $total"
+    echo -e "  ${GREEN}Passed: $passed${NC}"
+    echo -e "  ${RED}Failed: $failed${NC}"
     echo ""
     
     # Cleanup if requested
-    if [ "$2" = "--cleanup" ]; then
-        cleanup
+    if [ "$CLEANUP" = true ]; then
+        stop_docker
+    fi
+    
+    if [ $failed_suites -eq 0 ] && [ $failed -eq 0 ]; then
+        echo -e "${GREEN}✓ All BDD tests passed!${NC}"
+        exit 0
+    else
+        echo -e "${RED}✗ Some tests failed${NC}"
+        exit 1
     fi
 }
 
