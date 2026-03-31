@@ -2,6 +2,7 @@ package com.agentbanking.onboarding.infrastructure.persistence.entity;
 
 import com.agentbanking.onboarding.domain.model.AgentStatus;
 import com.agentbanking.onboarding.domain.model.AgentTier;
+import com.agentbanking.onboarding.domain.model.UserCreationStatus;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -40,6 +41,13 @@ public class AgentEntity {
     @Column(name = "phone_number", nullable = false, length = 15)
     private String phoneNumber;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "user_creation_status", nullable = false, length = 20)
+    private UserCreationStatus userCreationStatus = UserCreationStatus.PENDING;
+
+    @Column(name = "user_creation_error", length = 500)
+    private String userCreationError;
+
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
@@ -64,6 +72,10 @@ public class AgentEntity {
     public void setMykadNumber(String mykadNumber) { this.mykadNumber = mykadNumber; }
     public String getPhoneNumber() { return phoneNumber; }
     public void setPhoneNumber(String phoneNumber) { this.phoneNumber = phoneNumber; }
+    public UserCreationStatus getUserCreationStatus() { return userCreationStatus; }
+    public void setUserCreationStatus(UserCreationStatus userCreationStatus) { this.userCreationStatus = userCreationStatus; }
+    public String getUserCreationError() { return userCreationError; }
+    public void setUserCreationError(String userCreationError) { this.userCreationError = userCreationError; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }

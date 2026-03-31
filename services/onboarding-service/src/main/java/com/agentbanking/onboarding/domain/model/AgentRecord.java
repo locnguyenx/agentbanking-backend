@@ -14,6 +14,8 @@ public record AgentRecord(
     BigDecimal merchantGpsLng,
     String mykadNumber,
     String phoneNumber,
+    UserCreationStatus userCreationStatus,
+    String userCreationError,
     LocalDateTime createdAt,
     LocalDateTime updatedAt
 ) {}

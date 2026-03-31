@@ -4,6 +4,7 @@ import com.agentbanking.common.exception.AgentException;
 import com.agentbanking.common.security.ErrorCodes;
 import com.agentbanking.onboarding.domain.model.AgentRecord;
 import com.agentbanking.onboarding.domain.model.AgentStatus;
+import com.agentbanking.onboarding.domain.model.UserCreationStatus;
 import com.agentbanking.onboarding.domain.port.in.CreateAgentUseCase.CreateAgentCommand;
 import com.agentbanking.onboarding.domain.port.in.UpdateAgentUseCase.UpdateAgentCommand;
 import com.agentbanking.onboarding.domain.port.out.AgentRepository;
@@ -38,6 +39,8 @@ public class AgentService {
             command.merchantGpsLng(),
             command.mykadNumber(),
             command.phoneNumber(),
+            UserCreationStatus.PENDING,
+            null,
             now,
             now
         );
@@ -59,6 +62,8 @@ public class AgentService {
             command.merchantGpsLng(),
             existing.mykadNumber(),
             command.phoneNumber(),
+            existing.userCreationStatus(),
+            existing.userCreationError(),
             existing.createdAt(),
             LocalDateTime.now()
         );
@@ -84,6 +89,8 @@ public class AgentService {
             existing.merchantGpsLng(),
             existing.mykadNumber(),
             existing.phoneNumber(),
+            existing.userCreationStatus(),
+            existing.userCreationError(),
             existing.createdAt(),
             LocalDateTime.now()
         );

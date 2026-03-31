@@ -21,6 +21,8 @@ public class AgentMapper {
             entity.getMerchantGpsLng(),
             entity.getMykadNumber(),
             entity.getPhoneNumber(),
+            entity.getUserCreationStatus(),
+            entity.getUserCreationError(),
             entity.getCreatedAt(),
             entity.getUpdatedAt()
         );
@@ -40,6 +42,8 @@ public class AgentMapper {
         entity.setMerchantGpsLng(record.merchantGpsLng());
         entity.setMykadNumber(record.mykadNumber());
         entity.setPhoneNumber(record.phoneNumber());
+        entity.setUserCreationStatus(record.userCreationStatus());
+        entity.setUserCreationError(record.userCreationError());
         entity.setCreatedAt(record.createdAt());
         entity.setUpdatedAt(record.updatedAt());
         return entity;
