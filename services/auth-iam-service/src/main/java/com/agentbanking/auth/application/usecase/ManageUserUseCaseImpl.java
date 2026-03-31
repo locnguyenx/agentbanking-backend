@@ -243,4 +243,48 @@ public class ManageUserUseCaseImpl implements ManageUserUseCase {
     public List<UserRecord> getAllUsers() {
         return userRepository.findAll();
     }
+
+    @Override
+    public boolean changePassword(UUID userId, String currentPassword, String newPassword) {
+        UserRecord user = userRepository.findById(userId).orElse(null);
+        if (user == null) {
+            return false;
+        }
+
+        // Verify current password
+        if (!passwordHasher.matches(currentPassword, user.passwordHash())) {
+            return false;
+        }
+
+        // Hash the new password
+        String hashedNewPassword = passwordHasher.hash(newPassword);
+        
+        // Update password and related fields
+        UserRecord updatedUser = new UserRecord(
+                user.userId(),
+                user.username(),
+                user.email(),
+                user.phone(),
+                hashedNewPassword,
+                user.fullName(),
+                user.status(),
+                user.userType(),
+                user.agentId(),
+                user.agentCode(),
+                false, // User changed their own password, no longer need to change
+                null, // Clear temporary password flag
+                user.permissions(),
+                0, // Reset failed login attempts
+                null, // Clear lockout time
+                LocalDateTime.now(), // Password changed now
+                LocalDateTime.now().plusDays(90), // Password expires in 90 days
+                user.createdAt(),
+                LocalDateTime.now(),
+                user.lastLoginAt(),
+                user.createdBy()
+        );
+
+        userRepository.save(updatedUser);
+        return true;
+    }
 }

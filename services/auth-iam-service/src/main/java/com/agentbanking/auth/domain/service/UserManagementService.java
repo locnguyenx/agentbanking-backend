@@ -296,7 +296,7 @@ public class UserManagementService implements ManageUserUseCase {
         return userRepository.findByAgentId(agentId);
     }
 
-    public void changePassword(UUID userId, String currentPassword, String newPassword) {
+    public boolean changePassword(UUID userId, String currentPassword, String newPassword) {
         UserRecord user = userRepository.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException("User not found"));
 
@@ -308,5 +308,6 @@ public class UserManagementService implements ManageUserUseCase {
         userRepository.updatePassword(userId, hashedPassword, LocalDateTime.now());
 
         userRepository.clearTempPasswordFlags(userId);
+        return true;
     }
 }

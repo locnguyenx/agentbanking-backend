@@ -68,7 +68,7 @@ public class PasswordResetService {
         notificationPublisher.publishOtpRequested(event);
     }
 
-    public void verifyReset(String username, String otp) {
+    public void verifyReset(String username, String otp, String newPassword) {
         UserRecord user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new AuthBusinessException("ERR_AUTH_USER_NOT_FOUND", "User not found", "RETRY"));
 
@@ -87,8 +87,7 @@ public class PasswordResetService {
             throw new AuthBusinessException("ERR_AUTH_OTP_INVALID", "Invalid OTP", "RETRY");
         }
 
-        String temporaryPassword = generateTemporaryPassword();
-        String hashedPassword = passwordHasher.hash(temporaryPassword);
+        String hashedPassword = passwordHasher.hash(newPassword);
 
         UserRecord updatedUser = new UserRecord(
                 user.userId(),
@@ -101,12 +100,12 @@ public class PasswordResetService {
                 user.userType(),
                 user.agentId(),
                 user.agentCode(),
-                true,
-                LocalDateTime.now().plusHours(TEMPORARY_PASSWORD_VALIDITY_HOURS),
+                false,
+                null,
                 user.permissions(),
                 0,
                 null,
-                user.passwordChangedAt(),
+                LocalDateTime.now(),
                 LocalDateTime.now().plusDays(90),
                 user.createdAt(),
                 LocalDateTime.now(),

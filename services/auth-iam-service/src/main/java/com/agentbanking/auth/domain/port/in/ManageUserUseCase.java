@@ -78,4 +78,13 @@ public interface ManageUserUseCase {
      * @return list of all users
      */
     List<UserRecord> getAllUsers();
+    
+    /**
+     * Change user's password (requires current password verification)
+     * @param userId the user ID
+     * @param currentPassword the current password for verification
+     * @param newPassword the new password
+     * @return true if changed, false if verification failed or user not found
+     */
+    boolean changePassword(UUID userId, String currentPassword, String newPassword);
 }
