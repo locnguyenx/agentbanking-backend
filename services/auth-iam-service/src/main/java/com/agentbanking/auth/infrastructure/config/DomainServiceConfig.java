@@ -10,7 +10,11 @@ import com.agentbanking.auth.application.usecase.ValidateTokenUseCaseImpl;
 import com.agentbanking.auth.domain.service.AuthenticationService;
 import com.agentbanking.auth.domain.service.AuthorizationService;
 import com.agentbanking.auth.domain.service.AuditService;
+import com.agentbanking.auth.domain.service.PasswordResetService;
+import com.agentbanking.auth.domain.service.TemporaryPasswordGenerator;
 import com.agentbanking.auth.domain.service.UserManagementService;
+import com.agentbanking.auth.domain.port.out.NotificationPublisher;
+import com.agentbanking.auth.domain.port.out.OtpStore;
 import com.agentbanking.auth.domain.port.out.AuditLogRepository;
 import com.agentbanking.auth.domain.port.out.PasswordHasher;
 import com.agentbanking.auth.domain.port.out.PermissionRepository;
@@ -45,6 +49,20 @@ public class DomainServiceConfig {
     @Bean
     public AuditService auditService(AuditLogRepository auditLogRepository) {
         return new AuditService(auditLogRepository);
+    }
+
+    @Bean
+    public TemporaryPasswordGenerator temporaryPasswordGenerator() {
+        return new TemporaryPasswordGenerator();
+    }
+
+    @Bean
+    public PasswordResetService passwordResetService(OtpStore otpStore,
+                                                       NotificationPublisher notificationPublisher,
+                                                       PasswordHasher passwordHasher,
+                                                       UserRepository userRepository,
+                                                       TemporaryPasswordGenerator temporaryPasswordGenerator) {
+        return new PasswordResetService(otpStore, notificationPublisher, passwordHasher, userRepository, temporaryPasswordGenerator);
     }
 
     // Use case beans
