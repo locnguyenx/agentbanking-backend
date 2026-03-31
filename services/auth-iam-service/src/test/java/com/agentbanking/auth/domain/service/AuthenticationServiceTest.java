@@ -3,6 +3,7 @@ package com.agentbanking.auth.domain.service;
 import com.agentbanking.auth.domain.model.AuthenticationResult;
 import com.agentbanking.auth.domain.model.UserRecord;
 import com.agentbanking.auth.domain.model.UserStatus;
+import com.agentbanking.auth.domain.model.UserType;
 import com.agentbanking.auth.domain.port.out.PasswordHasher;
 import com.agentbanking.auth.domain.port.out.TokenProvider;
 import com.agentbanking.auth.domain.port.out.UserRepository;
@@ -44,9 +45,15 @@ class AuthenticationServiceTest {
                 UUID.randomUUID(),
                 "testuser",
                 "test@example.com",
+                "+60123456789",
                 "hashedPassword",
                 "Test User",
                 UserStatus.ACTIVE,
+                UserType.EXTERNAL,
+                UUID.randomUUID(),
+                "AGT001",
+                false,
+                null,
                 java.util.Set.of(),
                 0,
                 null,

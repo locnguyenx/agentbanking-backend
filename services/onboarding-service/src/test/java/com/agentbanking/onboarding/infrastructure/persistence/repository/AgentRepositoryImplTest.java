@@ -3,6 +3,7 @@ package com.agentbanking.onboarding.infrastructure.persistence.repository;
 import com.agentbanking.onboarding.domain.model.AgentRecord;
 import com.agentbanking.onboarding.domain.model.AgentStatus;
 import com.agentbanking.onboarding.domain.model.AgentTier;
+import com.agentbanking.onboarding.domain.model.UserCreationStatus;
 import com.agentbanking.onboarding.infrastructure.persistence.mapper.AgentMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -75,6 +76,8 @@ class AgentRepositoryImplTest {
             BigDecimal.valueOf(101.6869),
             "880101011234",
             "+60191234567",
+            UserCreationStatus.CREATED,
+            null,
             LocalDateTime.now(),
             LocalDateTime.now()
         );

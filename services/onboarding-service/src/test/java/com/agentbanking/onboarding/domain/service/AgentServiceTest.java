@@ -5,9 +5,11 @@ import com.agentbanking.common.security.ErrorCodes;
 import com.agentbanking.onboarding.domain.model.AgentRecord;
 import com.agentbanking.onboarding.domain.model.AgentStatus;
 import com.agentbanking.onboarding.domain.model.AgentTier;
+import com.agentbanking.onboarding.domain.model.UserCreationStatus;
 import com.agentbanking.onboarding.domain.port.in.CreateAgentUseCase.CreateAgentCommand;
 import com.agentbanking.onboarding.domain.port.in.UpdateAgentUseCase.UpdateAgentCommand;
 import com.agentbanking.onboarding.domain.port.out.AgentRepository;
+import com.agentbanking.onboarding.infrastructure.external.AuthUserClient;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -30,11 +32,14 @@ class AgentServiceTest {
     @Mock
     private AgentRepository agentRepository;
 
+    @Mock
+    private AuthUserClient authUserClient;
+
     private AgentService agentService;
 
     @BeforeEach
     void setUp() {
-        agentService = new AgentService(agentRepository);
+        agentService = new AgentService(agentRepository, authUserClient);
     }
 
     @Test
@@ -62,6 +67,8 @@ class AgentServiceTest {
                 saved.merchantGpsLng(),
                 saved.mykadNumber(),
                 saved.phoneNumber(),
+                UserCreationStatus.CREATED,
+                null,
                 LocalDateTime.now(),
                 LocalDateTime.now()
             );
@@ -89,6 +96,8 @@ class AgentServiceTest {
             BigDecimal.valueOf(101.6869),
             "880101011234",
             "+60191234567",
+            UserCreationStatus.CREATED,
+            null,
             LocalDateTime.now(),
             LocalDateTime.now()
         );
@@ -126,6 +135,8 @@ class AgentServiceTest {
             BigDecimal.valueOf(101.6869),
             "880101011234",
             "+60191234567",
+            UserCreationStatus.CREATED,
+            null,
             LocalDateTime.now(),
             LocalDateTime.now()
         );
@@ -154,6 +165,8 @@ class AgentServiceTest {
             BigDecimal.valueOf(101.6869),
             "880101011234",
             "+60191234567",
+            UserCreationStatus.CREATED,
+            null,
             LocalDateTime.now(),
             LocalDateTime.now()
         );
@@ -180,6 +193,8 @@ class AgentServiceTest {
             BigDecimal.valueOf(101.6869),
             "880101011234",
             "+60191234567",
+            UserCreationStatus.CREATED,
+            null,
             LocalDateTime.now(),
             LocalDateTime.now()
         );
@@ -205,6 +220,8 @@ class AgentServiceTest {
                 saved.merchantGpsLng(),
                 saved.mykadNumber(),
                 saved.phoneNumber(),
+                UserCreationStatus.CREATED,
+                null,
                 existing.createdAt(),
                 LocalDateTime.now()
             );
@@ -222,10 +239,10 @@ class AgentServiceTest {
         List<AgentRecord> agents = List.of(
             new AgentRecord(UUID.randomUUID(), "AGN001", "Business 1", AgentTier.STANDARD, AgentStatus.ACTIVE,
                 BigDecimal.valueOf(3.1390), BigDecimal.valueOf(101.6869), "880101011234", "+60191234567",
-                LocalDateTime.now(), LocalDateTime.now()),
+                UserCreationStatus.CREATED, null, LocalDateTime.now(), LocalDateTime.now()),
             new AgentRecord(UUID.randomUUID(), "AGN002", "Business 2", AgentTier.BASIC, AgentStatus.INACTIVE,
                 BigDecimal.valueOf(3.1390), BigDecimal.valueOf(101.6869), "880102011234", "+60191234568",
-                LocalDateTime.now(), LocalDateTime.now())
+                UserCreationStatus.CREATED, null, LocalDateTime.now(), LocalDateTime.now())
         );
 
         when(agentRepository.findAll(0, 20)).thenReturn(agents);
@@ -248,6 +265,8 @@ class AgentServiceTest {
             BigDecimal.valueOf(101.6869),
             "880101011234",
             "+60191234567",
+            UserCreationStatus.CREATED,
+            null,
             LocalDateTime.now(),
             LocalDateTime.now()
         );

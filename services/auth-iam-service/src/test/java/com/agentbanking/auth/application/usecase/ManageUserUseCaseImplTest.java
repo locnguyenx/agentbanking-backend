@@ -2,6 +2,7 @@ package com.agentbanking.auth.application.usecase;
 
 import com.agentbanking.auth.domain.model.UserRecord;
 import com.agentbanking.auth.domain.model.UserStatus;
+import com.agentbanking.auth.domain.model.UserType;
 import com.agentbanking.auth.domain.port.out.PasswordHasher;
 import com.agentbanking.auth.domain.port.out.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -12,6 +13,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDateTime;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -39,10 +41,16 @@ class ManageUserUseCaseImplTest {
                 UUID.randomUUID(),
                 "testuser",
                 "test@example.com",
+                "+60123456789",
                 "hashedPassword",
                 "Test User",
                 UserStatus.ACTIVE,
-                java.util.Set.of(),
+                UserType.INTERNAL,
+                null,
+                null,
+                false,
+                null,
+                Set.of(),
                 0,
                 null,
                 LocalDateTime.now(),
@@ -56,15 +64,20 @@ class ManageUserUseCaseImplTest {
 
     @Test
     void createUser_withValidData_shouldCreateUser() {
-        // Arrange
         UserRecord newUser = new UserRecord(
                 null,
                 "newuser",
                 "new@example.com",
+                "+60123456789",
                 "password123",
                 "New User",
                 UserStatus.ACTIVE,
-                java.util.Set.of(),
+                UserType.INTERNAL,
+                null,
+                null,
+                false,
+                null,
+                Set.of(),
                 0,
                 null,
                 null,
@@ -80,25 +93,28 @@ class ManageUserUseCaseImplTest {
         when(passwordHasher.hash("password123")).thenReturn("hashed-password");
         when(userRepository.save(any(UserRecord.class))).thenReturn(testUser);
 
-        // Act
         UserRecord created = manageUserUseCase.createUser(newUser);
 
-        // Assert
         assertNotNull(created);
         verify(userRepository).save(any(UserRecord.class));
     }
 
     @Test
     void createUser_withExistingUsername_shouldThrowException() {
-        // Arrange
         UserRecord newUser = new UserRecord(
                 null,
-                "testuser", // existing username
+                "testuser",
                 "new@example.com",
+                "+60123456789",
                 "password123",
                 "New User",
                 UserStatus.ACTIVE,
-                java.util.Set.of(),
+                UserType.INTERNAL,
+                null,
+                null,
+                false,
+                null,
+                Set.of(),
                 0,
                 null,
                 null,
@@ -111,7 +127,6 @@ class ManageUserUseCaseImplTest {
         
         when(userRepository.findByUsername("testuser")).thenReturn(Optional.of(testUser));
 
-        // Act & Assert
         assertThrows(IllegalArgumentException.class, () -> 
             manageUserUseCase.createUser(newUser)
         );
@@ -120,43 +135,42 @@ class ManageUserUseCaseImplTest {
 
     @Test
     void getUserById_withExistingId_shouldReturnUser() {
-        // Arrange
         UUID userId = testUser.userId();
         when(userRepository.findById(userId)).thenReturn(Optional.of(testUser));
 
-        // Act
         UserRecord found = manageUserUseCase.getUserById(userId);
 
-        // Assert
         assertNotNull(found);
         assertEquals(testUser.username(), found.username());
     }
 
     @Test
     void getUserById_withNonExistentId_shouldReturnNull() {
-        // Arrange
         UUID nonExistentId = UUID.randomUUID();
         when(userRepository.findById(nonExistentId)).thenReturn(Optional.empty());
 
-        // Act
         UserRecord found = manageUserUseCase.getUserById(nonExistentId);
 
-        // Assert
         assertNull(found);
     }
 
     @Test
     void updateUser_withValidData_shouldUpdateUser() {
-        // Arrange
         UUID userId = testUser.userId();
         UserRecord updateData = new UserRecord(
                 userId,
                 "updateduser",
                 "updated@example.com",
+                "+60123456789",
                 "hashedPassword",
                 "Updated User",
                 UserStatus.ACTIVE,
-                java.util.Set.of(),
+                UserType.INTERNAL,
+                null,
+                null,
+                false,
+                null,
+                Set.of(),
                 0,
                 null,
                 testUser.passwordChangedAt(),
@@ -172,10 +186,8 @@ class ManageUserUseCaseImplTest {
         when(userRepository.findByEmail("updated@example.com")).thenReturn(Optional.empty());
         when(userRepository.save(any(UserRecord.class))).thenReturn(updateData);
 
-        // Act
         UserRecord updated = manageUserUseCase.updateUser(userId, updateData);
 
-        // Assert
         assertNotNull(updated);
         assertEquals("updateduser", updated.username());
         verify(userRepository).save(any(UserRecord.class));
@@ -183,45 +195,36 @@ class ManageUserUseCaseImplTest {
 
     @Test
     void deleteUser_withExistingId_shouldDeleteUser() {
-        // Arrange
         UUID userId = testUser.userId();
         when(userRepository.deleteById(userId)).thenReturn(true);
 
-        // Act
         boolean deleted = manageUserUseCase.deleteUser(userId);
 
-        // Assert
         assertTrue(deleted);
         verify(userRepository).deleteById(userId);
     }
 
     @Test
     void lockUser_withExistingId_shouldLockUser() {
-        // Arrange
         UUID userId = testUser.userId();
         when(userRepository.findById(userId)).thenReturn(Optional.of(testUser));
         when(userRepository.save(any(UserRecord.class))).thenReturn(testUser);
 
-        // Act
         boolean locked = manageUserUseCase.lockUser(userId);
 
-        // Assert
         assertTrue(locked);
         verify(userRepository).save(any(UserRecord.class));
     }
 
     @Test
     void resetPassword_withExistingId_shouldResetPassword() {
-        // Arrange
         UUID userId = testUser.userId();
         when(userRepository.findById(userId)).thenReturn(Optional.of(testUser));
         when(passwordHasher.hash("newpassword")).thenReturn("new-hashed-password");
         when(userRepository.save(any(UserRecord.class))).thenReturn(testUser);
 
-        // Act
         boolean reset = manageUserUseCase.resetPassword(userId, "newpassword");
 
-        // Assert
         assertTrue(reset);
         verify(userRepository).save(any(UserRecord.class));
     }
