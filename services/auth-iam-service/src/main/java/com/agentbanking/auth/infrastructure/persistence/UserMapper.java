@@ -4,7 +4,6 @@ import com.agentbanking.auth.domain.model.UserRecord;
 import com.agentbanking.auth.domain.model.UserStatus;
 import org.springframework.stereotype.Component;
 
-import java.time.LocalDateTime;
 import java.util.Set;
 import java.util.UUID;
 
@@ -22,9 +21,15 @@ public class UserMapper {
             entity.getUserId(),
             entity.getUsername(),
             entity.getEmail(),
+            entity.getPhone(),
             entity.getPasswordHash(),
             entity.getFullName(),
-            UserStatus.valueOf(entity.getStatus().name()),
+            entity.getStatus(),
+            entity.getUserType(),
+            entity.getAgentId(),
+            entity.getAgentCode(),
+            entity.getMustChangePassword(),
+            entity.getTemporaryPasswordExpiresAt(),
             Set.of(), // permissions will be loaded separately
             entity.getFailedLoginAttempts(),
             entity.getLockedUntil(),
@@ -33,9 +38,7 @@ public class UserMapper {
             entity.getCreatedAt(),
             entity.getUpdatedAt(),
             entity.getLastLoginAt(),
-            entity.getCreatedBy(),
-            null, // agentId - will be populated via separate service/linking
-            null  // agentCode - will be populated via separate service/linking
+            entity.getCreatedBy()
         );
     }
 
@@ -47,9 +50,15 @@ public class UserMapper {
         entity.setUserId(record.userId());
         entity.setUsername(record.username());
         entity.setEmail(record.email());
+        entity.setPhone(record.phone());
         entity.setPasswordHash(record.passwordHash());
         entity.setFullName(record.fullName());
         entity.setStatus(record.status());
+        entity.setUserType(record.userType());
+        entity.setAgentId(record.agentId());
+        entity.setAgentCode(record.agentCode());
+        entity.setMustChangePassword(record.mustChangePassword());
+        entity.setTemporaryPasswordExpiresAt(record.temporaryPasswordExpiresAt());
         entity.setFailedLoginAttempts(record.failedLoginAttempts());
         entity.setLockedUntil(record.lockedUntil());
         entity.setPasswordChangedAt(record.passwordChangedAt());

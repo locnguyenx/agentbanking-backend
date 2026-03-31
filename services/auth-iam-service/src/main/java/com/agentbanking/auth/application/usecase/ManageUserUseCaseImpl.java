@@ -7,6 +7,7 @@ import com.agentbanking.auth.domain.port.out.PasswordHasher;
 import com.agentbanking.auth.domain.port.out.UserRepository;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -41,9 +42,15 @@ public class ManageUserUseCaseImpl implements ManageUserUseCase {
                 UUID.randomUUID(),
                 userRecord.username(),
                 userRecord.email(),
+                userRecord.phone(),
                 hashedPassword,
                 userRecord.fullName(),
                 userRecord.status() != null ? userRecord.status() : UserStatus.ACTIVE,
+                userRecord.userType(),
+                userRecord.agentId(),
+                userRecord.agentCode(),
+                userRecord.mustChangePassword(),
+                userRecord.temporaryPasswordExpiresAt(),
                 userRecord.permissions(),
                 0, // failedLoginAttempts
                 null, // lockedUntil
@@ -52,9 +59,7 @@ public class ManageUserUseCaseImpl implements ManageUserUseCase {
                 LocalDateTime.now(), // createdAt
                 LocalDateTime.now(), // updatedAt
                 null, // lastLoginAt
-                userRecord.createdBy(),
-                null, // agentId - to be set later via onboarding/linking service
-                null    // agentCode - to be set later via onboarding/linking service
+                userRecord.createdBy()
         );
 
         return userRepository.save(newUser);
@@ -97,9 +102,15 @@ public class ManageUserUseCaseImpl implements ManageUserUseCase {
                 existing.userId(),
                 userRecord.username(),
                 userRecord.email(),
+                userRecord.phone() != null ? userRecord.phone() : existing.phone(),
                 existing.passwordHash(), // Password should be updated via resetPassword
                 userRecord.fullName(),
                 userRecord.status() != null ? userRecord.status() : existing.status(),
+                userRecord.userType() != null ? userRecord.userType() : existing.userType(),
+                userRecord.agentId() != null ? userRecord.agentId() : existing.agentId(),
+                userRecord.agentCode() != null ? userRecord.agentCode() : existing.agentCode(),
+                userRecord.mustChangePassword() != null ? userRecord.mustChangePassword() : existing.mustChangePassword(),
+                userRecord.temporaryPasswordExpiresAt() != null ? userRecord.temporaryPasswordExpiresAt() : existing.temporaryPasswordExpiresAt(),
                 userRecord.permissions() != null ? userRecord.permissions() : existing.permissions(),
                 existing.failedLoginAttempts(),
                 existing.lockedUntil(),
@@ -108,9 +119,7 @@ public class ManageUserUseCaseImpl implements ManageUserUseCase {
                 existing.createdAt(),
                 LocalDateTime.now(),
                 existing.lastLoginAt(),
-                existing.createdBy(),
-                null, // agentId - preserve existing
-                null    // agentCode - preserve existing
+                existing.createdBy()
         );
 
         return userRepository.save(updatedUser);
@@ -132,9 +141,15 @@ public class ManageUserUseCaseImpl implements ManageUserUseCase {
                 user.userId(),
                 user.username(),
                 user.email(),
+                user.phone(),
                 user.passwordHash(),
                 user.fullName(),
                 UserStatus.LOCKED,
+                user.userType(),
+                user.agentId(),
+                user.agentCode(),
+                user.mustChangePassword(),
+                user.temporaryPasswordExpiresAt(),
                 user.permissions(),
                 user.failedLoginAttempts(),
                 LocalDateTime.now().plusMinutes(30), // Lock for 30 minutes
@@ -161,9 +176,15 @@ public class ManageUserUseCaseImpl implements ManageUserUseCase {
                 user.userId(),
                 user.username(),
                 user.email(),
+                user.phone(),
                 user.passwordHash(),
                 user.fullName(),
                 UserStatus.ACTIVE,
+                user.userType(),
+                user.agentId(),
+                user.agentCode(),
+                user.mustChangePassword(),
+                user.temporaryPasswordExpiresAt(),
                 user.permissions(),
                 0, // Reset failed login attempts
                 null, // Clear lockout time
@@ -194,9 +215,15 @@ public class ManageUserUseCaseImpl implements ManageUserUseCase {
                 user.userId(),
                 user.username(),
                 user.email(),
+                user.phone(),
                 hashedNewPassword,
                 user.fullName(),
                 user.status(),
+                user.userType(),
+                user.agentId(),
+                user.agentCode(),
+                user.mustChangePassword(),
+                user.temporaryPasswordExpiresAt(),
                 user.permissions(),
                 0, // Reset failed login attempts
                 null, // Clear lockout time

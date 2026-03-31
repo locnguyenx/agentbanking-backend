@@ -37,9 +37,15 @@ public class UserController {
                 null, // userId
                 userDto.username(),
                 userDto.email(),
+                null, // phone
                 userDto.password(),
                 userDto.fullName(),
                 null, // status
+                null, // userType
+                null, // agentId
+                null, // agentCode
+                null, // mustChangePassword
+                null, // temporaryPasswordExpiresAt
                 null, // permissions
                 null, // failedLoginAttempts
                 null, // lockedUntil
@@ -48,9 +54,7 @@ public class UserController {
                 null, // createdAt
                 null, // updatedAt
                 null, // lastLoginAt
-                "system", // createdBy
-                null, // agentId
-                null    // agentCode
+                "system" // createdBy
         );
         UserRecord created = manageUserUseCase.createUser(userRecord);
         return new ResponseEntity<>(toResponseDto(created), HttpStatus.CREATED);
@@ -63,9 +67,15 @@ public class UserController {
                 null, // userId
                 userDto.username(),
                 userDto.email(),
+                null, // phone
                 userDto.password(),
                 userDto.fullName(),
                 null, // status
+                null, // userType
+                null, // agentId
+                null, // agentCode
+                null, // mustChangePassword
+                null, // temporaryPasswordExpiresAt
                 null, // permissions
                 null, // failedLoginAttempts
                 null, // lockedUntil
@@ -74,9 +84,7 @@ public class UserController {
                 null, // createdAt
                 null, // updatedAt
                 null, // lastLoginAt
-                "admin", // createdBy
-                null, // agentId
-                null    // agentCode
+                "admin" // createdBy
         );
         UserRecord created = manageUserUseCase.createUser(userRecord);
         return new ResponseEntity<>(toResponseDto(created), HttpStatus.CREATED);
@@ -103,9 +111,15 @@ public class UserController {
                 id,
                 userDto.username(),
                 userDto.email(),
+                null, // phone
                 null, // passwordHash (will be set by service)
                 userDto.fullName(),
                 null, // status
+                null, // userType
+                null, // agentId
+                null, // agentCode
+                null, // mustChangePassword
+                null, // temporaryPasswordExpiresAt
                 null, // permissions
                 null, // failedLoginAttempts
                 null, // lockedUntil
@@ -114,9 +128,7 @@ public class UserController {
                 null, // createdAt
                 null, // updatedAt
                 null, // lastLoginAt
-                null, // createdBy (will be set by service)
-                null, // agentId
-                null    // agentCode
+                null // createdBy (will be set by service)
         );
         UserRecord updated = manageUserUseCase.updateUser(id, userRecord);
         return updated != null ? ResponseEntity.ok(toResponseDto(updated)) : ResponseEntity.notFound().build();

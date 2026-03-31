@@ -4,16 +4,19 @@ import java.time.LocalDateTime;
 import java.util.Set;
 import java.util.UUID;
 
-/**
- * Domain record for users in the Auth/IAM service
- */
 public record UserRecord(
     UUID userId,
     String username,
     String email,
+    String phone,
     String passwordHash,
     String fullName,
     UserStatus status,
+    UserType userType,
+    UUID agentId,
+    String agentCode,
+    Boolean mustChangePassword,
+    LocalDateTime temporaryPasswordExpiresAt,
     Set<String> permissions,
     Integer failedLoginAttempts,
     LocalDateTime lockedUntil,
@@ -22,7 +25,5 @@ public record UserRecord(
     LocalDateTime createdAt,
     LocalDateTime updatedAt,
     LocalDateTime lastLoginAt,
-    String createdBy,
-    UUID agentId,
-    String agentCode
+    String createdBy
 ) {}

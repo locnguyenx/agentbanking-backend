@@ -1,6 +1,7 @@
 package com.agentbanking.auth.infrastructure.persistence;
 
 import com.agentbanking.auth.domain.model.UserStatus;
+import com.agentbanking.auth.domain.model.UserType;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -22,6 +23,9 @@ public class UserEntity {
     @Column(name = "email", unique = true, nullable = false, length = 100)
     private String email;
 
+    @Column(name = "phone", length = 20)
+    private String phone;
+
     @Column(name = "password_hash", nullable = false, length = 255)
     private String passwordHash;
 
@@ -31,6 +35,22 @@ public class UserEntity {
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 20)
     private UserStatus status;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "user_type", nullable = false, length = 20)
+    private UserType userType = UserType.INTERNAL;
+
+    @Column(name = "agent_id")
+    private UUID agentId;
+
+    @Column(name = "agent_code", length = 50)
+    private String agentCode;
+
+    @Column(name = "must_change_password", nullable = false)
+    private Boolean mustChangePassword = false;
+
+    @Column(name = "temporary_password_expires_at")
+    private LocalDateTime temporaryPasswordExpiresAt;
 
     @Column(name = "failed_login_attempts", nullable = false)
     private Integer failedLoginAttempts = 0;
@@ -63,12 +83,24 @@ public class UserEntity {
     public void setUsername(String username) { this.username = username; }
     public String getEmail() { return email; }
     public void setEmail(String email) { this.email = email; }
+    public String getPhone() { return phone; }
+    public void setPhone(String phone) { this.phone = phone; }
     public String getPasswordHash() { return passwordHash; }
     public void setPasswordHash(String passwordHash) { this.passwordHash = passwordHash; }
     public String getFullName() { return fullName; }
     public void setFullName(String fullName) { this.fullName = fullName; }
     public UserStatus getStatus() { return status; }
     public void setStatus(UserStatus status) { this.status = status; }
+    public UserType getUserType() { return userType; }
+    public void setUserType(UserType userType) { this.userType = userType; }
+    public UUID getAgentId() { return agentId; }
+    public void setAgentId(UUID agentId) { this.agentId = agentId; }
+    public String getAgentCode() { return agentCode; }
+    public void setAgentCode(String agentCode) { this.agentCode = agentCode; }
+    public Boolean getMustChangePassword() { return mustChangePassword; }
+    public void setMustChangePassword(Boolean mustChangePassword) { this.mustChangePassword = mustChangePassword; }
+    public LocalDateTime getTemporaryPasswordExpiresAt() { return temporaryPasswordExpiresAt; }
+    public void setTemporaryPasswordExpiresAt(LocalDateTime temporaryPasswordExpiresAt) { this.temporaryPasswordExpiresAt = temporaryPasswordExpiresAt; }
     public Integer getFailedLoginAttempts() { return failedLoginAttempts; }
     public void setFailedLoginAttempts(Integer failedLoginAttempts) { this.failedLoginAttempts = failedLoginAttempts; }
     public LocalDateTime getLockedUntil() { return lockedUntil; }

@@ -4,8 +4,10 @@ import com.agentbanking.auth.domain.model.UserRecord;
 import com.agentbanking.auth.domain.port.out.UserRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
  * JPA implementation of UserRepository port
@@ -53,5 +55,12 @@ public class UserRepositoryImpl implements UserRepository {
             return true;
         }
         return false;
+    }
+
+    @Override
+    public List<UserRecord> findAll() {
+        return userJpaRepository.findAll().stream()
+                .map(userMapper::toRecord)
+                .collect(Collectors.toList());
     }
 }
