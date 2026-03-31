@@ -171,7 +171,7 @@ Issue 5: Onboarding Service AML Screening Mock Missing
 1. 🔴 Fix Request Transform Filter (highest priority - blocks all transformations)
 2. 🟡 Fix AML screening mock (allows agent creation flow)
 3. 🟡 Fix test data with real agent IDs (enables E2E tests)
-4. 🟢 Link auth users to onboarding agents (proper JWT content)
+4. 🟢 User propoer user accounts for testing: internal user to test backoffice functions, external users (linked to agent) to test agent functions & transactions (proper JWT content)
 
 **Test Results:**
 - Auth tests: ✅ passing
