@@ -1,8 +1,11 @@
 package com.agentbanking.auth.infrastructure.web;
 
-import com.agentbanking.auth.domain.port.out.UserRepository;
 import com.agentbanking.auth.domain.model.UserRecord;
+import com.agentbanking.auth.domain.port.in.CreateAgentUserUseCase;
+import com.agentbanking.auth.domain.port.out.UserRepository;
 import com.agentbanking.auth.infrastructure.web.dto.AgentUserStatusResponse;
+import com.agentbanking.auth.infrastructure.web.dto.CreateAgentUserRequest;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -13,9 +16,23 @@ import java.util.UUID;
 public class AgentUserController {
 
     private final UserRepository userRepository;
+    private final CreateAgentUserUseCase createAgentUserUseCase;
 
-    public AgentUserController(UserRepository userRepository) {
+    public AgentUserController(UserRepository userRepository, CreateAgentUserUseCase createAgentUserUseCase) {
         this.userRepository = userRepository;
+        this.createAgentUserUseCase = createAgentUserUseCase;
+    }
+
+    @PostMapping("/agent")
+    public ResponseEntity<UserRecord> createAgentUser(@Valid @RequestBody CreateAgentUserRequest request) {
+        UserRecord user = createAgentUserUseCase.createAgentUser(
+            request.agentId(),
+            request.agentCode(),
+            request.phone(),
+            request.email(),
+            request.businessName()
+        );
+        return ResponseEntity.ok(user);
     }
 
     @GetMapping("/agent/{agentId}/status")

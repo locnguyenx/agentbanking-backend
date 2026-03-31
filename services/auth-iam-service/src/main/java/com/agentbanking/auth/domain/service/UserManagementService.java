@@ -1,6 +1,7 @@
 package com.agentbanking.auth.domain.service;
 
 import com.agentbanking.auth.domain.model.*;
+import com.agentbanking.auth.domain.port.in.CreateAgentUserUseCase;
 import com.agentbanking.auth.domain.port.in.ManageUserUseCase;
 import com.agentbanking.auth.domain.port.out.PasswordHasher;
 import com.agentbanking.auth.domain.port.out.UserRepository;
@@ -15,7 +16,7 @@ import java.util.UUID;
  * Domain service for user management.
  * Uses outbound port for password hashing to maintain hexagonal architecture.
  */
-public class UserManagementService implements ManageUserUseCase {
+public class UserManagementService implements ManageUserUseCase, CreateAgentUserUseCase {
 
     private final UserRepository userRepository;
     private final PasswordHasher passwordHasher;
@@ -247,6 +248,7 @@ public class UserManagementService implements ManageUserUseCase {
         return userRepository.findAll();
     }
 
+    @Override
     public UserRecord createAgentUser(UUID agentId, String agentCode, String phone, String email, String businessName) {
         userRepository.findByAgentId(agentId).ifPresent(u -> {
             throw new UserAlreadyExistsException("User already exists for this agent");

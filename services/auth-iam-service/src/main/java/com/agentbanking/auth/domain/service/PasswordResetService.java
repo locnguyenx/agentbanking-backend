@@ -11,15 +11,16 @@ import com.agentbanking.auth.domain.port.out.OtpStore;
 import com.agentbanking.auth.domain.port.out.PasswordHasher;
 import com.agentbanking.auth.domain.port.out.UserRepository;
 
+import java.security.SecureRandom;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
 public class PasswordResetService {
 
-    private static final int OTP_TTL_SECONDS = 300;
+    private static final int OTP_LENGTH = 6;
+    private static final int OTP_TTL_SECONDS = 600;
     private static final int MAX_OTP_ATTEMPTS = 3;
-    private static final int TEMPORARY_PASSWORD_VALIDITY_HOURS = 24;
 
     private final OtpStore otpStore;
     private final NotificationPublisher notificationPublisher;
@@ -47,8 +48,8 @@ public class PasswordResetService {
             throw new AuthBusinessException("ERR_AUTH_USER_INACTIVE", "User account is not active", "RETRY");
         }
 
-        String temporaryPassword = generateTemporaryPassword();
-        String hashedOtp = passwordHasher.hash(temporaryPassword);
+        String otp = String.format("%06d", new SecureRandom().nextInt(999999));
+        String hashedOtp = passwordHasher.hash(otp);
         
         otpStore.storeOtp(username, hashedOtp, OTP_TTL_SECONDS);
 
@@ -61,7 +62,7 @@ public class PasswordResetService {
                         user.username(),
                         user.email(),
                         user.phone(),
-                        temporaryPassword,
+                        otp,
                         "PASSWORD_RESET"
                 )
         );
