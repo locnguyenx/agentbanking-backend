@@ -1,13 +1,14 @@
 package com.agentbanking.auth.domain.service;
 
-import com.agentbanking.auth.domain.model.UserRecord;
-import com.agentbanking.auth.domain.model.UserStatus;
+import com.agentbanking.auth.domain.model.*;
 import com.agentbanking.auth.domain.port.in.ManageUserUseCase;
 import com.agentbanking.auth.domain.port.out.PasswordHasher;
 import com.agentbanking.auth.domain.port.out.UserRepository;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -18,10 +19,12 @@ public class UserManagementService implements ManageUserUseCase {
 
     private final UserRepository userRepository;
     private final PasswordHasher passwordHasher;
+    private final TemporaryPasswordGenerator tempPasswordGenerator;
 
-    public UserManagementService(UserRepository userRepository, PasswordHasher passwordHasher) {
+    public UserManagementService(UserRepository userRepository, PasswordHasher passwordHasher, TemporaryPasswordGenerator tempPasswordGenerator) {
         this.userRepository = userRepository;
         this.passwordHasher = passwordHasher;
+        this.tempPasswordGenerator = tempPasswordGenerator;
     }
 
     @Override
@@ -242,5 +245,68 @@ public class UserManagementService implements ManageUserUseCase {
     @Override
     public List<UserRecord> getAllUsers() {
         return userRepository.findAll();
+    }
+
+    public UserRecord createAgentUser(UUID agentId, String agentCode, String phone, String email, String businessName) {
+        userRepository.findByAgentId(agentId).ifPresent(u -> {
+            throw new UserAlreadyExistsException("User already exists for this agent");
+        });
+
+        String tempPassword = tempPasswordGenerator.generate();
+        String hashedPassword = passwordHasher.hash(tempPassword);
+
+        LocalDateTime tempPasswordExpiresAt = LocalDateTime.now().plusDays(3);
+
+        UserRecord user = new UserRecord(
+                UUID.randomUUID(),
+                agentCode,
+                email,
+                phone,
+                hashedPassword,
+                businessName,
+                UserStatus.ACTIVE,
+                UserType.EXTERNAL,
+                agentId,
+                agentCode,
+                true,
+                tempPasswordExpiresAt,
+                Set.of("AGENT"),
+                0,
+                null,
+                LocalDateTime.now(),
+                null,
+                LocalDateTime.now(),
+                LocalDateTime.now(),
+                null,
+                "SYSTEM"
+        );
+
+        userRepository.save(user);
+
+        return new UserRecord(
+                user.userId(), user.username(), user.email(), user.phone(), tempPassword,
+                user.fullName(), user.status(), user.userType(), user.agentId(), user.agentCode(),
+                user.mustChangePassword(), user.temporaryPasswordExpiresAt(), user.permissions(),
+                user.failedLoginAttempts(), user.lockedUntil(), user.passwordChangedAt(),
+                user.passwordExpiresAt(), user.createdAt(), user.updatedAt(), user.lastLoginAt(), user.createdBy()
+        );
+    }
+
+    public Optional<UserRecord> findByAgentId(UUID agentId) {
+        return userRepository.findByAgentId(agentId);
+    }
+
+    public void changePassword(UUID userId, String currentPassword, String newPassword) {
+        UserRecord user = userRepository.findById(userId)
+                .orElseThrow(() -> new UserNotFoundException("User not found"));
+
+        if (!passwordHasher.matches(currentPassword, user.passwordHash())) {
+            throw new InvalidPasswordException("Current password is incorrect");
+        }
+
+        String hashedPassword = passwordHasher.hash(newPassword);
+        userRepository.updatePassword(userId, hashedPassword, LocalDateTime.now());
+
+        userRepository.clearTempPasswordFlags(userId);
     }
 }

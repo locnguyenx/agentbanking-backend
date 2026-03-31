@@ -42,8 +42,9 @@ public class DomainServiceConfig {
 
     @Bean
     public UserManagementService userManagementService(UserRepository userRepository,
-                                                    PasswordHasher passwordHasher) {
-        return new UserManagementService(userRepository, passwordHasher);
+                                                    PasswordHasher passwordHasher,
+                                                    TemporaryPasswordGenerator temporaryPasswordGenerator) {
+        return new UserManagementService(userRepository, passwordHasher, temporaryPasswordGenerator);
     }
 
     @Bean

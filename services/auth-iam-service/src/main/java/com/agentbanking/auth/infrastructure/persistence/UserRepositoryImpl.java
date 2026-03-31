@@ -4,6 +4,7 @@ import com.agentbanking.auth.domain.model.UserRecord;
 import com.agentbanking.auth.domain.port.out.UserRepository;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -42,6 +43,12 @@ public class UserRepositoryImpl implements UserRepository {
     }
 
     @Override
+    public Optional<UserRecord> findByAgentId(UUID agentId) {
+        return userJpaRepository.findByAgentId(agentId)
+                .map(userMapper::toRecord);
+    }
+
+    @Override
     public UserRecord save(UserRecord userRecord) {
         UserEntity entity = userMapper.toEntity(userRecord);
         UserEntity saved = userJpaRepository.save(entity);
@@ -62,5 +69,23 @@ public class UserRepositoryImpl implements UserRepository {
         return userJpaRepository.findAll().stream()
                 .map(userMapper::toRecord)
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    public void updatePassword(UUID userId, String passwordHash, LocalDateTime changedAt) {
+        userJpaRepository.findById(userId).ifPresent(entity -> {
+            entity.setPasswordHash(passwordHash);
+            entity.setPasswordChangedAt(changedAt);
+            userJpaRepository.save(entity);
+        });
+    }
+
+    @Override
+    public void clearTempPasswordFlags(UUID userId) {
+        userJpaRepository.findById(userId).ifPresent(entity -> {
+            entity.setMustChangePassword(false);
+            entity.setTemporaryPasswordExpiresAt(null);
+            userJpaRepository.save(entity);
+        });
     }
 }
