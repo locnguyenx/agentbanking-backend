@@ -8,6 +8,11 @@ import com.agentbanking.onboarding.domain.model.UserCreationStatus;
 import com.agentbanking.onboarding.domain.port.in.CreateAgentUseCase.CreateAgentCommand;
 import com.agentbanking.onboarding.domain.port.in.UpdateAgentUseCase.UpdateAgentCommand;
 import com.agentbanking.onboarding.domain.port.out.AgentRepository;
+import com.agentbanking.onboarding.infrastructure.external.AuthUserClient;
+import com.agentbanking.onboarding.infrastructure.external.CreateAgentUserRequest;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.http.ResponseEntity;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -16,10 +21,14 @@ import java.util.UUID;
 
 public class AgentService {
 
-    private final AgentRepository agentRepository;
+    private static final Logger log = LoggerFactory.getLogger(AgentService.class);
 
-    public AgentService(AgentRepository agentRepository) {
+    private final AgentRepository agentRepository;
+    private final AuthUserClient authUserClient;
+
+    public AgentService(AgentRepository agentRepository, AuthUserClient authUserClient) {
         this.agentRepository = agentRepository;
+        this.authUserClient = authUserClient;
     }
 
     public AgentRecord createAgent(CreateAgentCommand command) {
@@ -45,7 +54,64 @@ public class AgentService {
             now
         );
 
-        return agentRepository.save(agent);
+        AgentRecord savedAgent = agentRepository.save(agent);
+
+        try {
+            CreateAgentUserRequest request = new CreateAgentUserRequest(
+                savedAgent.agentId(),
+                savedAgent.agentCode(),
+                savedAgent.phoneNumber(),
+                null,
+                savedAgent.businessName()
+            );
+            
+            ResponseEntity<?> response = authUserClient.createAgentUser(request);
+            
+            if (response.getStatusCode().is2xxSuccessful()) {
+                AgentRecord successAgent = new AgentRecord(
+                    savedAgent.agentId(),
+                    savedAgent.agentCode(),
+                    savedAgent.businessName(),
+                    savedAgent.tier(),
+                    savedAgent.status(),
+                    savedAgent.merchantGpsLat(),
+                    savedAgent.merchantGpsLng(),
+                    savedAgent.mykadNumber(),
+                    savedAgent.phoneNumber(),
+                    UserCreationStatus.CREATED,
+                    null,
+                    savedAgent.createdAt(),
+                    LocalDateTime.now()
+                );
+                log.info("Agent user created successfully in auth-iam-service for agentId: {}", savedAgent.agentId());
+                return agentRepository.save(successAgent);
+            } else {
+                log.warn("Failed to create agent user in auth-iam-service, status: {}", response.getStatusCode());
+                return updateUserCreationStatus(savedAgent, UserCreationStatus.FAILED, "Auth service returned: " + response.getStatusCode());
+            }
+        } catch (Exception e) {
+            log.error("Error creating agent user in auth-iam-service for agentId: {}, error: {}", savedAgent.agentId(), e.getMessage());
+            return updateUserCreationStatus(savedAgent, UserCreationStatus.FAILED, e.getMessage());
+        }
+    }
+
+    private AgentRecord updateUserCreationStatus(AgentRecord agent, UserCreationStatus status, String error) {
+        AgentRecord updated = new AgentRecord(
+            agent.agentId(),
+            agent.agentCode(),
+            agent.businessName(),
+            agent.tier(),
+            agent.status(),
+            agent.merchantGpsLat(),
+            agent.merchantGpsLng(),
+            agent.mykadNumber(),
+            agent.phoneNumber(),
+            status,
+            error,
+            agent.createdAt(),
+            LocalDateTime.now()
+        );
+        return agentRepository.save(updated);
     }
 
     public AgentRecord updateAgent(UUID agentId, UpdateAgentCommand command) {

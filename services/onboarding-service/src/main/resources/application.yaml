@@ -20,3 +20,7 @@ jwt:
 
 aml-screening:
   url: http://localhost:8090
+
+auth:
+  service:
+    url: http://auth-iam-service:8087

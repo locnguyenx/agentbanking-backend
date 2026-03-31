@@ -9,6 +9,7 @@ import com.agentbanking.onboarding.domain.port.out.AmlScreeningPort;
 import com.agentbanking.onboarding.domain.port.out.GpfenceService;
 import com.agentbanking.onboarding.domain.port.out.OcroService;
 import com.agentbanking.onboarding.domain.port.out.SsmService;
+import com.agentbanking.onboarding.infrastructure.external.AuthUserClient;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -21,8 +22,8 @@ public class DomainServiceConfig {
     }
 
     @Bean
-    public AgentService agentService(AgentRepository agentRepository) {
-        return new AgentService(agentRepository);
+    public AgentService agentService(AgentRepository agentRepository, AuthUserClient authUserClient) {
+        return new AgentService(agentRepository, authUserClient);
     }
 
     @Bean

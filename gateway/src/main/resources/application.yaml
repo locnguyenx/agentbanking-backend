@@ -57,6 +57,28 @@ spring:
           predicates:
             - Path=/docs/auth/**
         
+        # Password endpoints (public)
+        - id: auth-password-forgot
+          uri: http://auth-iam-service:8087
+          predicates:
+            - Path=/auth/password/forgot
+        - id: auth-password-reset
+          uri: http://auth-iam-service:8087
+          predicates:
+            - Path=/auth/password/reset
+        - id: auth-password-change
+          uri: http://auth-iam-service:8087
+          predicates:
+            - Path=/auth/password/change
+          filters:
+            - JwtAuthFilter
+        - id: internal-auth-agent-user
+          uri: http://auth-iam-service:8087
+          predicates:
+            - Path=/internal/users/agent
+          filters:
+            - RewritePath=/internal/users/agent, /internal/users/agent
+        
         # Auth/IAM Service (protected endpoints - JWT required)
         - id: auth-users
           uri: http://auth-iam-service:8087
