@@ -7,12 +7,14 @@ import com.agentbanking.auth.application.usecase.ManageRoleUseCaseImpl;
 import com.agentbanking.auth.application.usecase.ManageSessionUseCaseImpl;
 import com.agentbanking.auth.application.usecase.ManageUserUseCaseImpl;
 import com.agentbanking.auth.application.usecase.ValidateTokenUseCaseImpl;
+import com.agentbanking.auth.domain.service.AgentUserSyncService;
 import com.agentbanking.auth.domain.service.AuthenticationService;
 import com.agentbanking.auth.domain.service.AuthorizationService;
 import com.agentbanking.auth.domain.service.AuditService;
 import com.agentbanking.auth.domain.service.PasswordResetService;
 import com.agentbanking.auth.domain.service.TemporaryPasswordGenerator;
 import com.agentbanking.auth.domain.service.UserManagementService;
+import com.agentbanking.auth.domain.port.in.CreateAgentUserUseCase;
 import com.agentbanking.auth.domain.port.out.NotificationPublisher;
 import com.agentbanking.auth.domain.port.out.OtpStore;
 import com.agentbanking.auth.domain.port.out.AuditLogRepository;
@@ -109,5 +111,12 @@ public class DomainServiceConfig {
     public ManageRoleUseCaseImpl manageRoleUseCase(RoleRepository roleRepository,
                                                    PermissionRepository permissionRepository) {
         return new ManageRoleUseCaseImpl(roleRepository, permissionRepository);
+    }
+
+    @Bean
+    public AgentUserSyncService agentUserSyncService(CreateAgentUserUseCase createAgentUserUseCase,
+                                                      UserRepository userRepository,
+                                                      NotificationPublisher notificationPublisher) {
+        return new AgentUserSyncService(createAgentUserUseCase, userRepository, notificationPublisher);
     }
 }
