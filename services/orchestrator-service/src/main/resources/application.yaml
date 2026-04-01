@@ -1,5 +1,14 @@
 server:
-  port: 8084
+  port: 8086
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always
 
 spring:
   application:

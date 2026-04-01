@@ -177,3 +177,28 @@ Issue 5: Onboarding Service AML Screening Mock Missing
 - Auth tests: ✅ passing
 - Onboarding tests: ❌ AML screening fails
 - Transaction tests: ❌ 500 errors (transformation not working)
+
+# Testing 2026-03-31
+
+## API Gateway
+
+**Archivement**
+- Gateway filter & transform: done for all apis in openapi.yaml
+- Creat all e2e test classes with correct seed data
+- Compile all tests
+- Doc: `docs\superpowers\specs\gateway-transformation\2026-03-31-gateway-transformation-SPEC.md`
+
+**Summary of Remaining Issues**
+- stuck with Kafka to generate token
+- run all e2e tests to verify test setup
+
+## Services
+
+**Archivement**
+- Create all real integration tests for all services, don't use mock
+- Fix ledger-service issue
+- Run all integration tests
+
+**Summary of Remaining Issues**
+- auth-iam-service test fail
+- Next action: need to check if existing tests (unit/persistence) have worked, to make sure have no issue with DB

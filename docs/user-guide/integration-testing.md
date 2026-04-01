@@ -80,7 +80,11 @@ done
 ```
 > **Note:** Script requires PostgreSQL running locally. For full environment, use Docker instead.
 
+# Integration tests for services
+
 ## **Integration tests for EXTERNAL APIs**
+
+Test class: ExternalApiIntegrationTest.java
 
 All 24 integration tests passed:
 External API Tests:
@@ -118,8 +122,39 @@ docker-compose --profile infra --profile backend --profile gateway up -d
 # Run tests
 ./gradlew :gateway:test --tests "ExternalApiIntegrationTest"
 ```
+## Current issue with server integration tests
 
-# Integration testing
+Investigate `ledger service`:
+**Why tests didn't catch this issue:**
+1. Unit tests (LedgerServiceTest.java) mock at the repository interface level:
+      when(agentFloatRepository.findByIdWithLock(agentId)).thenReturn(agentFloat);
+      The mock doesn't verify if the method is appropriate for the transaction context - it just returns whatever is configured.
+2. Integration tests (LedgerIntegrationTest.java) use @SpringBootTest with @MockBean - they mock external services but also mock the repository behavior, so no real JPA transaction is tested.
+3. No real endpoint test - There's no test that calls /internal/balance/{agentId} with a real database to verify transaction behavior.
+The gap: Tests mock at the wrong level. They test that the service calls the repository, but don't test that the repository call is compatible with the transaction context (@Transactional(readOnly = true)).
+Recommendation: Add an integration test that tests the actual endpoint without mocking the repository:
+@Test
+void getBalance_endpoint_returnsAgentBalance() {
+    // Uses real database, tests actual transaction behavior
+    ResponseEntity<Map> response = restTemplate.getForEntity(
+        "/internal/balance/{agentId}", Map.class, AGENT_ID);
+    
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+    assertThat(response.getBody()).containsKey("balance");
+}
+**Would you like me to add such a test?**
+Thinking: The user wants me to add integration tests for all endpoints in the ledger service. Let me first understand all the endpoints available in the LedgerController, then create comprehensive integration tests.
+→ Read services\ledger-service\src\main\java\com\agentbanking\ledger\infrastructure\web\LedgerController.java 
+Thinking: Now I need to create a comprehensive integration test that tests all these endpoints. Let me first check the existing test structure to understand how to add new tests.
+→ Read services\ledger-service\src\test\java\com\agentbanking\ledger\integration\LedgerIntegrationTest.java 
+Thinking: Now I need to create comprehensive REST controller tests for all ledger service endpoints. Let me look at the DTOs first to understand the request structure:
+✱ Glob "*.java" in services\ledger-service\src\main\java\com\agentbanking\ledger\infrastructure\web\dto (3 matches)
+Thinking: Let me read the DTOs to understand their structure.
+→ Read services\ledger-service\src\main\java\com\agentbanking\ledger\infrastructure\web\dto\WithdrawalRequest.java 
+→ Read services\ledger-service\src\main\java\com\agentbanking\ledger\infrastructure\web\dto\DepositRequest.java 
+Thinking: Now I'll create a comprehensive REST controller test that tests all endpoints. I'll use MockMvc to test all the endpoints.
+
+# API Gateway Integration testing
 
 E2E Testing Infrastructure Complete!
 

@@ -47,7 +47,7 @@ public class LedgerController {
     @PostMapping("/debit")
     public ResponseEntity<Map<String, Object>> debit(@RequestBody WithdrawalRequest request) {
         try {
-            Map<String, Object> result = processWithdrawalUseCase.processWithdrawal(
+            Map<String, Object> result = new HashMap<>(processWithdrawalUseCase.processWithdrawal(
                 request.agentId(),
                 request.amount(),
                 request.customerFee(),
@@ -57,7 +57,7 @@ public class LedgerController {
                 request.customerCardMasked(),
                 request.geofenceLat(),
                 request.geofenceLng()
-            );
+            ));
 
             result.put("balance", getBalanceUseCase.getBalance(request.agentId()));
             return ResponseEntity.ok(result);
@@ -77,7 +77,7 @@ public class LedgerController {
     @PostMapping("/credit")
     public ResponseEntity<Map<String, Object>> credit(@RequestBody DepositRequest request) {
         try {
-            Map<String, Object> result = processDepositUseCase.processDeposit(
+            Map<String, Object> result = new HashMap<>(processDepositUseCase.processDeposit(
                 request.agentId(),
                 request.amount(),
                 request.customerFee(),
@@ -85,7 +85,7 @@ public class LedgerController {
                 request.bankShare(),
                 request.idempotencyKey(),
                 request.destinationAccount()
-            );
+            ));
 
             result.put("balance", getBalanceUseCase.getBalance(request.agentId()));
             return ResponseEntity.ok(result);

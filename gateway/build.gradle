@@ -32,7 +32,37 @@ dependencies {
     implementation 'io.jsonwebtoken:jjwt-jackson:0.12.5'
     
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'io.projectreactor:reactor-test'
     testImplementation 'com.nimbusds:nimbus-jose-jwt:9.37.3'
+}
+
+test {
+    description = 'Run unit tests only (excludes E2E tests)'
+    useJUnitPlatform {
+        excludeTags 'e2e'
+    }
+}
+
+task e2eTest(type: Test) {
+    description = 'Run E2E integration tests (requires Docker services running)'
+    group = 'verification'
+    useJUnitPlatform {
+        includeTags 'e2e'
+    }
+    // Ensure tests run in order
+    systemProperty 'junit.jupiter.testclass.order.default',
+            'org.junit.jupiter.api.ClassOrderer\$OrderAnnotation'
+    // Increase timeout for E2E tests
+    systemProperty 'junit.jupiter.execution.timeout.default', '60s'
+    // Fail fast on first failure
+    systemProperty 'junit.jupiter.execution.parallel.enabled', 'false'
+}
+
+task cleanE2eTestData(type: JavaExec) {
+    description = 'Clean up E2E test data (users, agents, floats)'
+    group = 'cleanup'
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.agentbanking.gateway.e2e.CleanTestData'
 }
 
 tasks.named('bootJar') {

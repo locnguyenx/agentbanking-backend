@@ -17,4 +17,7 @@ public interface AgentFloatJpaRepository extends JpaRepository<AgentFloatEntity,
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT a FROM AgentFloatEntity a WHERE a.agentId = :agentId")
     Optional<AgentFloatEntity> findByAgentIdWithLock(@Param("agentId") UUID agentId);
+
+    @Query("SELECT a FROM AgentFloatEntity a WHERE a.agentId = :agentId")
+    Optional<AgentFloatEntity> findByAgentId(@Param("agentId") UUID agentId);
 }

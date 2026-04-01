@@ -23,6 +23,12 @@ public class JpaAgentFloatRepository implements AgentFloatRepository {
         Optional<AgentFloatEntity> entity = jpaRepository.findByAgentIdWithLock(agentId);
         return entity.map(AgentFloatMapper::toRecord).orElse(null);
     }
+
+    @Override
+    public AgentFloatRecord findById(UUID agentId) {
+        Optional<AgentFloatEntity> entity = jpaRepository.findByAgentId(agentId);
+        return entity.map(AgentFloatMapper::toRecord).orElse(null);
+    }
     
     @Override
     public AgentFloatRecord save(AgentFloatRecord record) {

@@ -1,0 +1,21 @@
+# Multi-stage build for gateway
+FROM eclipse-temurin:21-jdk-alpine AS builder
+WORKDIR /build
+
+# Copy project files
+COPY build.gradle settings.gradle ./
+COPY gradlew gradlew
+COPY gradle/ gradle/
+
+COPY gateway/ gateway/
+COPY common/ common/
+
+# Build gateway
+RUN chmod +x gradlew && ./gradlew :gateway:bootJar --no-daemon
+
+# Runtime stage
+FROM eclipse-temurin:21-jre-alpine
+WORKDIR /app
+COPY --from=builder /build/gateway/build/libs/*.jar app.jar
+EXPOSE 8080
+ENTRYPOINT ["java", "-jar", "app.jar"]
