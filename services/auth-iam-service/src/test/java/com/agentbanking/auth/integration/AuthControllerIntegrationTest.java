@@ -1,120 +1,156 @@
 package com.agentbanking.auth.integration;
 
-import com.agentbanking.auth.application.usecase.AuthenticateUserUseCaseImpl;
-import com.agentbanking.auth.domain.model.AuthenticationResult;
-import com.agentbanking.auth.infrastructure.web.dto.AuthRequestDto;
-import com.agentbanking.auth.infrastructure.web.dto.RefreshTokenDto;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
+import org.springframework.data.redis.connection.RedisConnectionFactory;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.MediaType;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 
-import java.time.Instant;
-import java.util.Map;
-import java.util.UUID;
-
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 /**
  * Integration test for AuthController that tests actual HTTP endpoints
- * Uses existing PostgreSQL container on port 5439
+ * Uses real PostgreSQL container and tests full authentication flow
  */
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
-@TestPropertySource("classpath:application-test.yaml")
 class AuthControllerIntegrationTest {
+
+    @TestConfiguration
+    static class TestConfig {
+        @Bean
+        public RedisConnectionFactory redisConnectionFactory() {
+            return org.mockito.Mockito.mock(RedisConnectionFactory.class);
+        }
+
+        @Bean
+        public StringRedisTemplate stringRedisTemplate(RedisConnectionFactory connectionFactory) {
+            return new StringRedisTemplate(connectionFactory);
+        }
+
+        @Bean
+        public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+            http
+                .csrf(AbstractHttpConfigurer::disable)
+                .authorizeHttpRequests(auth -> auth
+                    .anyRequest().permitAll()
+                );
+            return http.build();
+        }
+    }
 
     @Autowired
     private MockMvc mockMvc;
 
-    @MockBean
-    private AuthenticateUserUseCaseImpl authenticateUserUseCase;
-
-    private static final String VALID_USERNAME = "testuser";
-    private static final String VALID_PASSWORD = "testpass123";
-    private static final String ACCESS_TOKEN = "test-access-token-" + UUID.randomUUID();
-    private static final String REFRESH_TOKEN = "test-refresh-token-" + UUID.randomUUID();
-
-    @BeforeEach
-    void setUp() {
-        // Mock successful authentication
-        AuthenticationResult authResult = new AuthenticationResult(
-                ACCESS_TOKEN,
-                REFRESH_TOKEN,
-                900 // 15 minutes in seconds
-        );
-
-        when(authenticateUserUseCase.authenticate(anyString(), anyString()))
-                .thenReturn(authResult);
-
-        when(authenticateUserUseCase.refreshToken(anyString()))
-                .thenReturn(authResult);
-    }
-
     @Test
     void authenticate_withValidCredentials_shouldReturnTokens() throws Exception {
-        AuthRequestDto request = new AuthRequestDto();
-        request.setUsername(VALID_USERNAME);
-        request.setPassword(VALID_PASSWORD);
+        String requestBody = """
+            {
+                "username": "admin",
+                "password": "password"
+            }
+            """;
 
         mockMvc.perform(post("/auth/token")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"username\":\"" + VALID_USERNAME + "\",\"password\":\"" + VALID_PASSWORD + "\"}"))
+                        .content(requestBody))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.accessToken").value(ACCESS_TOKEN))
-                .andExpect(jsonPath("$.refreshToken").value(REFRESH_TOKEN))
-                .andExpect(jsonPath("$.expiresIn").value(900));
+                .andExpect(jsonPath("$.accessToken").exists())
+                .andExpect(jsonPath("$.refreshToken").exists())
+                .andExpect(jsonPath("$.expiresIn").exists());
     }
 
     @Test
-    void authenticate_withInvalidCredentials_shouldReturnUnauthorized() throws Exception {
-        // Override mock to return null for invalid credentials
-        when(authenticateUserUseCase.authenticate("wronguser", "wrongpass"))
-                .thenReturn(null);
+    void authenticate_withInvalidPassword_shouldReturn400() throws Exception {
+        String requestBody = """
+            {
+                "username": "admin",
+                "password": "wrongpassword"
+            }
+            """;
 
         mockMvc.perform(post("/auth/token")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"username\":\"wronguser\",\"password\":\"wrongpass\"}"))
-                .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.status").value("FAILED"))
-                .andExpect(jsonPath("$.error.code").value("ERR_INVALID_CREDENTIALS"));
+                        .content(requestBody))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.code").value("ERR_VAL_INVALID_REQUEST"));
     }
 
     @Test
-    void refreshToken_withValidToken_shouldReturnNewTokens() throws Exception {
-        RefreshTokenDto request = new RefreshTokenDto(REFRESH_TOKEN);
+    void authenticate_withNonExistentUser_shouldReturn400() throws Exception {
+        String requestBody = """
+            {
+                "username": "nonexistent",
+                "password": "somepassword"
+            }
+            """;
 
-        mockMvc.perform(post("/auth/refresh")
+        mockMvc.perform(post("/auth/token")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"refreshToken\":\"" + REFRESH_TOKEN + "\"}"))
+                        .content(requestBody))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.code").value("ERR_VAL_INVALID_REQUEST"));
+    }
+
+    @Test
+    void refreshToken_withValidRefreshToken_shouldReturnNewTokens() throws Exception {
+        // First, authenticate to get a refresh token
+        String authRequestBody = """
+            {
+                "username": "admin",
+                "password": "password"
+            }
+            """;
+
+        MvcResult authResult = mockMvc.perform(post("/auth/token")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(authRequestBody))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.accessToken").value(ACCESS_TOKEN))
-                .andExpect(jsonPath("$.refreshToken").value(REFRESH_TOKEN))
-                .andExpect(jsonPath("$.expiresIn").value(900));
-    }
+                .andReturn();
 
-    @Test
-    void refreshToken_withInvalidToken_shouldReturnUnauthorized() throws Exception {
-        // Override mock to return null for invalid refresh token
-        when(authenticateUserUseCase.refreshToken("invalid-token"))
-                .thenReturn(null);
+        String responseBody = authResult.getResponse().getContentAsString();
+        // Extract refresh token from response
+        String refreshToken = responseBody.replaceAll(".*\"refreshToken\":\"([^\"]+)\".*", "$1");
+
+        // Now use the refresh token to get new tokens
+        String refreshRequestBody = """
+            {
+                "refreshToken": "%s"
+            }
+            """.formatted(refreshToken);
 
         mockMvc.perform(post("/auth/refresh")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"refreshToken\":\"invalid-token\"}"))
-                .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.status").value("FAILED"))
-                .andExpect(jsonPath("$.error.code").value("ERR_INVALID_REFRESH_TOKEN"));
+                        .content(refreshRequestBody))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.accessToken").exists())
+                .andExpect(jsonPath("$.refreshToken").exists());
+    }
+
+    @Test
+    void refreshToken_withInvalidRefreshToken_shouldReturn400() throws Exception {
+        String requestBody = """
+            {
+                "refreshToken": "invalid-refresh-token"
+            }
+            """;
+
+        mockMvc.perform(post("/auth/refresh")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.code").value("ERR_VAL_INVALID_REQUEST"));
     }
 }

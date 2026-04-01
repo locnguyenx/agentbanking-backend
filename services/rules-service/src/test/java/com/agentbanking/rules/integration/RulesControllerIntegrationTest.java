@@ -45,7 +45,7 @@ class RulesControllerIntegrationTest {
     void createFeeConfig_withValidData_shouldReturnResult() throws Exception {
         String requestBody = """
             {
-                "transactionType": "CASH_DEPOSIT",
+                "transactionType": "PIN_PURCHASE",
                 "agentTier": "PREMIER",
                 "feeType": "FIXED",
                 "customerFeeValue": "1.00",
@@ -53,7 +53,7 @@ class RulesControllerIntegrationTest {
                 "bankShareValue": "0.80",
                 "dailyLimitAmount": "10000.00",
                 "dailyLimitCount": 10,
-                "effectiveFrom": "2027-01-01"
+                "effectiveFrom": "2028-01-01"
             }
             """;
 

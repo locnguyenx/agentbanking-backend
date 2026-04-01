@@ -2,34 +2,16 @@ spring:
   main:
     allow-bean-definition-overriding: true
   datasource:
-    url: jdbc:postgresql://localhost:5439/auth_db
-    username: postgres
-    password: postgres
+    url: jdbc:postgresql://localhost:5439/authdb
+    username: auth_user
+    password: auth_password
   jpa:
     hibernate:
       ddl-auto: none
-  flyway:
-    enabled: true
-    locations: filesystem:src/main/resources/db/migration
   autoconfigure:
     exclude:
       - org.springframework.boot.autoconfigure.kafka.KafkaAutoConfiguration
       - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
-      - org.springframework.boot.autoconfigure.security.oauth2.resource.servlet.OAuth2ResourceServerAutoConfiguration
-  security:
-    oauth2:
-      resourceserver:
-        jwt:
-          issuer-uri: http://localhost:8087
-
-jwt:
-  secret: test-secret-key-for-testing-only-not-for-production
-  access-token-expiration-minutes: 15
-  refresh-token-expiration-minutes: 1440
-
-logging:
-  level:
-    com.agentbanking.auth: DEBUG
-    org.springframework.security: DEBUG
-    org.hibernate.SQL: DEBUG
-    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+  flyway:
+    enabled: true
+    locations: filesystem:db/migration
