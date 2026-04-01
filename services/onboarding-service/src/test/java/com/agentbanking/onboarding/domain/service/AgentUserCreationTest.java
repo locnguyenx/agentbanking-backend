@@ -3,19 +3,17 @@ package com.agentbanking.onboarding.domain.service;
 import com.agentbanking.onboarding.domain.model.AgentRecord;
 import com.agentbanking.onboarding.domain.model.AgentStatus;
 import com.agentbanking.onboarding.domain.model.AgentTier;
+import com.agentbanking.onboarding.domain.model.CreateAgentUserRequest;
 import com.agentbanking.onboarding.domain.model.UserCreationStatus;
 import com.agentbanking.onboarding.domain.port.in.CreateAgentUseCase.CreateAgentCommand;
 import com.agentbanking.onboarding.domain.port.out.AgentRepository;
-import com.agentbanking.onboarding.infrastructure.external.AuthUserClient;
-import com.agentbanking.onboarding.infrastructure.external.CreateAgentUserRequest;
+import com.agentbanking.onboarding.domain.port.out.AuthUserCreationPort;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -33,13 +31,13 @@ class AgentUserCreationTest {
     private AgentRepository agentRepository;
 
     @Mock
-    private AuthUserClient authUserClient;
+    private AuthUserCreationPort authUserCreationPort;
 
     private AgentService agentService;
 
     @BeforeEach
     void setUp() {
-        agentService = new AgentService(agentRepository, authUserClient);
+        agentService = new AgentService(agentRepository, authUserCreationPort);
     }
 
     @Test
@@ -72,8 +70,8 @@ class AgentUserCreationTest {
 
         when(agentRepository.findByMykadNumber(command.mykadNumber())).thenReturn(Optional.empty());
         when(agentRepository.save(any(AgentRecord.class))).thenAnswer(invocation -> invocation.getArgument(0));
-        when(authUserClient.createAgentUser(any(CreateAgentUserRequest.class)))
-                .thenReturn(new ResponseEntity<>(HttpStatus.CREATED));
+        when(authUserCreationPort.createAgentUser(any(CreateAgentUserRequest.class)))
+                .thenReturn(true);
 
         AgentRecord result = agentService.createAgent(command);
 
@@ -95,8 +93,8 @@ class AgentUserCreationTest {
 
         when(agentRepository.findByMykadNumber(command.mykadNumber())).thenReturn(Optional.empty());
         when(agentRepository.save(any(AgentRecord.class))).thenAnswer(invocation -> invocation.getArgument(0));
-        when(authUserClient.createAgentUser(any(CreateAgentUserRequest.class)))
-                .thenReturn(new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR));
+        when(authUserCreationPort.createAgentUser(any(CreateAgentUserRequest.class)))
+                .thenReturn(false);
 
         AgentRecord result = agentService.createAgent(command);
 
@@ -118,7 +116,7 @@ class AgentUserCreationTest {
 
         when(agentRepository.findByMykadNumber(command.mykadNumber())).thenReturn(Optional.empty());
         when(agentRepository.save(any(AgentRecord.class))).thenAnswer(invocation -> invocation.getArgument(0));
-        when(authUserClient.createAgentUser(any(CreateAgentUserRequest.class)))
+        when(authUserCreationPort.createAgentUser(any(CreateAgentUserRequest.class)))
                 .thenThrow(new RuntimeException("Connection failed"));
 
         AgentRecord result = agentService.createAgent(command);
@@ -159,8 +157,8 @@ class AgentUserCreationTest {
 
         when(agentRepository.findByMykadNumber(command.mykadNumber())).thenReturn(Optional.empty());
         when(agentRepository.save(any(AgentRecord.class))).thenReturn(savedAgent);
-        when(authUserClient.createAgentUser(requestCaptor.capture()))
-                .thenReturn(new ResponseEntity<>(HttpStatus.CREATED));
+        when(authUserCreationPort.createAgentUser(requestCaptor.capture()))
+                .thenReturn(true);
 
         agentService.createAgent(command);
 
@@ -187,8 +185,8 @@ class AgentUserCreationTest {
         when(agentRepository.save(any(AgentRecord.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
-        when(authUserClient.createAgentUser(any(CreateAgentUserRequest.class)))
-                .thenReturn(new ResponseEntity<>(HttpStatus.CREATED));
+        when(authUserCreationPort.createAgentUser(any(CreateAgentUserRequest.class)))
+                .thenReturn(true);
 
         agentService.createAgent(command);
 
@@ -232,7 +230,7 @@ class AgentUserCreationTest {
 
         assertThrows(Exception.class, () -> agentService.createAgent(command));
 
-        verify(authUserClient, never()).createAgentUser(any());
+        verify(authUserCreationPort, never()).createAgentUser(any());
     }
 
     @Test
@@ -249,14 +247,14 @@ class AgentUserCreationTest {
 
         when(agentRepository.findByMykadNumber(command.mykadNumber())).thenReturn(Optional.empty());
         when(agentRepository.save(any(AgentRecord.class))).thenAnswer(invocation -> invocation.getArgument(0));
-        when(authUserClient.createAgentUser(any(CreateAgentUserRequest.class)))
-                .thenReturn(new ResponseEntity<>(HttpStatus.CREATED));
+        when(authUserCreationPort.createAgentUser(any(CreateAgentUserRequest.class)))
+                .thenReturn(true);
 
         ArgumentCaptor<CreateAgentUserRequest> requestCaptor = ArgumentCaptor.forClass(CreateAgentUserRequest.class);
 
         agentService.createAgent(command);
 
-        verify(authUserClient, times(1)).createAgentUser(requestCaptor.capture());
+        verify(authUserCreationPort, times(1)).createAgentUser(requestCaptor.capture());
         assertNotNull(requestCaptor.getValue().agentId());
         assertEquals(command.agentCode(), requestCaptor.getValue().agentCode());
     }

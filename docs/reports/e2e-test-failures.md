@@ -269,23 +269,10 @@ The rules-service test has NO mocks - it's a true integration test. Let me compa
 | orchestrator-service	| 1 mock (Redis)	| ❌ Partial - Redis mocked	|
 | ledger-service	| 14 mocks	| ❌ No - heavily mocked	|
 
+**Updates:**
+- all integration tests use testcontainers for Posgresql, Kafka, Redis, remove all infra mocks 
+- auth-iam-service: all tests PASSED
+
 ### ACTION ITEMS
 
-**auth-iam-service - In Progress**
-What we fixed:
-1. Added Redis mocks (RedisConnectionFactory, StringRedisTemplate) - fixed 500 errors
-2. Added TestSecurityConfig with @Profile("test") - permits /auth/** endpoints
-3. Fixed database schema - added missing agent_code column to users table
-
-Current blocker:
-- Password verification failing - test returns 400 "Invalid credentials"
-- The BCrypt hash in the database ($2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy) doesn't verify against either "AdminPass123!" or "password"
-- This is a data issue, not a test infrastructure issue
-
-Root cause:
-The PasswordEncoder bean is defined in TestSecurityConfig (with @Profile("test")), but authentication still fails. The hash in the migration file doesn't match what BCrypt.verify expects.
-
-Next step needed:
-Either:
-1. Fix the admin user's password hash in the database to actually match "password"
-2. Or simplify the auth-iam-service test to just test the security configuration works (like the other services) without trying to authenticate
+run integration tests for all services

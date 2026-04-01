@@ -1,0 +1,21 @@
+spring:
+  main:
+    allow-bean-definition-overriding: true
+  jpa:
+    hibernate:
+      ddl-auto: none
+  flyway:
+    enabled: true
+    locations: filesystem:src/main/resources/db/migration
+
+rules-service:
+  url: http://localhost:9999
+
+switch-adapter:
+  url: http://localhost:9998
+
+switch-adapter-service:
+  url: http://localhost:9998
+
+onboarding-service:
+  url: http://localhost:9997

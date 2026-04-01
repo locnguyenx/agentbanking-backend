@@ -80,7 +80,7 @@ public class CleanTestData {
             String body = """
                     {
                         "username": "admin",
-                        "password": "AdminPass123!"
+                        "password": "password"
                     }
                     """;
 
@@ -108,7 +108,7 @@ public class CleanTestData {
                     {
                         "username": "admin",
                         "email": "admin@agentbanking.com",
-                        "password": "AdminPass123!",
+                        "password": "password",
                         "fullName": "System Administrator"
                     }
                     """;

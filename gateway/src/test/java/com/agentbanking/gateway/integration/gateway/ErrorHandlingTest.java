@@ -101,7 +101,7 @@ class ErrorHandlingTest extends BaseIntegrationTest {
         String body = """
                 {
                     "username": "admin",
-                    "password": "AdminPass123!"
+                    "password": "password"
                 }
                 """;
 

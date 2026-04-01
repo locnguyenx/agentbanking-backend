@@ -127,7 +127,7 @@ test_authentication() {
     # The tests below assume users exist in the database
     
     log_info "To test valid authentication, ensure these users exist:"
-    log_info "  - admin/AdminPass123! (IT Admin)"
+    log_info "  - admin/password (IT Admin)"
     log_info "  - agent001/AgentPass123! (Agent)"
     log_info "  - operator001/OperatorPass123! (Bank Operator)"
 }
@@ -138,7 +138,7 @@ test_protected_endpoints_with_tokens() {
     # Try to get tokens (will fail if users don't exist, but that's expected)
     log_info "Attempting to get JWT tokens..."
     
-    local admin_token=$(get_token "admin" "AdminPass123!")
+    local admin_token=$(get_token "admin" "password")
     local agent_token=$(get_token "agent001" "AgentPass123!")
     local operator_token=$(get_token "operator001" "OperatorPass123!")
     

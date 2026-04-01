@@ -155,7 +155,7 @@ test_authentication() {
     # US-AUTH-16: End user authenticates with valid credentials
     echo -e "\n${YELLOW}Scenario: End user authenticates with valid credentials${NC}"
     local response=$(api_call "POST" "/auth/token" "" \
-        '{"username":"admin","password":"AdminPass123!"}')
+        '{"username":"admin","password":"password"}')
     local status=$(echo "$response" | tail -1)
     local body=$(echo "$response" | head -1)
     assert_status "Authentication successful" "200" "$status"

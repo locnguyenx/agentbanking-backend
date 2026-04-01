@@ -142,19 +142,23 @@ void getBalance_endpoint_returnsAgentBalance() {
     assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
     assertThat(response.getBody()).containsKey("balance");
 }
-**Would you like me to add such a test?**
-Thinking: The user wants me to add integration tests for all endpoints in the ledger service. Let me first understand all the endpoints available in the LedgerController, then create comprehensive integration tests.
-→ Read services\ledger-service\src\main\java\com\agentbanking\ledger\infrastructure\web\LedgerController.java 
-Thinking: Now I need to create a comprehensive integration test that tests all these endpoints. Let me first check the existing test structure to understand how to add new tests.
-→ Read services\ledger-service\src\test\java\com\agentbanking\ledger\integration\LedgerIntegrationTest.java 
-Thinking: Now I need to create comprehensive REST controller tests for all ledger service endpoints. Let me look at the DTOs first to understand the request structure:
-✱ Glob "*.java" in services\ledger-service\src\main\java\com\agentbanking\ledger\infrastructure\web\dto (3 matches)
-Thinking: Let me read the DTOs to understand their structure.
-→ Read services\ledger-service\src\main\java\com\agentbanking\ledger\infrastructure\web\dto\WithdrawalRequest.java 
-→ Read services\ledger-service\src\main\java\com\agentbanking\ledger\infrastructure\web\dto\DepositRequest.java 
-Thinking: Now I'll create a comprehensive REST controller test that tests all endpoints. I'll use MockMvc to test all the endpoints.
 
-# API Gateway Integration testing
+## Infra dependencies for integration test
+
+- Default option: user Testcontainers for Postgresql + Redis + Kafka
+- Fall back to Postgresql container (i.e in Windows):
+
+**Usage:**
+- ./gradlew test → uses tc profile (Testcontainers, default)
+- ./gradlew test -PtestProfile=local → uses test profile (localhost Docker Compose)
+
+```bash
+# Fallback (localhost Docker Compose)
+docker compose up -d
+./gradlew test -PtestProfile=local
+```
+
+# API Gateway Integration testing with script (DON'T USE THIS)
 
 E2E Testing Infrastructure Complete!
 

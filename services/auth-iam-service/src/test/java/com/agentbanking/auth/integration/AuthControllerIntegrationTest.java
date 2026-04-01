@@ -1,18 +1,15 @@
 package com.agentbanking.auth.integration;
 
+import com.agentbanking.common.test.AbstractIntegrationTest;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
-import org.springframework.data.redis.connection.RedisConnectionFactory;
-import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.MediaType;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
@@ -21,25 +18,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 /**
  * Integration test for AuthController that tests actual HTTP endpoints
- * Uses real PostgreSQL container and tests full authentication flow
+ * Uses Testcontainers for PostgreSQL, Redis, and Kafka
  */
-@SpringBootTest
 @AutoConfigureMockMvc
-@ActiveProfiles("test")
-class AuthControllerIntegrationTest {
+class AuthControllerIntegrationTest extends AbstractIntegrationTest {
 
     @TestConfiguration
     static class TestConfig {
-        @Bean
-        public RedisConnectionFactory redisConnectionFactory() {
-            return org.mockito.Mockito.mock(RedisConnectionFactory.class);
-        }
-
-        @Bean
-        public StringRedisTemplate stringRedisTemplate(RedisConnectionFactory connectionFactory) {
-            return new StringRedisTemplate(connectionFactory);
-        }
-
         @Bean
         public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
             http
@@ -140,7 +125,7 @@ class AuthControllerIntegrationTest {
     }
 
     @Test
-    void refreshToken_withInvalidRefreshToken_shouldReturn400() throws Exception {
+    void refreshToken_withInvalidRefreshToken_shouldReturn401() throws Exception {
         String requestBody = """
             {
                 "refreshToken": "invalid-refresh-token"
@@ -150,7 +135,7 @@ class AuthControllerIntegrationTest {
         mockMvc.perform(post("/auth/refresh")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.error.code").value("ERR_VAL_INVALID_REQUEST"));
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.error.code").value("ERR_AUTH_UNAUTHORIZED"));
     }
 }

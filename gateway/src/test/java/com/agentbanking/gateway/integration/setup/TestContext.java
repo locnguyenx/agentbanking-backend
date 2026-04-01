@@ -42,7 +42,7 @@ public class TestContext {
 
     // Test credentials
     public static final String ADMIN_USERNAME = "admin";
-    public static final String ADMIN_PASSWORD = "AdminPass123!";
+    public static final String ADMIN_PASSWORD = "password";
 
     public static final String AGENT_USERNAME = "agent001";
     public static final String AGENT_PASSWORD = "AgentPass123!";

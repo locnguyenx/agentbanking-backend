@@ -1,0 +1,9 @@
+spring:
+  main:
+    allow-bean-definition-overriding: true
+  jpa:
+    hibernate:
+      ddl-auto: none
+  flyway:
+    enabled: true
+    locations: filesystem:src/main/resources/db/migration

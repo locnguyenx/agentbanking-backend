@@ -1,6 +1,7 @@
 package com.agentbanking.ledger.integration;
 
 import com.agentbanking.common.efm.EfmEventPublisher;
+import com.agentbanking.common.test.AbstractIntegrationTest;
 import com.agentbanking.ledger.domain.port.in.CustomerBalanceInquiryUseCase;
 import com.agentbanking.ledger.domain.port.in.ProcessWithdrawalUseCase;
 import com.agentbanking.ledger.domain.port.out.*;
@@ -16,17 +17,11 @@ import com.agentbanking.ledger.infrastructure.messaging.TransactionEventPublishe
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
-import org.springframework.data.redis.connection.RedisConnectionFactory;
-import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.MediaType;
-import org.springframework.kafka.core.KafkaTemplate;
-import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.math.BigDecimal;
@@ -37,10 +32,8 @@ import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@SpringBootTest
 @AutoConfigureMockMvc
-@ActiveProfiles("test")
-class LedgerControllerIntegrationTest {
+class LedgerControllerIntegrationTest extends AbstractIntegrationTest {
 
     @TestConfiguration
     static class TestConfig {
@@ -112,16 +105,6 @@ class LedgerControllerIntegrationTest {
 
     @MockBean
     private ReconciliationService reconciliationService;
-
-    @MockBean
-    @SuppressWarnings("rawtypes")
-    private KafkaTemplate kafkaTemplate;
-
-    @MockBean
-    private StringRedisTemplate stringRedisTemplate;
-
-    @MockBean
-    private RedisConnectionFactory redisConnectionFactory;
 
     @MockBean
     private CustomerBalanceInquiryUseCase customerBalanceInquiryUseCase;

@@ -395,7 +395,7 @@ public abstract class BaseIntegrationTest {
 
     @Deprecated
     protected String getAdminToken() {
-        return getToken("admin", "AdminPass123!");
+        return getToken("admin", "password");
     }
 
     @Deprecated

@@ -14,4 +14,4 @@ spring:
       - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
   flyway:
     enabled: true
-    locations: filesystem:db/migration
+    locations: filesystem:src/main/resources/db/migration

@@ -4,15 +4,12 @@ import com.agentbanking.common.exception.AgentException;
 import com.agentbanking.common.security.ErrorCodes;
 import com.agentbanking.onboarding.domain.model.AgentRecord;
 import com.agentbanking.onboarding.domain.model.AgentStatus;
+import com.agentbanking.onboarding.domain.model.CreateAgentUserRequest;
 import com.agentbanking.onboarding.domain.model.UserCreationStatus;
 import com.agentbanking.onboarding.domain.port.in.CreateAgentUseCase.CreateAgentCommand;
 import com.agentbanking.onboarding.domain.port.in.UpdateAgentUseCase.UpdateAgentCommand;
 import com.agentbanking.onboarding.domain.port.out.AgentRepository;
-import com.agentbanking.onboarding.infrastructure.external.AuthUserClient;
-import com.agentbanking.onboarding.infrastructure.external.CreateAgentUserRequest;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.http.ResponseEntity;
+import com.agentbanking.onboarding.domain.port.out.AuthUserCreationPort;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -21,14 +18,12 @@ import java.util.UUID;
 
 public class AgentService {
 
-    private static final Logger log = LoggerFactory.getLogger(AgentService.class);
-
     private final AgentRepository agentRepository;
-    private final AuthUserClient authUserClient;
+    private final AuthUserCreationPort authUserCreationPort;
 
-    public AgentService(AgentRepository agentRepository, AuthUserClient authUserClient) {
+    public AgentService(AgentRepository agentRepository, AuthUserCreationPort authUserCreationPort) {
         this.agentRepository = agentRepository;
-        this.authUserClient = authUserClient;
+        this.authUserCreationPort = authUserCreationPort;
     }
 
     public AgentRecord createAgent(CreateAgentCommand command) {
@@ -64,10 +59,10 @@ public class AgentService {
                 null,
                 savedAgent.businessName()
             );
-            
-            ResponseEntity<?> response = authUserClient.createAgentUser(request);
-            
-            if (response.getStatusCode().is2xxSuccessful()) {
+
+            boolean success = authUserCreationPort.createAgentUser(request);
+
+            if (success) {
                 AgentRecord successAgent = new AgentRecord(
                     savedAgent.agentId(),
                     savedAgent.agentCode(),
@@ -83,14 +78,11 @@ public class AgentService {
                     savedAgent.createdAt(),
                     LocalDateTime.now()
                 );
-                log.info("Agent user created successfully in auth-iam-service for agentId: {}", savedAgent.agentId());
                 return agentRepository.save(successAgent);
             } else {
-                log.warn("Failed to create agent user in auth-iam-service, status: {}", response.getStatusCode());
-                return updateUserCreationStatus(savedAgent, UserCreationStatus.FAILED, "Auth service returned: " + response.getStatusCode());
+                return updateUserCreationStatus(savedAgent, UserCreationStatus.FAILED, "Auth service returned non-success status");
             }
         } catch (Exception e) {
-            log.error("Error creating agent user in auth-iam-service for agentId: {}, error: {}", savedAgent.agentId(), e.getMessage());
             return updateUserCreationStatus(savedAgent, UserCreationStatus.FAILED, e.getMessage());
         }
     }

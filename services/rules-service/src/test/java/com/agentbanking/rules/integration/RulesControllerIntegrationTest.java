@@ -1,28 +1,42 @@
 package com.agentbanking.rules.integration;
 
+import com.agentbanking.common.test.AbstractIntegrationTest;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
-import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
-
-import java.util.UUID;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@SpringBootTest
 @AutoConfigureMockMvc
-@ActiveProfiles("test")
-class RulesControllerIntegrationTest {
+class RulesControllerIntegrationTest extends AbstractIntegrationTest {
 
     @Autowired
     private MockMvc mockMvc;
 
     @Test
     void calculateFees_shouldReturnFees() throws Exception {
+        // Seed fee config for CASH_WITHDRAWAL/STANDARD
+        String configBody = """
+            {
+                "transactionType": "CASH_WITHDRAWAL",
+                "agentTier": "STANDARD",
+                "feeType": "FIXED",
+                "customerFeeValue": "1.00",
+                "agentCommissionValue": "0.20",
+                "bankShareValue": "0.80",
+                "dailyLimitAmount": "10000.00",
+                "dailyLimitCount": 10,
+                "effectiveFrom": "2024-01-01"
+            }
+            """;
+        mockMvc.perform(post("/internal/fees")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(configBody))
+                .andExpect(status().is2xxSuccessful());
+
         mockMvc.perform(post("/internal/fees/calculate")
                         .param("transactionType", "CASH_WITHDRAWAL")
                         .param("agentTier", "STANDARD")

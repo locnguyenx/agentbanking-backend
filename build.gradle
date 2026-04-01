@@ -84,6 +84,8 @@ subprojects {
         testLogging {
             events "passed", "skipped", "failed"
         }
+        def profile = project.findProperty('testProfile') ?: 'tc'
+        systemProperty 'spring.profiles.active', profile
     }
 }
 
