@@ -56,7 +56,76 @@ spring:
           uri: http://auth-iam-service:8087
           predicates:
             - Path=/docs/auth/**
-        
+
+        # ============================================================
+        # External Auth Token endpoints (public - no JwtAuth required)
+        # ============================================================
+        - id: external-auth-token
+          uri: http://auth-iam-service:8087
+          predicates:
+            - Path=/api/v1/auth/token
+          filters:
+            - RewritePath=/api/v1/auth/token, /auth/token
+
+        - id: external-auth-refresh
+          uri: http://auth-iam-service:8087
+          predicates:
+            - Path=/api/v1/auth/refresh
+          filters:
+            - RewritePath=/api/v1/auth/refresh, /auth/refresh
+
+        - id: external-auth-revoke
+          uri: http://auth-iam-service:8087
+          predicates:
+            - Path=/api/v1/auth/revoke
+          filters:
+            - JwtAuth
+            - RewritePath=/api/v1/auth/revoke, /auth/revoke
+
+        # ============================================================
+        # External Password endpoints (forgot/reset public, change protected)
+        # ============================================================
+        - id: external-auth-password-forgot
+          uri: http://auth-iam-service:8087
+          predicates:
+            - Path=/api/v1/auth/password/forgot
+          filters:
+            - RewritePath=/api/v1/auth/password/forgot, /auth/password/forgot
+
+        - id: external-auth-password-reset
+          uri: http://auth-iam-service:8087
+          predicates:
+            - Path=/api/v1/auth/password/reset
+          filters:
+            - RewritePath=/api/v1/auth/password/reset, /auth/password/reset
+
+        - id: external-auth-password-change
+          uri: http://auth-iam-service:8087
+          predicates:
+            - Path=/api/v1/auth/password/change
+          filters:
+            - JwtAuth
+            - RewritePath=/api/v1/auth/password/change, /auth/password/change
+
+        # ============================================================
+        # External Agent User Management endpoints (protected)
+        # ============================================================
+        - id: external-backoffice-agent-user-status
+          uri: http://auth-iam-service:8087
+          predicates:
+            - Path=/api/v1/backoffice/agents/*/user-status
+          filters:
+            - JwtAuth
+            - RewritePath=/api/v1/backoffice/agents/(?<agentId>.*)/user-status, /auth/users/agent/${agentId}/status
+
+        - id: external-backoffice-agent-create-user
+          uri: http://auth-iam-service:8087
+          predicates:
+            - Path=/api/v1/backoffice/agents/*/create-user
+          filters:
+            - JwtAuth
+            - RewritePath=/api/v1/backoffice/agents/(?<agentId>.*)/create-user, /auth/users/agent/${agentId}/create
+
         # Password endpoints (public)
         - id: auth-password-forgot
           uri: http://auth-iam-service:8087
@@ -71,7 +140,7 @@ spring:
           predicates:
             - Path=/auth/password/change
           filters:
-            - JwtAuthFilter
+            - JwtAuth
         - id: internal-auth-agent-user
           uri: http://auth-iam-service:8087
           predicates:
@@ -85,35 +154,35 @@ spring:
           predicates:
             - Path=/auth/users, /auth/users/*
           filters:
-            - JwtAuthFilter
+            - JwtAuth
             - RewritePath=/auth/users/(?<segment>.*), /auth/users/${segment}
         - id: auth-roles
           uri: http://auth-iam-service:8087
           predicates:
             - Path=/auth/roles, /auth/roles/*
           filters:
-            - JwtAuthFilter
+            - JwtAuth
             - RewritePath=/auth/roles/(?<segment>.*), /auth/roles/${segment}
         - id: auth-permissions
           uri: http://auth-iam-service:8087
           predicates:
             - Path=/auth/permissions, /auth/permissions/*
           filters:
-            - JwtAuthFilter
+            - JwtAuth
             - RewritePath=/auth/permissions/(?<segment>.*), /auth/permissions/${segment}
         - id: auth-sessions
           uri: http://auth-iam-service:8087
           predicates:
             - Path=/auth/sessions, /auth/sessions/*
           filters:
-            - JwtAuthFilter
+            - JwtAuth
             - RewritePath=/auth/sessions/(?<segment>.*), /auth/sessions/${segment}
         - id: auth-audit
           uri: http://auth-iam-service:8087
           predicates:
             - Path=/auth/audit/**
           filters:
-            - JwtAuthFilter
+            - JwtAuth
         
         # Rules Service
         - id: rules-service
@@ -161,7 +230,7 @@ spring:
           predicates:
             - Path=/api/v1/withdrawal
           filters:
-            - JwtAuthFilter
+            - JwtAuth
             - RequestTransform=withdrawal
             - RewritePath=/api/v1/withdrawal, /internal/debit
         
@@ -170,7 +239,7 @@ spring:
           predicates:
             - Path=/api/v1/deposit
           filters:
-            - JwtAuthFilter
+            - JwtAuth
             - RequestTransform=deposit
             - RewritePath=/api/v1/deposit, /internal/credit
         
@@ -179,7 +248,8 @@ spring:
           predicates:
             - Path=/api/v1/balance-inquiry
           filters:
-            - JwtAuthFilter
+            - JwtAuth
+            - RequestTransform=balance-inquiry
             - RewritePath=/api/v1/balance-inquiry, /internal/balance-inquiry
         
         - id: external-agent-balance
@@ -187,7 +257,7 @@ spring:
           predicates:
             - Path=/api/v1/agent/balance
           filters:
-            - JwtAuthFilter
+            - JwtAuth
             - RewritePath=/api/v1/agent/balance, /internal/balance
         
         - id: external-kyc-verify
@@ -195,7 +265,8 @@ spring:
           predicates:
             - Path=/api/v1/kyc/verify
           filters:
-            - JwtAuthFilter
+            - JwtAuth
+            - RequestTransform=kyc-verify
             - RewritePath=/api/v1/kyc/verify, /internal/verify-mykad
         
         - id: external-kyc-biometric
@@ -203,7 +274,8 @@ spring:
           predicates:
             - Path=/api/v1/kyc/biometric
           filters:
-            - JwtAuthFilter
+            - JwtAuth
+            - RequestTransform=kyc-biometric
             - RewritePath=/api/v1/kyc/biometric, /internal/biometric
         
         - id: external-bill-pay
@@ -211,7 +283,8 @@ spring:
           predicates:
             - Path=/api/v1/bill/pay
           filters:
-            - JwtAuthFilter
+            - JwtAuth
+            - RequestTransform=bill-pay
             - RewritePath=/api/v1/bill/pay, /internal/pay-bill
         
         - id: external-topup
@@ -219,7 +292,7 @@ spring:
           predicates:
             - Path=/api/v1/topup
           filters:
-            - JwtAuthFilter
+            - JwtAuth
             - RequestTransform=topup
             - RewritePath=/api/v1/topup, /internal/topup
         
@@ -228,7 +301,8 @@ spring:
           predicates:
             - Path=/api/v1/transfer/duitnow
           filters:
-            - JwtAuthFilter
+            - JwtAuth
+            - RequestTransform=duitnow
             - RewritePath=/api/v1/transfer/duitnow, /internal/duitnow
         
         - id: external-retail-sale
@@ -236,7 +310,8 @@ spring:
           predicates:
             - Path=/api/v1/retail/sale
           filters:
-            - JwtAuthFilter
+            - JwtAuth
+            - RequestTransform=retail-sale
             - RewritePath=/api/v1/retail/sale, /internal/merchant/retail-sale
         
         - id: external-retail-pin-purchase
@@ -244,7 +319,8 @@ spring:
           predicates:
             - Path=/api/v1/retail/pin-purchase
           filters:
-            - JwtAuthFilter
+            - JwtAuth
+            - RequestTransform=retail-pin-purchase
             - RewritePath=/api/v1/retail/pin-purchase, /internal/merchant/pin-purchase
         
         - id: external-retail-cashback
@@ -252,7 +328,8 @@ spring:
           predicates:
             - Path=/api/v1/retail/cashback
           filters:
-            - JwtAuthFilter
+            - JwtAuth
+            - RequestTransform=retail-cashback
             - RewritePath=/api/v1/retail/cashback, /internal/merchant/cash-back
         
         - id: external-ewallet-withdraw
@@ -260,7 +337,7 @@ spring:
           predicates:
             - Path=/api/v1/ewallet/withdraw
           filters:
-            - JwtAuthFilter
+            - JwtAuth
             - RequestTransform=ewallet
             - RewritePath=/api/v1/ewallet/withdraw, /internal/ewallet/withdrawal
         
@@ -269,7 +346,7 @@ spring:
           predicates:
             - Path=/api/v1/ewallet/topup
           filters:
-            - JwtAuthFilter
+            - JwtAuth
             - RequestTransform=ewallet
             - RewritePath=/api/v1/ewallet/topup, /internal/ewallet/topup
         
@@ -278,7 +355,8 @@ spring:
           predicates:
             - Path=/api/v1/essp/purchase
           filters:
-            - JwtAuthFilter
+            - JwtAuth
+            - RequestTransform=essp
             - RewritePath=/api/v1/essp/purchase, /internal/essp/purchase
         
         # Missing routes from E2E tests
@@ -287,7 +365,8 @@ spring:
           predicates:
             - Path=/api/v1/rules/fees
           filters:
-            - JwtAuthFilter
+            - JwtAuth
+            - RequestTransform=rules-fees
             - RewritePath=/api/v1/rules/fees, /internal/fees
         
         - id: external-ledger-balance
@@ -295,7 +374,7 @@ spring:
           predicates:
             - Path=/api/v1/ledger/balance/**
           filters:
-            - JwtAuthFilter
+            - JwtAuth
             - RewritePath=/api/v1/ledger/balance, /internal/balance
         
         - id: external-onboarding-verify-mykad
@@ -303,7 +382,7 @@ spring:
           predicates:
             - Path=/api/v1/onboarding/verify-mykad
           filters:
-            - JwtAuthFilter
+            - JwtAuth
             - RewritePath=/api/v1/onboarding/verify-mykad, /internal/verify-mykad
         
         - id: external-biller-jompay
@@ -311,7 +390,7 @@ spring:
           predicates:
             - Path=/api/v1/billpayment/jompay
           filters:
-            - JwtAuthFilter
+            - JwtAuth
             - RequestTransform=jompay
             - RewritePath=/api/v1/billpayment/jompay, /internal/billpayment/jompay
         
@@ -320,7 +399,7 @@ spring:
           predicates:
             - Path=/api/v1/onboarding/submit-application
           filters:
-            - JwtAuthFilter
+            - JwtAuth
             - RequestTransform=onboarding
             - RewritePath=/api/v1/onboarding/submit-application, /internal/onboarding/application
          
@@ -330,7 +409,7 @@ spring:
           predicates:
             - Path=/api/v1/backoffice/dashboard
           filters:
-            - JwtAuthFilter
+            - JwtAuth
             - RewritePath=/api/v1/backoffice/dashboard, /internal/backoffice/dashboard
         
         - id: backoffice-agents-list
@@ -338,7 +417,7 @@ spring:
           predicates:
             - Path=/api/v1/backoffice/agents
           filters:
-            - JwtAuthFilter
+            - JwtAuth
             - RewritePath=/api/v1/backoffice/agents, /backoffice/agents
         
         - id: backoffice-agents-detail
@@ -346,7 +425,7 @@ spring:
           predicates:
             - Path=/api/v1/backoffice/agents/{id}
           filters:
-            - JwtAuthFilter
+            - JwtAuth
             - RewritePath=/api/v1/backoffice/agents/(?<segment>.*), /backoffice/agents/${segment}
         
         - id: backoffice-transactions
@@ -354,7 +433,7 @@ spring:
           predicates:
             - Path=/api/v1/backoffice/transactions
           filters:
-            - JwtAuthFilter
+            - JwtAuth
             - RewritePath=/api/v1/backoffice/transactions, /internal/backoffice/transactions
         
         - id: backoffice-settlement
@@ -362,7 +441,7 @@ spring:
           predicates:
             - Path=/api/v1/backoffice/settlement
           filters:
-            - JwtAuthFilter
+            - JwtAuth
             - RewritePath=/api/v1/backoffice/settlement, /internal/backoffice/settlement
         
         - id: backoffice-kyc-review
@@ -370,7 +449,7 @@ spring:
           predicates:
             - Path=/api/v1/backoffice/kyc/review-queue
           filters:
-            - JwtAuthFilter
+            - JwtAuth
             - RewritePath=/api/v1/backoffice/kyc/review-queue, /internal/kyc/review-queue
         
         - id: backoffice-discrepancy-maker
@@ -378,7 +457,7 @@ spring:
           predicates:
             - Path=/api/v1/backoffice/discrepancy/*/maker-action
           filters:
-            - JwtAuthFilter
+            - JwtAuth
             - RewritePath=/api/v1/backoffice/discrepancy/(?<caseId>.*)/maker-action, /internal/reconciliation/discrepancy/maker-propose
         
         - id: backoffice-discrepancy-checker-approve
@@ -386,7 +465,7 @@ spring:
           predicates:
             - Path=/api/v1/backoffice/discrepancy/*/checker-approve
           filters:
-            - JwtAuthFilter
+            - JwtAuth
             - RewritePath=/api/v1/backoffice/discrepancy/(?<caseId>.*)/checker-approve, /internal/reconciliation/discrepancy/checker-approve
         
         - id: backoffice-discrepancy-checker-reject
@@ -394,7 +473,7 @@ spring:
           predicates:
             - Path=/api/v1/backoffice/discrepancy/*/checker-reject
           filters:
-            - JwtAuthFilter
+            - JwtAuth
             - RewritePath=/api/v1/backoffice/discrepancy/(?<caseId>.*)/checker-reject, /internal/reconciliation/discrepancy/checker-reject
         
         - id: backoffice-audit-logs
@@ -402,7 +481,7 @@ spring:
           predicates:
             - Path=/api/v1/backoffice/audit-logs
           filters:
-            - JwtAuthFilter
+            - JwtAuth
             - RewritePath=/api/v1/backoffice/audit-logs, /auth/audit/logs
         
         # Admin routes (User Management, Roles) - now pointing to auth-iam-service
@@ -411,7 +490,7 @@ spring:
           predicates:
             - Path=/api/v1/backoffice/admin/users
           filters:
-            - JwtAuthFilter
+            - JwtAuth
             - RewritePath=/api/v1/backoffice/admin/users, /auth/users
         
         - id: admin-users-detail
@@ -419,7 +498,7 @@ spring:
           predicates:
             - Path=/api/v1/backoffice/admin/users/*
           filters:
-            - JwtAuthFilter
+            - JwtAuth
             - RewritePath=/api/v1/backoffice/admin/users/(?<segment>.*), /auth/users/${segment}
         
         - id: admin-roles
@@ -427,7 +506,7 @@ spring:
           predicates:
             - Path=/api/v1/backoffice/admin/roles
           filters:
-            - JwtAuthFilter
+            - JwtAuth
             - RewritePath=/api/v1/backoffice/admin/roles, /auth/roles
         
         # API Docs proxy routes
@@ -484,6 +563,7 @@ management:
 
 logging:
   level:
+    com.agentbanking.gateway: DEBUG
     org.springframework.security: DEBUG
     org.springframework.security.oauth2: DEBUG
     org.springframework.security.oauth2.jwt: DEBUG

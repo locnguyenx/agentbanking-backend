@@ -1,0 +1,25 @@
+# Dockerfile for compiling gateway tests
+FROM eclipse-temurin:21-jdk-alpine AS builder
+WORKDIR /build
+
+# Copy project files
+COPY build.gradle settings.gradle gradlew ./
+COPY gradle/ gradle/
+RUN chmod +x gradlew
+
+COPY gateway/ gateway/
+COPY common/ common/
+
+# Compile main classes first, then test classes
+RUN ./gradlew :gateway:compileJava --no-daemon && \
+    ./gradlew :gateway:compileTestJava --no-daemon
+
+# Print test file count
+RUN echo "=== Test files found ===" && \
+    find gateway/src/test -name "*.java" | wc -l && \
+    echo "=== All test files ===" && \
+    find gateway/src/test -name "*.java"
+
+FROM alpine:latest
+COPY --from=builder /build/gateway/build/classes /test-classes
+CMD ["echo", "Compilation complete"]

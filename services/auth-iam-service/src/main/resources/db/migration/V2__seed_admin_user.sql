@@ -1,7 +1,7 @@
 -- Seed initial admin user and base roles/permissions
--- Password: AdminPass123! (BCrypt hashed)
+-- Password: password (BCrypt hashed)
 
--- Insert admin user (password: AdminPass123!)
+-- Insert admin user (password: password)
 INSERT INTO users (
     user_id,
     username,
@@ -19,7 +19,7 @@ INSERT INTO users (
     'a0000000-0000-0000-0000-000000000001',
     'admin',
     'admin@agentbanking.com',
-    '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy',
+    '$2b$10$X9h9/K9.y92h/R0MMyX7cOLIS/a42nsb.TqXM2yJEBNOR9bpv9Bom',
     'System Administrator',
     'ACTIVE',
     0,

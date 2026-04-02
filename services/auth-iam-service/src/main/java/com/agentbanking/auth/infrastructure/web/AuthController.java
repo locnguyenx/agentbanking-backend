@@ -2,6 +2,7 @@ package com.agentbanking.auth.infrastructure.web;
 
 import com.agentbanking.auth.application.usecase.AuthenticateUserUseCaseImpl;
 import com.agentbanking.auth.domain.model.AuthenticationResult;
+import com.agentbanking.auth.domain.port.in.ManageSessionUseCase;
 import com.agentbanking.auth.infrastructure.web.dto.AuthRequestDto;
 import com.agentbanking.auth.infrastructure.web.dto.AuthResponseDto;
 import com.agentbanking.auth.infrastructure.web.dto.RefreshTokenDto;
@@ -18,9 +19,12 @@ import java.util.UUID;
 public class AuthController {
 
     private final AuthenticateUserUseCaseImpl authenticateUserUseCase;
+    private final ManageSessionUseCase manageSessionUseCase;
 
-    public AuthController(AuthenticateUserUseCaseImpl authenticateUserUseCase) {
+    public AuthController(AuthenticateUserUseCaseImpl authenticateUserUseCase,
+                         ManageSessionUseCase manageSessionUseCase) {
         this.authenticateUserUseCase = authenticateUserUseCase;
+        this.manageSessionUseCase = manageSessionUseCase;
     }
 
     @PostMapping("/token")
@@ -76,5 +80,39 @@ public class AuthController {
         response.setExpiresIn(result.expiresIn());
 
         return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/revoke")
+    public ResponseEntity<?> revoke(@RequestHeader("X-User-Id") String userIdHeader) {
+        try {
+            UUID userId = UUID.fromString(userIdHeader);
+            boolean revoked = manageSessionUseCase.revokeAllSessionsForUser(userId);
+            
+            if (revoked) {
+                return ResponseEntity.noContent().build();
+            } else {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of(
+                    "status", "FAILED",
+                    "error", Map.of(
+                        "code", "ERR_USER_NOT_FOUND",
+                        "message", "User not found or no active sessions",
+                        "action_code", "REVIEW",
+                        "trace_id", UUID.randomUUID().toString(),
+                        "timestamp", java.time.Instant.now().toString()
+                    )
+                ));
+            }
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of(
+                "status", "FAILED",
+                "error", Map.of(
+                    "code", "ERR_INVALID_USER_ID",
+                    "message", "Invalid user ID format",
+                    "action_code", "DECLINE",
+                    "trace_id", UUID.randomUUID().toString(),
+                    "timestamp", java.time.Instant.now().toString()
+                )
+            ));
+        }
     }
 }

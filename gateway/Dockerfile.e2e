@@ -1,0 +1,20 @@
+# Dockerfile for running gateway E2E tests
+FROM eclipse-temurin:21-jdk-alpine AS builder
+WORKDIR /build
+
+# Copy project files
+COPY build.gradle settings.gradle gradlew ./
+COPY gradle/ gradle/
+RUN chmod +x gradlew
+
+COPY gateway/ gateway/
+COPY common/ common/
+
+# Run E2E tests
+RUN ./gradlew :gateway:e2eTest --no-daemon --continue 2>&1 || true
+
+# Copy test results
+FROM alpine:latest
+COPY --from=builder /build/gateway/build/reports/tests/e2eTest /test-reports
+COPY --from=builder /build/gateway/build/test-results/e2eTest /test-results
+CMD ["ls", "-la", "/test-results"]

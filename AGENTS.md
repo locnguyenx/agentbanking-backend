@@ -172,6 +172,8 @@ Add to main application class:
 
 ## Coding Standards
 
+**Coding Reference:** Always use Context7 when you need library/API documentation, code generation, setup or configuration steps without having to explicitly ask.
+
 ### Immutability
 * Use Java Records for DTOs where possible.
 

@@ -323,7 +323,7 @@ public class LedgerService {
     }
     
      public BigDecimal getBalance(UUID agentId) {
-         AgentFloatRecord agentFloat = agentFloatRepository.findByIdWithLock(agentId);
+         AgentFloatRecord agentFloat = agentFloatRepository.findById(agentId);
          if (agentFloat == null) {
              throw new LedgerException(ErrorCodes.ERR_AGENT_FLOAT_NOT_FOUND, "RETRY");
          }

@@ -151,10 +151,10 @@ main() {
     section "1. Auth/IAM Setup"
     
     # Create admin via bootstrap
-    create_user_via_bootstrap "admin" "admin@agentbanking.com" "AdminPass123!" "System Administrator"
+    create_user_via_bootstrap "admin" "admin@agentbanking.com" "password" "System Administrator"
     
     # Get admin token
-    local admin_token=$(get_token "admin" "AdminPass123!")
+    local admin_token=$(get_token "admin" "password")
     
     if [ -z "$admin_token" ]; then
         log_error "Failed to get admin token"

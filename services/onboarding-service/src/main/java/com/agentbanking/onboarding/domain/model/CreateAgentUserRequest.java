@@ -1,4 +1,4 @@
-package com.agentbanking.onboarding.infrastructure.external;
+package com.agentbanking.onboarding.domain.model;
 
 import java.util.UUID;
 

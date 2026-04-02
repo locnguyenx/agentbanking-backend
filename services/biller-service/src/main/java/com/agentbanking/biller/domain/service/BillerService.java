@@ -6,13 +6,11 @@ import com.agentbanking.biller.domain.port.out.BillPaymentRepository;
 import com.agentbanking.biller.domain.port.out.EWalletTransactionRepository;
 import com.agentbanking.biller.domain.port.out.EsspTransactionRepository;
 import com.agentbanking.biller.domain.port.out.TopupTransactionRepository;
-import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
-@Service
 public class BillerService {
 
     private final BillerConfigRepository billerConfigRepository;

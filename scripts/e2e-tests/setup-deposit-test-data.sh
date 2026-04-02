@@ -194,7 +194,7 @@ main() {
         -d '{
             "username": "admin",
             "email": "admin@agentbanking.com",
-            "password": "AdminPass123!",
+            "password": "password",
             "fullName": "System Administrator"
         }')
     local admin_status=$(get_status "$admin_bootstrap")
@@ -203,7 +203,7 @@ main() {
     fi
 
     # Get admin token
-    local admin_token=$(get_token "admin" "AdminPass123!")
+    local admin_token=$(get_token "admin" "password")
     if [ -z "$admin_token" ]; then
         log_error "Cannot authenticate as admin. Run seed-test-data.sh first."
         exit 1

@@ -80,7 +80,11 @@ done
 ```
 > **Note:** Script requires PostgreSQL running locally. For full environment, use Docker instead.
 
+# Integration tests for services
+
 ## **Integration tests for EXTERNAL APIs**
+
+Test class: ExternalApiIntegrationTest.java
 
 All 24 integration tests passed:
 External API Tests:
@@ -118,8 +122,43 @@ docker-compose --profile infra --profile backend --profile gateway up -d
 # Run tests
 ./gradlew :gateway:test --tests "ExternalApiIntegrationTest"
 ```
+## Current issue with server integration tests
 
-# Integration testing
+Investigate `ledger service`:
+**Why tests didn't catch this issue:**
+1. Unit tests (LedgerServiceTest.java) mock at the repository interface level:
+      when(agentFloatRepository.findByIdWithLock(agentId)).thenReturn(agentFloat);
+      The mock doesn't verify if the method is appropriate for the transaction context - it just returns whatever is configured.
+2. Integration tests (LedgerIntegrationTest.java) use @SpringBootTest with @MockBean - they mock external services but also mock the repository behavior, so no real JPA transaction is tested.
+3. No real endpoint test - There's no test that calls /internal/balance/{agentId} with a real database to verify transaction behavior.
+The gap: Tests mock at the wrong level. They test that the service calls the repository, but don't test that the repository call is compatible with the transaction context (@Transactional(readOnly = true)).
+Recommendation: Add an integration test that tests the actual endpoint without mocking the repository:
+@Test
+void getBalance_endpoint_returnsAgentBalance() {
+    // Uses real database, tests actual transaction behavior
+    ResponseEntity<Map> response = restTemplate.getForEntity(
+        "/internal/balance/{agentId}", Map.class, AGENT_ID);
+    
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+    assertThat(response.getBody()).containsKey("balance");
+}
+
+## Infra dependencies for integration test
+
+- Default option: user Testcontainers for Postgresql + Redis + Kafka
+- Fall back to Postgresql container (i.e in Windows):
+
+**Usage:**
+- ./gradlew test → uses tc profile (Testcontainers, default)
+- ./gradlew test -PtestProfile=local → uses test profile (localhost Docker Compose)
+
+```bash
+# Fallback (localhost Docker Compose)
+docker compose up -d
+./gradlew test -PtestProfile=local
+```
+
+# API Gateway Integration testing with script (DON'T USE THIS)
 
 E2E Testing Infrastructure Complete!
 

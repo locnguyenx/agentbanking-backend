@@ -1,5 +1,6 @@
 plugins {
     id 'java-library'
+    id 'java-test-fixtures'
     id 'org.springframework.boot' apply false
     id 'io.spring.dependency-management' apply false
 }
@@ -26,9 +27,22 @@ dependencies {
     api 'org.slf4j:slf4j-api'
     api 'org.springframework.boot:spring-boot-starter-web'
     api 'org.springframework.boot:spring-boot-starter-validation'
-    
+
+    testFixturesImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testFixturesImplementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    testFixturesImplementation 'org.testcontainers:testcontainers:1.20.1'
+    testFixturesImplementation 'org.testcontainers:junit-jupiter:1.20.1'
+    testFixturesImplementation 'org.testcontainers:postgresql:1.20.1'
+    testFixturesImplementation 'org.testcontainers:kafka:1.20.1'
+
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     testImplementation 'org.junit.jupiter:junit-jupiter:5.10.0'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    testImplementation 'org.testcontainers:testcontainers:1.20.1'
+    testImplementation 'org.testcontainers:junit-jupiter:1.20.1'
+    testImplementation 'org.testcontainers:postgresql:1.20.1'
+    testImplementation 'org.testcontainers:kafka:1.20.1'
 }
 
 tasks.named('bootJar') {

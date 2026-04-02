@@ -463,6 +463,13 @@ paths:
       tags:
       - reconciliation-controller (ledger-service)
       operationId: makerPropose
+      parameters:
+      - name: caseId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
       requestBody:
         content:
           application/json:
@@ -487,6 +494,13 @@ paths:
       tags:
       - reconciliation-controller (ledger-service)
       operationId: checkerReject
+      parameters:
+      - name: caseId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
       requestBody:
         content:
           application/json:
@@ -511,6 +525,13 @@ paths:
       tags:
       - reconciliation-controller (ledger-service)
       operationId: checkerApprove
+      parameters:
+      - name: caseId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
       requestBody:
         content:
           application/json:
@@ -651,7 +672,7 @@ paths:
       operationId: getBalance
       parameters:
       - name: agentId
-        in: path
+        in: query
         required: true
         schema:
           type: string
@@ -788,7 +809,7 @@ paths:
     post:
       tags:
       - onboarding-controller (onboarding-service)
-      operationId: verifyMyKad
+      operationId: verifyMyKadKyc
       requestBody:
         content:
           application/json:
@@ -909,6 +930,196 @@ paths:
                 type: object
                 additionalProperties:
                   type: object
+  /api/v1/auth/token:
+    post:
+      tags:
+      - auth-controller (auth-iam-service)
+      operationId: authenticateUser
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TokenRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/auth/refresh:
+    post:
+      tags:
+      - auth-controller (auth-iam-service)
+      operationId: refreshToken
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshTokenRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/auth/revoke:
+    post:
+      tags:
+      - auth-controller (auth-iam-service)
+      operationId: revokeToken
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RevokeTokenRequest'
+        required: true
+      responses:
+        '204':
+          description: No Content
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/auth/password/forgot:
+    post:
+      tags:
+      - user-management-controller (auth-iam-service)
+      operationId: forgotPassword
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ForgotPasswordRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ForgotPasswordResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/auth/password/reset:
+    post:
+      tags:
+      - user-management-controller (auth-iam-service)
+      operationId: resetPassword
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResetPasswordRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResetPasswordResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/auth/password/change:
+    post:
+      tags:
+      - user-management-controller (auth-iam-service)
+      operationId: changePassword
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangePasswordRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChangePasswordResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/backoffice/agents/{agentId}/user-status:
+    get:
+      tags:
+      - user-management-controller (auth-iam-service)
+      operationId: getAgentUserStatus
+      parameters:
+      - name: agentId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentUserStatusResponse'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/backoffice/agents/{agentId}/create-user:
+    post:
+      tags:
+      - user-management-controller (auth-iam-service)
+      operationId: createAgentUser
+      parameters:
+      - name: agentId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /api/v1/backoffice/audit-logs:
     get:
       tags:
@@ -2081,4 +2292,138 @@ components:
             timestamp:
               type: string
               format: date-time
+
+    # Token Management
+    TokenRequest:
+      required:
+      - username
+      - password
+      type: object
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+          minLength: 8
+          maxLength: 64
+    TokenResponse:
+      required:
+      - access_token
+      - refresh_token
+      - expires_in
+      - token_type
+      type: object
+      properties:
+        access_token:
+          type: string
+        refresh_token:
+          type: string
+        expires_in:
+          type: integer
+          format: int32
+          description: Token expiry in seconds
+        token_type:
+          type: string
+          enum: [Bearer]
+    RefreshTokenRequest:
+      required:
+      - refresh_token
+      type: object
+      properties:
+        refresh_token:
+          type: string
+    RevokeTokenRequest:
+      type: object
+      properties:
+        token:
+          type: string
+          description: Optional. If not provided, revokes all sessions for the current user.
+
+    # Password Management
+    ForgotPasswordRequest:
+      required:
+      - username
+      type: object
+      properties:
+        username:
+          type: string
+    ForgotPasswordResponse:
+      type: object
+      properties:
+        message:
+          type: string
+    ResetPasswordRequest:
+      required:
+      - username
+      - otp
+      - newPassword
+      type: object
+      properties:
+        username:
+          type: string
+        otp:
+          type: string
+          minLength: 6
+          maxLength: 6
+        newPassword:
+          type: string
+          minLength: 8
+          maxLength: 64
+    ResetPasswordResponse:
+      type: object
+      properties:
+        message:
+          type: string
+    ChangePasswordRequest:
+      required:
+      - currentPassword
+      - newPassword
+      type: object
+      properties:
+        currentPassword:
+          type: string
+        newPassword:
+          type: string
+          minLength: 8
+          maxLength: 64
+    ChangePasswordResponse:
+      type: object
+      properties:
+        message:
+          type: string
+
+    # Agent User Management
+    AgentUserStatusResponse:
+      type: object
+      properties:
+        agentId:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [PENDING, CREATED, FAILED]
+        userId:
+          type: string
+          format: uuid
+        error:
+          type: string
+    UserResponse:
+      type: object
+      properties:
+        userId:
+          type: string
+          format: uuid
+        username:
+          type: string
+        email:
+          type: string
+        fullName:
+          type: string
+        status:
+          type: string
+        userType:
+          type: string
+          enum: [INTERNAL, EXTERNAL]
+        mustChangePassword:
+          type: boolean
 tags: []

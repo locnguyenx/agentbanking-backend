@@ -25,9 +25,12 @@ spring:
     port: 6379
     timeout: 10s
   kafka:
-    bootstrap-servers: localhost:9092
+    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:kafka:9092}
   cloud:
     stream:
+      kafka:
+        binder:
+          brokers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:kafka:9092}
       bindings:
         userCreated-out-0:
           destination: user.lifecycle

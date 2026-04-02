@@ -2,6 +2,7 @@ package com.agentbanking.auth.application.usecase;
 
 import com.agentbanking.auth.domain.model.UserRecord;
 import com.agentbanking.auth.domain.model.UserStatus;
+import com.agentbanking.auth.domain.model.UserType;
 import com.agentbanking.auth.domain.port.in.ManageUserUseCase;
 import com.agentbanking.auth.domain.port.out.PasswordHasher;
 import com.agentbanking.auth.domain.port.out.UserRepository;
@@ -46,10 +47,10 @@ public class ManageUserUseCaseImpl implements ManageUserUseCase {
                 hashedPassword,
                 userRecord.fullName(),
                 userRecord.status() != null ? userRecord.status() : UserStatus.ACTIVE,
-                userRecord.userType(),
+                userRecord.userType() != null ? userRecord.userType() : UserType.INTERNAL,
                 userRecord.agentId(),
                 userRecord.agentCode(),
-                userRecord.mustChangePassword(),
+                userRecord.mustChangePassword() != null ? userRecord.mustChangePassword() : false,
                 userRecord.temporaryPasswordExpiresAt(),
                 userRecord.permissions(),
                 0, // failedLoginAttempts

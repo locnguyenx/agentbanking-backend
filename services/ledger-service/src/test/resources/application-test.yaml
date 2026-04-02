@@ -1,4 +1,13 @@
 spring:
+  main:
+    allow-bean-definition-overriding: true
+  datasource:
+    url: jdbc:postgresql://localhost:5434/ledger_db
+    username: postgres
+    password: postgres
+  jpa:
+    hibernate:
+      ddl-auto: none
   kafka:
     bootstrap-servers: localhost:0
     producer:

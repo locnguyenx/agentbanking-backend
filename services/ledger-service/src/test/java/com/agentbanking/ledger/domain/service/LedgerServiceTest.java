@@ -90,6 +90,8 @@ class LedgerServiceTest {
             new BigDecimal("101.6869"),
             "880101011234",
             "0123456789",
+            null,
+            null,
             java.time.LocalDateTime.now(),
             java.time.LocalDateTime.now()
         );
@@ -249,7 +251,7 @@ class LedgerServiceTest {
     
     @Test
     void getBalance_withValidAgent_returnsBalance() {
-        when(agentFloatRepository.findByIdWithLock(agentId)).thenReturn(agentFloat);
+        when(agentFloatRepository.findById(agentId)).thenReturn(agentFloat);
         
         BigDecimal balance = ledgerService.getBalance(agentId);
         
@@ -258,7 +260,7 @@ class LedgerServiceTest {
     
     @Test
     void getBalance_withNonExistentAgent_throwsException() {
-        when(agentFloatRepository.findByIdWithLock(agentId)).thenReturn(null);
+        when(agentFloatRepository.findById(agentId)).thenReturn(null);
         
         assertThrows(com.agentbanking.common.exception.LedgerException.class, () -> 
             ledgerService.getBalance(agentId)

@@ -177,3 +177,102 @@ Issue 5: Onboarding Service AML Screening Mock Missing
 - Auth tests: ✅ passing
 - Onboarding tests: ❌ AML screening fails
 - Transaction tests: ❌ 500 errors (transformation not working)
+
+# Testing 2026-03-31
+
+## API Gateway
+
+**Archivement**
+- Gateway filter & transform: done for all apis in openapi.yaml
+- Creat all e2e test classes with correct seed data
+- Compile all tests
+- Doc: `docs\superpowers\specs\gateway-transformation\2026-03-31-gateway-transformation-SPEC.md`
+
+**Summary of Remaining Issues**
+- stuck with Kafka to generate token
+- run all e2e tests to verify test setup
+
+## Services
+
+**Archivement**
+- Create all real integration tests for all services, don't use mock
+- Fix ledger-service issue
+- Run all integration tests
+
+**Summary of Remaining Issues**
+- auth-iam-service test fail
+- Next action: need to check if existing tests (unit/persistence) have worked, to make sure have no issue with DB
+
+# Testing 2026-04-01
+
+## Services
+
+All integration tests are now using PostgreSQL containers (via existing docker-compose containers). Let me provide a summary of the changes made:
+
+**Summary of Changes**
+1. auth-iam-service:
+   - Updated application-test.yaml to use correct PostgreSQL container credentials (auth_user/auth_password on port 5439)
+   - Added TestConfiguration to mock Redis components (RedisConnectionFactory and StringRedisTemplate)
+   - All 4 integration tests passing
+2. rules-service:
+   - Verified existing configuration works with PostgreSQL container (port 5433)
+   - Fixed createFeeConfig_withValidData_shouldReturnResult test by changing transaction type from "CASH_DEPOSIT" to "PIN_PURCHASE" (which was causing unique constraint violations)
+   - All 8 integration tests passing
+3. onboarding-service:
+   - Verified existing configuration works with PostgreSQL container (port 5435)
+   - All 7 integration tests passing
+4. biller-service:
+   - Verified existing configuration works with PostgreSQL container (port 5437)
+   - All 4 integration tests passing
+5. switch-adapter-service:
+   - Verified existing configuration works with PostgreSQL container (port 5436)
+   - All 4 integration tests passing
+6. orchestrator-service:
+   - Updated application-test.yaml to exclude Redis auto-configuration
+   - Added @MockBean for IdempotencyService to avoid Redis dependency
+   - All integration tests passing
+All services are now properly configured to run integration tests against real PostgreSQL containers, following the pattern established by the existing services.
+All integration tests across all microservices are now configured to use PostgreSQL containers. Here's the summary:
+
+**Completed Changes**
+| Service	| Changes	|
+| -----	| -----	|
+| auth-iam-service	| Updated credentials (auth_user/auth_password), added Redis mocks	|
+| rules-service	| Fixed test data for fee config test	|
+| onboarding-service	| No changes needed	|
+| biller-service	| No changes needed	|
+| switch-adapter-service	| No changes needed	|
+| orchestrator-service	| Excluded Redis, mocked IdempotencyService	|
+
+**Key Fixes Applied**
+1. auth-iam-service: The container was using different credentials (auth_user/auth_password vs postgres/postgres). Updated application-test.yaml accordingly and added Redis mock configuration.
+2. rules-service: Fixed duplicate key constraint violation in createFeeConfig_withValidData_shouldReturnResult test by using a different transaction type (PIN_PURCHASE instead of CASH_DEPOSIT).
+3. orchestrator-service: Excluded Redis auto-configuration and mocked IdempotencyService to avoid Redis dependency.
+
+> The rules-service test is a true integration test - no mocks at all! It tests the full HTTP → Controller → Service → Repository → PostgreSQL flow.
+
+**Remained Issues:**
+
+These tests are using @MockBean extensively.
+
+This means the tests are NOT true integration tests - they're more like controller unit tests with MockMvc. They don't test the full integration flow from HTTP → Controller → Service → Repository → Database.
+
+The rules-service test has NO mocks - it's a true integration test. Let me compare what each test actually validates:
+
+| Service	| Mocks	| Tests Full Stack?	|
+| -----	| -----	| -----	|
+| rules-service	| 0 mocks	| ✅ Yes - HTTP → Controller → Service → Repository → DB	|
+| onboarding-service	| 1 mock (external Feign client)	| ✅ Yes - except external services	|
+| biller-service	| 0 mocks	| ✅ Yes	|
+| switch-adapter-service	| 0 mocks	| ✅ Yes	|
+| auth-iam-service	| 1 mock (main use case)	| ❌ No - only tests controller	|
+| orchestrator-service	| 1 mock (Redis)	| ❌ Partial - Redis mocked	|
+| ledger-service	| 14 mocks	| ❌ No - heavily mocked	|
+
+**Updates:**
+- all integration tests use testcontainers for Posgresql, Kafka, Redis, remove all infra mocks 
+- auth-iam-service: all tests PASSED
+
+### ACTION ITEMS
+
+run integration tests for all services

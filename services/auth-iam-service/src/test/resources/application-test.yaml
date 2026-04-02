@@ -1,48 +1,17 @@
-server:
-  port: 8081
-
 spring:
-  application:
-    name: auth-iam-service
+  main:
+    allow-bean-definition-overriding: true
   datasource:
-    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
-    username: sa
-    password: 
-    driver-class-name: org.h2.Driver
+    url: jdbc:postgresql://localhost:5439/authdb
+    username: auth_user
+    password: auth_password
   jpa:
-    database-platform: org.hibernate.dialect.H2Dialect
     hibernate:
       ddl-auto: none
-    show-sql: true
-    properties:
-      hibernate:
-        format_sql: true
-  flyway:
-    enabled: false
-  sql:
-    init:
-      mode: always
-      schema-locations: classpath:schema-test.sql
-  h2:
-    console:
-      enabled: true
   autoconfigure:
     exclude:
-      - org.springframework.boot.autoconfigure.security.oauth2.resource.servlet.OAuth2ResourceServerAutoConfiguration
-  security:
-    oauth2:
-      resourceserver:
-        jwt:
-          issuer-uri: http://localhost:8087
-
-jwt:
-  secret: test-secret-key-for-testing-only-not-for-production
-  access-token-expiration-minutes: 15
-  refresh-token-expiration-minutes: 1440
-
-logging:
-  level:
-    com.agentbanking.auth: DEBUG
-    org.springframework.security: DEBUG
-    org.hibernate.SQL: DEBUG
-    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+      - org.springframework.boot.autoconfigure.kafka.KafkaAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
+  flyway:
+    enabled: true
+    locations: filesystem:src/main/resources/db/migration
