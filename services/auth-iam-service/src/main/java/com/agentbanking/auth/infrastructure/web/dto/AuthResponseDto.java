@@ -1,13 +1,22 @@
 package com.agentbanking.auth.infrastructure.web.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 /**
- * DTO for authentication response
+ * DTO for authentication response - RFC 6749 standard format
  */
 public class AuthResponseDto {
 
+    @JsonProperty("access_token")
     private String accessToken;
+
+    @JsonProperty("refresh_token")
     private String refreshToken;
+
+    @JsonProperty("expires_in")
     private long expiresIn;
+
+    @JsonProperty("token_type")
     private String tokenType = "Bearer";
 
     // Getters and setters

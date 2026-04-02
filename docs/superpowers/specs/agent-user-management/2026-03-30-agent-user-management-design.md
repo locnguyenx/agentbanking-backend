@@ -255,13 +255,13 @@ public interface AuthServiceClient {
 
 | Route ID | External Path | Target Service | Rewrite | Auth |
 |----------|--------------|----------------|---------|------|
-| `auth-password-forgot` | `/auth/password/forgot` | auth-iam-service:8087 | `/auth/password/forgot` | Public |
-| `auth-password-reset` | `/auth/password/reset` | auth-iam-service:8087 | `/auth/password/reset` | Public |
-| `auth-password-change` | `/auth/password/change` | auth-iam-service:8087 | `/auth/password/change` | JwtAuthFilter |
+| `auth-password-forgot` | `/api/v1/auth/password/forgot` | auth-iam-service:8087 | `/auth/password/forgot` | Public |
+| `auth-password-reset` | `/api/v1/auth/password/reset` | auth-iam-service:8087 | `/auth/password/reset` | Public |
+| `auth-password-change` | `/api/v1/auth/password/change` | auth-iam-service:8087 | `/auth/password/change` | JwtAuthFilter |
 | `backoffice-agent-user-status` | `/api/v1/backoffice/agents/{agentId}/user-status` | auth-iam-service:8087 | `/auth/users/agent/{agentId}/status` | JwtAuthFilter |
 | `backoffice-agent-user-create` | `/api/v1/backoffice/agents/{agentId}/create-user` | auth-iam-service:8087 | `/auth/users/agent/{agentId}/create` | JwtAuthFilter |
 
-Password endpoints follow the existing `/auth/` prefix convention (same as `/auth/token`, `/auth/refresh`, `/auth/users/bootstrap`). Agent user status endpoints follow the existing `/api/v1/backoffice/` convention.
+All external-facing paths follow the `/api/v1/...` convention (consistent with the rest of the platform API).
 
 ### Gateway YAML
 
@@ -285,24 +285,29 @@ Password endpoints follow the existing `/auth/` prefix convention (same as `/aut
     - JwtAuthFilter
     - RewritePath=/api/v1/backoffice/agents/(?<agentId>.*)/create-user, /auth/users/agent/${agentId}/create
 
-# Public password endpoints (consistent with /auth/ prefix)
+# Public password endpoints (/api/v1 prefix for external-facing consistency)
 - id: auth-password-forgot
   uri: http://auth-iam-service:8087
   predicates:
-    - Path=/auth/password/forgot
+    - Path=/api/v1/auth/password/forgot
+  filters:
+    - RewritePath=/api/v1/auth/password/forgot, /auth/password/forgot
 
 - id: auth-password-reset
   uri: http://auth-iam-service:8087
   predicates:
-    - Path=/auth/password/reset
+    - Path=/api/v1/auth/password/reset
+  filters:
+    - RewritePath=/api/v1/auth/password/reset, /auth/password/reset
 
-# Protected password change (consistent with /auth/ prefix)
+# Protected password change
 - id: auth-password-change
   uri: http://auth-iam-service:8087
   predicates:
-    - Path=/auth/password/change
+    - Path=/api/v1/auth/password/change
   filters:
     - JwtAuthFilter
+    - RewritePath=/api/v1/auth/password/change, /auth/password/change
 ```
 
 ### Feign URL Property (onboarding-service application.yaml)

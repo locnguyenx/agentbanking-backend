@@ -52,9 +52,9 @@ class AuthControllerIntegrationTest extends AbstractIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.accessToken").exists())
-                .andExpect(jsonPath("$.refreshToken").exists())
-                .andExpect(jsonPath("$.expiresIn").exists());
+                .andExpect(jsonPath("$.access_token").exists())
+                .andExpect(jsonPath("$.refresh_token").exists())
+                .andExpect(jsonPath("$.expires_in").exists());
     }
 
     @Test
@@ -106,13 +106,13 @@ class AuthControllerIntegrationTest extends AbstractIntegrationTest {
                 .andReturn();
 
         String responseBody = authResult.getResponse().getContentAsString();
-        // Extract refresh token from response
-        String refreshToken = responseBody.replaceAll(".*\"refreshToken\":\"([^\"]+)\".*", "$1");
+        // Extract refresh token from response (RFC 6749 format)
+        String refreshToken = responseBody.replaceAll(".*\"refresh_token\":\"([^\"]+)\".*", "$1");
 
-        // Now use the refresh token to get new tokens
+        // Now use the refresh token to get new tokens (RFC 6749 format)
         String refreshRequestBody = """
             {
-                "refreshToken": "%s"
+                "refresh_token": "%s"
             }
             """.formatted(refreshToken);
 
@@ -120,15 +120,15 @@ class AuthControllerIntegrationTest extends AbstractIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(refreshRequestBody))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.accessToken").exists())
-                .andExpect(jsonPath("$.refreshToken").exists());
+                .andExpect(jsonPath("$.access_token").exists())
+                .andExpect(jsonPath("$.refresh_token").exists());
     }
 
     @Test
     void refreshToken_withInvalidRefreshToken_shouldReturn401() throws Exception {
         String requestBody = """
             {
-                "refreshToken": "invalid-refresh-token"
+                "refresh_token": "invalid-refresh-token"
             }
             """;
 

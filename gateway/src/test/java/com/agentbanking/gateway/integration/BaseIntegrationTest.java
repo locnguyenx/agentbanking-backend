@@ -140,7 +140,7 @@ public abstract class BaseIntegrationTest {
 
         try {
             JsonNode node = objectMapper.readTree(response);
-            return node.get("accessToken").asText();
+            return node.get("access_token").asText();
         } catch (Exception e) {
             throw new RuntimeException("Failed to parse token response", e);
         }

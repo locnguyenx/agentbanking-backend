@@ -259,10 +259,12 @@ public class UserManagementService implements ManageUserUseCase, CreateAgentUser
 
         LocalDateTime tempPasswordExpiresAt = LocalDateTime.now().plusDays(3);
 
+        String effectiveEmail = email != null ? email : agentCode + "@agent.local";
+
         UserRecord user = new UserRecord(
                 UUID.randomUUID(),
                 agentCode,
-                email,
+                effectiveEmail,
                 phone,
                 hashedPassword,
                 businessName,

@@ -94,7 +94,7 @@ public class CleanTestData {
                     .getResponseBody();
 
             JsonNode node = objectMapper.readTree(response);
-            return node.has("accessToken") ? node.get("accessToken").asText() : null;
+            return node.has("access_token") ? node.get("access_token").asText() : null;
         } catch (Exception e) {
             System.out.println("Failed to get admin token: " + e.getMessage());
             return null;

@@ -56,7 +56,76 @@ spring:
           uri: http://auth-iam-service:8087
           predicates:
             - Path=/docs/auth/**
-        
+
+        # ============================================================
+        # External Auth Token endpoints (public - no JwtAuth required)
+        # ============================================================
+        - id: external-auth-token
+          uri: http://auth-iam-service:8087
+          predicates:
+            - Path=/api/v1/auth/token
+          filters:
+            - RewritePath=/api/v1/auth/token, /auth/token
+
+        - id: external-auth-refresh
+          uri: http://auth-iam-service:8087
+          predicates:
+            - Path=/api/v1/auth/refresh
+          filters:
+            - RewritePath=/api/v1/auth/refresh, /auth/refresh
+
+        - id: external-auth-revoke
+          uri: http://auth-iam-service:8087
+          predicates:
+            - Path=/api/v1/auth/revoke
+          filters:
+            - JwtAuth
+            - RewritePath=/api/v1/auth/revoke, /auth/revoke
+
+        # ============================================================
+        # External Password endpoints (forgot/reset public, change protected)
+        # ============================================================
+        - id: external-auth-password-forgot
+          uri: http://auth-iam-service:8087
+          predicates:
+            - Path=/api/v1/auth/password/forgot
+          filters:
+            - RewritePath=/api/v1/auth/password/forgot, /auth/password/forgot
+
+        - id: external-auth-password-reset
+          uri: http://auth-iam-service:8087
+          predicates:
+            - Path=/api/v1/auth/password/reset
+          filters:
+            - RewritePath=/api/v1/auth/password/reset, /auth/password/reset
+
+        - id: external-auth-password-change
+          uri: http://auth-iam-service:8087
+          predicates:
+            - Path=/api/v1/auth/password/change
+          filters:
+            - JwtAuth
+            - RewritePath=/api/v1/auth/password/change, /auth/password/change
+
+        # ============================================================
+        # External Agent User Management endpoints (protected)
+        # ============================================================
+        - id: external-backoffice-agent-user-status
+          uri: http://auth-iam-service:8087
+          predicates:
+            - Path=/api/v1/backoffice/agents/*/user-status
+          filters:
+            - JwtAuth
+            - RewritePath=/api/v1/backoffice/agents/(?<agentId>.*)/user-status, /auth/users/agent/${agentId}/status
+
+        - id: external-backoffice-agent-create-user
+          uri: http://auth-iam-service:8087
+          predicates:
+            - Path=/api/v1/backoffice/agents/*/create-user
+          filters:
+            - JwtAuth
+            - RewritePath=/api/v1/backoffice/agents/(?<agentId>.*)/create-user, /auth/users/agent/${agentId}/create
+
         # Password endpoints (public)
         - id: auth-password-forgot
           uri: http://auth-iam-service:8087

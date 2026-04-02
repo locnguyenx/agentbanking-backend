@@ -69,10 +69,6 @@ project(':mock-server').tasks.named('bootJar') {
     enabled = true
 }
 
-project(':mock-jwt-issuer').tasks.named('bootJar') {
-    enabled = true
-}
-
 // Verify hexagonal architecture for all services with domain layer
 subprojects {
     tasks.named('check').configure {
