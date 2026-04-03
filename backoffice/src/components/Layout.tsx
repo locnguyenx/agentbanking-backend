@@ -1,7 +1,8 @@
 import { Outlet, NavLink, useLocation } from 'react-router-dom'
 import { 
   LayoutDashboard, 
-  Users, 
+  Users,
+  UserCog,
   ArrowLeftRight, 
   FileCheck, 
   FileText,
@@ -15,6 +16,7 @@ import { useState } from 'react'
 const navItems = [
   { path: '/', icon: LayoutDashboard, label: 'Dashboard' },
   { path: '/agents', icon: Users, label: 'Agents' },
+  { path: '/users', icon: UserCog, label: 'User Management' },
   { path: '/transactions', icon: ArrowLeftRight, label: 'Transactions' },
   { path: '/settlement', icon: FileText, label: 'Settlement' },
   { path: '/kyc-review', icon: FileCheck, label: 'KYC Review' },
@@ -279,6 +281,24 @@ export function Layout() {
                   Super Admin
                 </div>
               </div>
+              <button 
+                onClick={() => {
+                  localStorage.removeItem('backoffice_token')
+                  window.location.href = '/login'
+                }}
+                style={{
+                  marginLeft: 8,
+                  padding: '6px 12px',
+                  background: '#fee2e2',
+                  border: 'none',
+                  borderRadius: 6,
+                  color: '#dc2626',
+                  fontSize: 12,
+                  cursor: 'pointer'
+                }}
+              >
+                Logout
+              </button>
             </div>
           </div>
         </header>

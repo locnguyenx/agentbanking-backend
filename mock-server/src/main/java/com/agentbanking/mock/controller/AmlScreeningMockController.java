@@ -1,12 +1,16 @@
 package com.agentbanking.mock.controller;
 
 import com.agentbanking.mock.data.TestDataService;
-import com.agentbanking.onboarding.domain.model.AmlStatus;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Map;
+
+enum AmlStatus {
+    CLEAN, HIGH_RISK, MEDIUM_RISK, PENDING_REVIEW
+}
 
 /**
  * Mock controller for AML screening service.

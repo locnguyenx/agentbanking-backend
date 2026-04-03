@@ -31,7 +31,7 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          secret: ""
+          secret: ${JWT_SECRET:your-super-secret-jwt-key-change-in-production-minimum-32-chars-long}
   cloud:
     gateway:
       routes:
@@ -116,7 +116,7 @@ spring:
             - Path=/api/v1/backoffice/agents/*/user-status
           filters:
             - JwtAuth
-            - RewritePath=/api/v1/backoffice/agents/(?<agentId>.*)/user-status, /auth/users/agent/${agentId}/status
+            - RewritePath=/api/v1/backoffice/agents/(?<agentId>.*)/user-status, /internal/users/agent/${agentId}/status
 
         - id: external-backoffice-agent-create-user
           uri: http://auth-iam-service:8087
@@ -124,7 +124,7 @@ spring:
             - Path=/api/v1/backoffice/agents/*/create-user
           filters:
             - JwtAuth
-            - RewritePath=/api/v1/backoffice/agents/(?<agentId>.*)/create-user, /auth/users/agent/${agentId}/create
+            - RewritePath=/api/v1/backoffice/agents/(?<agentId>.*)/create-user, /internal/users/agent/${agentId}/create
 
         # Password endpoints (public)
         - id: auth-password-forgot
@@ -152,10 +152,10 @@ spring:
         - id: auth-users
           uri: http://auth-iam-service:8087
           predicates:
-            - Path=/auth/users, /auth/users/*
+            - Path=/api/v1/auth/users
           filters:
             - JwtAuth
-            - RewritePath=/auth/users/(?<segment>.*), /auth/users/${segment}
+            - RewritePath=/api/v1/auth/users, /auth/users
         - id: auth-roles
           uri: http://auth-iam-service:8087
           predicates:

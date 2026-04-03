@@ -6,12 +6,12 @@ import com.agentbanking.auth.domain.port.in.ManageSessionUseCase;
 import com.agentbanking.auth.infrastructure.web.dto.AuthRequestDto;
 import com.agentbanking.auth.infrastructure.web.dto.AuthResponseDto;
 import com.agentbanking.auth.infrastructure.web.dto.RefreshTokenDto;
+import com.agentbanking.common.exception.ErrorResponse;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -35,16 +35,8 @@ public class AuthController {
         AuthenticationResult result = authenticateUserUseCase.authenticate(username, password);
 
         if (result == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(
-                "status", "FAILED",
-                "error", Map.of(
-                    "code", "ERR_INVALID_CREDENTIALS",
-                    "message", "Invalid username or password",
-                    "action_code", "DECLINE",
-                    "trace_id", UUID.randomUUID().toString(),
-                    "timestamp", java.time.Instant.now().toString()
-                )
-            ));
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(ErrorResponse.of("ERR_INVALID_CREDENTIALS", "Invalid username or password", "DECLINE", UUID.randomUUID().toString()));
         }
 
         AuthResponseDto response = new AuthResponseDto();
@@ -62,16 +54,8 @@ public class AuthController {
         AuthenticationResult result = authenticateUserUseCase.refreshToken(refreshToken);
 
         if (result == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(
-                "status", "FAILED",
-                "error", Map.of(
-                    "code", "ERR_INVALID_REFRESH_TOKEN",
-                    "message", "Invalid or expired refresh token",
-                    "action_code", "DECLINE",
-                    "trace_id", UUID.randomUUID().toString(),
-                    "timestamp", java.time.Instant.now().toString()
-                )
-            ));
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(ErrorResponse.of("ERR_INVALID_REFRESH_TOKEN", "Invalid or expired refresh token", "DECLINE", UUID.randomUUID().toString()));
         }
 
         AuthResponseDto response = new AuthResponseDto();
@@ -91,28 +75,12 @@ public class AuthController {
             if (revoked) {
                 return ResponseEntity.noContent().build();
             } else {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of(
-                    "status", "FAILED",
-                    "error", Map.of(
-                        "code", "ERR_USER_NOT_FOUND",
-                        "message", "User not found or no active sessions",
-                        "action_code", "REVIEW",
-                        "trace_id", UUID.randomUUID().toString(),
-                        "timestamp", java.time.Instant.now().toString()
-                    )
-                ));
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(ErrorResponse.of("ERR_USER_NOT_FOUND", "User not found or no active sessions", "REVIEW", UUID.randomUUID().toString()));
             }
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of(
-                "status", "FAILED",
-                "error", Map.of(
-                    "code", "ERR_INVALID_USER_ID",
-                    "message", "Invalid user ID format",
-                    "action_code", "DECLINE",
-                    "trace_id", UUID.randomUUID().toString(),
-                    "timestamp", java.time.Instant.now().toString()
-                )
-            ));
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(ErrorResponse.of("ERR_INVALID_USER_ID", "Invalid user ID format", "DECLINE", UUID.randomUUID().toString()));
         }
     }
 }

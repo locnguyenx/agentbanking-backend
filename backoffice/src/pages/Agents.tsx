@@ -1,6 +1,7 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { X, Edit2, Users, Search, Filter, Download, ChevronLeft, ChevronRight, MoreVertical, MapPin, CheckCircle } from 'lucide-react'
+import { X, Edit2, Users, Search, Filter, Download, ChevronLeft, ChevronRight, MoreVertical, MapPin, CheckCircle, Clock, XCircle } from 'lucide-react'
 import api from '../api/client'
 
 interface Agent {
@@ -12,9 +13,19 @@ interface Agent {
   phoneNumber: string
   merchantGpsLat: number
   merchantGpsLng: number
+  createdAt?: string
+  updatedAt?: string
+}
+
+interface AgentUserStatus {
+  agentId: string
+  status: string
+  userId?: string
+  error?: string
 }
 
 export function Agents() {
+  const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [currentPage, setCurrentPage] = useState(1)
   const [showAddModal, setShowAddModal] = useState(false)
@@ -32,6 +43,27 @@ export function Agents() {
       return response as Agent[]
     }
   })
+
+  const { data: agentUserStatuses = [] } = useQuery({
+    queryKey: ['agentUserStatuses'],
+    queryFn: async () => {
+      const statuses: AgentUserStatus[] = []
+      for (const agent of agents) {
+        try {
+          const status = await api.getAgentUserStatus(agent.agentId)
+          statuses.push(status as AgentUserStatus)
+        } catch {
+          statuses.push({ agentId: agent.agentId, status: 'UNKNOWN', userId: undefined, error: 'Failed to fetch' })
+        }
+      }
+      return statuses
+    },
+    enabled: agents.length > 0
+  })
+
+  const getAgentUserStatus = (agentId: string): AgentUserStatus | undefined => {
+    return agentUserStatuses.find(s => s.agentId === agentId)
+  }
 
   const createAgentMutation = useMutation({
     mutationFn: (data: { agentCode: string; businessName: string; tier: string; phoneNumber: string; location: string }) => 
@@ -155,6 +187,32 @@ export function Agents() {
     setSelectedAgentId(null)
   }
 
+  const createAgentUserMutation = useMutation({
+    mutationFn: ({ agentId, data }: { agentId: string; data: { phone?: string; email?: string; businessName?: string } }) =>
+      api.createAgentUser(agentId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['agentUserStatuses'] })
+      alert('User account created successfully!')
+    },
+    onError: (error: any) => {
+      alert(`Failed to create user account: ${error.response?.data?.error?.message || error.message}`)
+    }
+  })
+
+  const handleCreateAgentUser = (agentId: string) => {
+    const agent = agents.find(a => a.agentId === agentId)
+    if (agent) {
+      createAgentUserMutation.mutate({
+        agentId,
+        data: {
+          phone: agent.phoneNumber,
+          businessName: agent.businessName
+        }
+      })
+    }
+    setSelectedAgentId(null)
+  }
+
   const handleSaveEdit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     const form = e.currentTarget
@@ -272,12 +330,12 @@ export function Agents() {
                 <th>
                   <input type="checkbox" style={{ width: 16, height: 16 }} />
                 </th>
-                <th>Agent ID</th>
+                <th>Agent Code</th>
                 <th>Name</th>
                 <th>Phone</th>
                 <th>Location</th>
                 <th>Status</th>
-                <th>Transactions</th>
+                <th>User Account</th>
                 <th>Tier</th>
                 <th>Actions</th>
               </tr>
@@ -328,7 +386,34 @@ export function Agents() {
                       {agent.status}
                     </span>
                   </td>
-                  <td style={{ fontWeight: 500 }}>-</td>
+                  <td>
+                    {(() => {
+                      const userStatus = getAgentUserStatus(agent.agentId)
+                      if (!userStatus) return <span style={{ color: '#94a3b8' }}>Loading...</span>
+                      const status = userStatus.status
+                      if (status === 'CREATED' || status === 'ACTIVE') {
+                        return (
+                          <span style={{ display: 'flex', alignItems: 'center', gap: 4, color: '#10b981', fontSize: 12, fontWeight: 500 }}>
+                            <CheckCircle size={12} /> Created
+                          </span>
+                        )
+                      } else if (status === 'PENDING') {
+                        return (
+                          <span style={{ display: 'flex', alignItems: 'center', gap: 4, color: '#f59e0b', fontSize: 12, fontWeight: 500 }}>
+                            <Clock size={12} /> Pending
+                          </span>
+                        )
+                      } else if (status === 'NOT_CREATED') {
+                        return (
+                          <span style={{ display: 'flex', alignItems: 'center', gap: 4, color: '#ef4444', fontSize: 12, fontWeight: 500 }}>
+                            <XCircle size={12} /> Not Created
+                          </span>
+                        )
+                      } else {
+                        return <span style={{ color: '#64748b', fontSize: 12 }}>{status}</span>
+                      }
+                    })()}
+                  </td>
                   <td>
                     <span style={{
                       padding: '4px 10px',
@@ -401,6 +486,24 @@ export function Agents() {
                           >
                             Edit Agent
                           </button>
+                          {getAgentUserStatus(agent.agentId)?.status === 'NOT_CREATED' && (
+                            <button 
+                              style={{
+                                display: 'block',
+                                width: '100%',
+                                padding: '10px 16px',
+                                textAlign: 'left',
+                                background: 'none',
+                                border: 'none',
+                                cursor: 'pointer',
+                                fontSize: 14,
+                                color: '#10b981'
+                              }}
+                              onClick={() => handleCreateAgentUser(agent.agentId)}
+                            >
+                              Create User Account
+                            </button>
+                          )}
                           <button 
                             style={{
                               display: 'block',
@@ -578,12 +681,20 @@ export function Agents() {
             </div>
             <div style={{ padding: 24, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
               <div style={{ background: '#f8fafc', padding: 16, borderRadius: 12 }}>
-                <label style={{ fontSize: 11, color: '#64748b', textTransform: 'uppercase', letterSpacing: 0.5, fontWeight: 600 }}>Phone Number</label>
-                <p style={{ fontWeight: 500, margin: '8px 0 0 0', fontSize: 15 }}>{viewAgent.phoneNumber}</p>
+                <label style={{ fontSize: 11, color: '#64748b', textTransform: 'uppercase', letterSpacing: 0.5, fontWeight: 600 }}>Agent Code</label>
+                <p style={{ fontWeight: 500, margin: '8px 0 0 0', fontSize: 15, fontFamily: 'monospace' }}>{viewAgent.agentCode}</p>
               </div>
               <div style={{ background: '#f8fafc', padding: 16, borderRadius: 12 }}>
                 <label style={{ fontSize: 11, color: '#64748b', textTransform: 'uppercase', letterSpacing: 0.5, fontWeight: 600 }}>Status</label>
                 <p style={{ margin: '8px 0 0 0' }}><span className={`badge ${viewAgent.status === 'ACTIVE' ? 'badge-success' : viewAgent.status === 'SUSPENDED' ? 'badge-warning' : 'badge-error'}`}>{viewAgent.status}</span></p>
+              </div>
+              <div style={{ gridColumn: '1 / -1', background: '#f8fafc', padding: 16, borderRadius: 12 }}>
+                <label style={{ fontSize: 11, color: '#64748b', textTransform: 'uppercase', letterSpacing: 0.5, fontWeight: 600 }}>Business Name</label>
+                <p style={{ fontWeight: 500, margin: '8px 0 0 0', fontSize: 15 }}>{viewAgent.businessName}</p>
+              </div>
+              <div style={{ background: '#f8fafc', padding: 16, borderRadius: 12 }}>
+                <label style={{ fontSize: 11, color: '#64748b', textTransform: 'uppercase', letterSpacing: 0.5, fontWeight: 600 }}>Phone Number</label>
+                <p style={{ fontWeight: 500, margin: '8px 0 0 0', fontSize: 15 }}>{viewAgent.phoneNumber}</p>
               </div>
               <div style={{ background: '#f8fafc', padding: 16, borderRadius: 12 }}>
                 <label style={{ fontSize: 11, color: '#64748b', textTransform: 'uppercase', letterSpacing: 0.5, fontWeight: 600 }}>Agent Tier</label>
@@ -598,9 +709,76 @@ export function Agents() {
                 <label style={{ fontSize: 11, color: '#64748b', textTransform: 'uppercase', letterSpacing: 0.5, fontWeight: 600 }}>GPS Location</label>
                 <p style={{ fontWeight: 500, margin: '8px 0 0 0', fontSize: 15 }}>{viewAgent.merchantGpsLat}, {viewAgent.merchantGpsLng}</p>
               </div>
+              <div style={{ background: '#f8fafc', padding: 16, borderRadius: 12 }}>
+                <label style={{ fontSize: 11, color: '#64748b', textTransform: 'uppercase', letterSpacing: 0.5, fontWeight: 600 }}>Created At</label>
+                <p style={{ fontWeight: 500, margin: '8px 0 0 0', fontSize: 14 }}>{viewAgent.createdAt ? new Date(viewAgent.createdAt).toLocaleString() : 'N/A'}</p>
+              </div>
+              <div style={{ background: '#f8fafc', padding: 16, borderRadius: 12 }}>
+                <label style={{ fontSize: 11, color: '#64748b', textTransform: 'uppercase', letterSpacing: 0.5, fontWeight: 600 }}>Updated At</label>
+                <p style={{ fontWeight: 500, margin: '8px 0 0 0', fontSize: 14 }}>{viewAgent.updatedAt ? new Date(viewAgent.updatedAt).toLocaleString() : 'N/A'}</p>
+              </div>
               <div style={{ gridColumn: '1 / -1', background: '#f8fafc', padding: 16, borderRadius: 12 }}>
-                <label style={{ fontSize: 11, color: '#64748b', textTransform: 'uppercase', letterSpacing: 0.5, fontWeight: 600 }}>Agent ID</label>
-                <p style={{ fontWeight: 500, margin: '8px 0 0 0', fontSize: 14, fontFamily: 'monospace' }}>{viewAgent.agentId}</p>
+                <label style={{ fontSize: 11, color: '#64748b', textTransform: 'uppercase', letterSpacing: 0.5, fontWeight: 600 }}>Agent ID (UUID)</label>
+                <p style={{ fontWeight: 500, margin: '8px 0 0 0', fontSize: 13, fontFamily: 'monospace' }}>{viewAgent.agentId}</p>
+              </div>
+              <div style={{ gridColumn: '1 / -1', background: '#f8fafc', padding: 16, borderRadius: 12, marginTop: 8 }}>
+                <label style={{ fontSize: 11, color: '#64748b', textTransform: 'uppercase', letterSpacing: 0.5, fontWeight: 600 }}>User Account</label>
+                {(() => {
+                  const userStatus = getAgentUserStatus(viewAgent.agentId)
+                  if (!userStatus) {
+                    return <p style={{ fontWeight: 500, margin: '8px 0 0 0', fontSize: 14, color: '#64748b' }}>Loading...</p>
+                  }
+                  if (userStatus.status === 'CREATED' || userStatus.status === 'ACTIVE') {
+                    return (
+                      <div style={{ marginTop: 8 }}>
+                        <span className="badge badge-success" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                          <CheckCircle size={12} /> Created
+                        </span>
+                        {userStatus.userId && (
+                          <p 
+                            style={{ 
+                              fontWeight: 500, 
+                              margin: '8px 0 0 0', 
+                              fontSize: 13, 
+                              fontFamily: 'monospace',
+                              color: '#1e3a5f',
+                              cursor: 'pointer',
+                              textDecoration: 'underline'
+                            }}
+                            onClick={() => navigate('/users')}
+                          >
+                            User ID: {userStatus.userId}
+                          </p>
+                        )}
+                      </div>
+                    )
+                  } else if (userStatus.status === 'PENDING') {
+                    return (
+                      <div style={{ marginTop: 8 }}>
+                        <span className="badge badge-warning" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                          <Clock size={12} /> Pending
+                        </span>
+                      </div>
+                    )
+                  } else if (userStatus.status === 'NOT_CREATED') {
+                    return (
+                      <div style={{ marginTop: 8 }}>
+                        <span className="badge badge-error" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                          <XCircle size={12} /> Not Created
+                        </span>
+                        <button 
+                          className="btn btn-primary" 
+                          onClick={() => { handleCreateAgentUser(viewAgent.agentId); setViewAgent(null); }}
+                          style={{ marginTop: 12, padding: '8px 16px', fontSize: 13 }}
+                        >
+                          Create User Account
+                        </button>
+                      </div>
+                    )
+                  } else {
+                    return <p style={{ fontWeight: 500, margin: '8px 0 0 0', fontSize: 14 }}>{userStatus.status}</p>
+                  }
+                })()}
               </div>
             </div>
             <div style={{ padding: '0 24px 24px', display: 'flex', gap: 12 }}>
@@ -701,6 +879,18 @@ export function Agents() {
                     <label style={{ fontSize: 11, color: '#64748b', textTransform: 'uppercase', fontWeight: 600 }}>Status</label>
                     <p style={{ margin: '4px 0 0 0' }}><span className={`badge ${editAgent.status === 'ACTIVE' ? 'badge-success' : editAgent.status === 'SUSPENDED' ? 'badge-warning' : 'badge-error'}`}>{editAgent.status}</span></p>
                   </div>
+                  <div>
+                    <label style={{ fontSize: 11, color: '#64748b', textTransform: 'uppercase', fontWeight: 600 }}>Created At</label>
+                    <p style={{ fontWeight: 500, margin: '4px 0 0 0', fontSize: 13 }}>{editAgent.createdAt ? new Date(editAgent.createdAt).toLocaleString() : 'N/A'}</p>
+                  </div>
+                  <div>
+                    <label style={{ fontSize: 11, color: '#64748b', textTransform: 'uppercase', fontWeight: 600 }}>Updated At</label>
+                    <p style={{ fontWeight: 500, margin: '4px 0 0 0', fontSize: 13 }}>{editAgent.updatedAt ? new Date(editAgent.updatedAt).toLocaleString() : 'N/A'}</p>
+                  </div>
+                </div>
+                <div style={{ background: '#f8fafc', padding: 16, borderRadius: 12, marginTop: 12 }}>
+                  <label style={{ fontSize: 11, color: '#64748b', textTransform: 'uppercase', fontWeight: 600 }}>Agent ID (UUID)</label>
+                  <p style={{ fontWeight: 500, margin: '4px 0 0 0', fontSize: 12, fontFamily: 'monospace' }}>{editAgent.agentId}</p>
                 </div>
                 <div style={{ display: 'flex', gap: 12, marginTop: 8 }}>
                   <button type="submit" className="btn btn-primary" style={{ flex: 1, padding: '12px 24px', fontSize: 15 }}>
