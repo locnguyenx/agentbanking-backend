@@ -3,6 +3,24 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
 import { Settlement } from '../pages/Settlement'
+import React from 'react'
+
+function createTestQueryClient(): QueryClient {
+  return new QueryClient({
+    defaultOptions: {
+      queries: { retry: false, gcTime: 0 },
+    },
+  })
+}
+
+function renderWithProviders(ui: React.ReactElement) {
+  const queryClient = createTestQueryClient()
+  return render(
+    <MemoryRouter>
+      <QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>
+    </MemoryRouter>
+  )
+}
 
 vi.mock('../api/client', () => ({
   default: {
@@ -20,23 +38,9 @@ vi.mock('../api/client', () => ({
   },
 }))
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: { retry: false },
-  },
-})
-
-const renderWithQuery = (ui: React.ReactElement) => {
-  return render(
-    <MemoryRouter>
-      <QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>
-    </MemoryRouter>
-  )
-}
-
 describe('Settlement', () => {
   it('should render settlement page', async () => {
-    renderWithQuery(<Settlement />)
+    renderWithProviders(<Settlement />)
     
     await waitFor(() => {
       expect(screen.getByTestId('page-title')).toBeInTheDocument()
@@ -44,7 +48,7 @@ describe('Settlement', () => {
   })
 
   it('should display page title', async () => {
-    renderWithQuery(<Settlement />)
+    renderWithProviders(<Settlement />)
     
     await waitFor(() => {
       expect(screen.getByText('Settlement Report')).toBeInTheDocument()
@@ -52,7 +56,7 @@ describe('Settlement', () => {
   })
 
   it('should render date picker', async () => {
-    renderWithQuery(<Settlement />)
+    renderWithProviders(<Settlement />)
     
     await waitFor(() => {
       expect(screen.getByTestId('date-picker')).toBeInTheDocument()
@@ -60,7 +64,7 @@ describe('Settlement', () => {
   })
 
   it('should render export button', async () => {
-    renderWithQuery(<Settlement />)
+    renderWithProviders(<Settlement />)
     
     await waitFor(() => {
       expect(screen.getByTestId('export-button')).toBeInTheDocument()
@@ -68,7 +72,7 @@ describe('Settlement', () => {
   })
 
   it('should display settlement stats', async () => {
-    renderWithQuery(<Settlement />)
+    renderWithProviders(<Settlement />)
     
     await waitFor(() => {
       expect(screen.getAllByText('Total Deposits').length).toBeGreaterThan(0)
@@ -78,18 +82,17 @@ describe('Settlement', () => {
   })
 
   it('should display agent settlement table', async () => {
-    renderWithQuery(<Settlement />)
+    renderWithProviders(<Settlement />)
     
     await waitFor(() => {
-      expect(screen.getAllByText('Agent').length).toBeGreaterThan(0)
-      expect(screen.getAllByText('Deposits').length).toBeGreaterThan(0)
-      expect(screen.getAllByText('Withdrawals').length).toBeGreaterThan(0)
-      expect(screen.getAllByText('Net Settlement').length).toBeGreaterThan(0)
+      expect(screen.getByText('Agent Settlement Details')).toBeInTheDocument()
+      expect(screen.getByText('Transaction ID')).toBeInTheDocument()
+      expect(screen.getByText('Type')).toBeInTheDocument()
     })
   })
 
   it('should have working date picker', async () => {
-    renderWithQuery(<Settlement />)
+    renderWithProviders(<Settlement />)
     
     await waitFor(() => {
       const datePicker = screen.getByTestId('date-picker')

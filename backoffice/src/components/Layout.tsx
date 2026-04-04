@@ -1,4 +1,4 @@
-import { Outlet, NavLink, useLocation } from 'react-router-dom'
+import { Outlet, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { 
   LayoutDashboard, 
   Users,
@@ -12,6 +12,8 @@ import {
   ChevronRight
 } from 'lucide-react'
 import { useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import api from '../api/client'
 
 const navItems = [
   { path: '/', icon: LayoutDashboard, label: 'Dashboard' },
@@ -22,9 +24,39 @@ const navItems = [
   { path: '/kyc-review', icon: FileCheck, label: 'KYC Review' },
 ]
 
+function getUserInitials(fullName: string) {
+  return fullName
+    .split(' ')
+    .map(n => n[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2)
+}
+
+function formatRole(userType: string | undefined) {
+  if (!userType) return 'User'
+  const roles: Record<string, string> = {
+    INTERNAL: 'Bank Staff',
+    EXTERNAL: 'Agent User',
+  }
+  return roles[userType] || userType
+}
+
 export function Layout() {
   const [collapsed, setCollapsed] = useState(false)
   const location = useLocation()
+  const navigate = useNavigate()
+
+  const { data: profile } = useQuery({
+    queryKey: ['myProfile'],
+    queryFn: api.getMyProfile,
+    staleTime: 5 * 60 * 1000,
+    retry: false,
+  })
+
+  const displayName = profile?.fullName || 'User'
+  const displayInitial = getUserInitials(displayName)
+  const displayRole = formatRole(profile?.userType)
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh' }}>
@@ -271,16 +303,31 @@ export function Layout() {
                 fontWeight: 600,
                 fontSize: 14
               }}>
-                A
+                {displayInitial}
               </div>
               <div>
                 <div style={{ fontSize: 14, fontWeight: 500, color: '#1e293b' }}>
-                  Admin User
+                  {displayName}
                 </div>
                 <div style={{ fontSize: 12, color: '#64748b' }}>
-                  Super Admin
+                  {displayRole}
                 </div>
               </div>
+              <button 
+                onClick={() => navigate('/profile')}
+                style={{
+                  marginLeft: 8,
+                  padding: '6px 12px',
+                  background: '#f1f5f9',
+                  border: 'none',
+                  borderRadius: 6,
+                  color: '#1e293b',
+                  fontSize: 12,
+                  cursor: 'pointer'
+                }}
+              >
+                Profile
+              </button>
               <button 
                 onClick={() => {
                   localStorage.removeItem('backoffice_token')

@@ -43,18 +43,19 @@ class DepositTest extends BaseIntegrationTest {
         var status = response.expectBody(String.class).returnResult().getStatus();
         String responseBody = response.expectBody(String.class).returnResult().getResponseBody();
 
-        System.out.println("Deposit status: " + (status != null ? status.value() : "null"));
-        System.out.println("Deposit response: " + responseBody);
+        assertNotNull(status, "Response status should not be null");
+        assertEquals(200, status.value(), "Deposit should return 200");
 
-        if (status != null && status.value() == 200) {
-            try {
-                JsonNode body = objectMapper.readTree(responseBody);
-                assertEquals("SUCCESS", body.get("status").asText(), "Status should be SUCCESS");
-                assertNotNull(body.get("transactionId"), "Transaction ID should exist");
-            } catch (Exception e) {
-                fail("Failed to parse deposit response: " + e.getMessage());
-            }
+        assertNotNull(responseBody, "Response body should not be null");
+        JsonNode body;
+        try {
+            body = objectMapper.readTree(responseBody);
+        } catch (Exception e) {
+            fail("Failed to parse deposit response: " + e.getMessage());
+            return;
         }
+        assertEquals("SUCCESS", body.get("status").asText(), "Status should be SUCCESS");
+        assertNotNull(body.get("transactionId"), "Transaction ID should exist");
     }
 
     // ================================================================

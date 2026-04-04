@@ -105,7 +105,7 @@ class AgentServiceTest {
         CreateAgentCommand command = new CreateAgentCommand(
             "AGN002",
             "New Business",
-            AgentTier.BASIC,
+            AgentTier.MICRO,
             BigDecimal.valueOf(3.1390),
             BigDecimal.valueOf(101.6869),
             "880101011234",
@@ -201,7 +201,7 @@ class AgentServiceTest {
 
         UpdateAgentCommand command = new UpdateAgentCommand(
             "New Business",
-            AgentTier.PREMIUM,
+            AgentTier.PREMIER,
             BigDecimal.valueOf(4.0000),
             BigDecimal.valueOf(102.0000),
             "+60199999999"
@@ -230,7 +230,7 @@ class AgentServiceTest {
         AgentRecord result = agentService.updateAgent(agentId, command);
 
         assertEquals("New Business", result.businessName());
-        assertEquals(AgentTier.PREMIUM, result.tier());
+        assertEquals(AgentTier.PREMIER, result.tier());
         assertEquals("+60199999999", result.phoneNumber());
     }
 
@@ -240,7 +240,7 @@ class AgentServiceTest {
             new AgentRecord(UUID.randomUUID(), "AGN001", "Business 1", AgentTier.STANDARD, AgentStatus.ACTIVE,
                 BigDecimal.valueOf(3.1390), BigDecimal.valueOf(101.6869), "880101011234", "+60191234567",
                 UserCreationStatus.CREATED, null, LocalDateTime.now(), LocalDateTime.now()),
-            new AgentRecord(UUID.randomUUID(), "AGN002", "Business 2", AgentTier.BASIC, AgentStatus.INACTIVE,
+            new AgentRecord(UUID.randomUUID(), "AGN002", "Business 2", AgentTier.MICRO, AgentStatus.INACTIVE,
                 BigDecimal.valueOf(3.1390), BigDecimal.valueOf(101.6869), "880102011234", "+60191234568",
                 UserCreationStatus.CREATED, null, LocalDateTime.now(), LocalDateTime.now())
         );

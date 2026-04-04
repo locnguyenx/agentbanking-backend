@@ -16,6 +16,10 @@ Project Rules for Testing & Testcontainers Configuration
 
 **EXCEPTION:** may have issue in using Testcontainers on Windows, in this case we can use docker containers for required infra, but need to do test data cleanup
 
+## Backoffice UI Testing
+
+Refer to @docs/superpowers/specs/2026-04-02-backoffice-test-architecture.md
+
 ## Environment & Docker Setup
 - **Docker Socket:** Ensure the Docker socket (`/var/run/docker.sock`) is accessible to Testcontainers.
 - **MacOS Fix:** If running locally on Mac, ensure `/var/run/docker.sock` maps correctly to `$HOME/.docker/run/docker.sock`.

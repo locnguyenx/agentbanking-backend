@@ -67,6 +67,9 @@ export const api = {
   // Auth
   login: (username: string, password: string) => 
     client.post('/auth/token', { username, password }).then((r) => r.data),
+  getMyProfile: () => client.get('/auth/me').then((r) => r.data),
+  changeMyPassword: (data: { currentPassword: string; newPassword: string }) => 
+    client.post('/auth/password/change', data).then((r) => r.data),
   logout: () => {
     localStorage.removeItem('backoffice_token')
   }

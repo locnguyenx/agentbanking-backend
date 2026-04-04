@@ -1,10 +1,13 @@
 package com.agentbanking.auth.infrastructure.web;
 
 import com.agentbanking.auth.application.usecase.AuthenticateUserUseCaseImpl;
+import com.agentbanking.auth.application.usecase.ManageUserUseCaseImpl;
 import com.agentbanking.auth.domain.model.AuthenticationResult;
+import com.agentbanking.auth.domain.model.UserRecord;
 import com.agentbanking.auth.domain.port.in.ManageSessionUseCase;
 import com.agentbanking.auth.infrastructure.web.dto.AuthRequestDto;
 import com.agentbanking.auth.infrastructure.web.dto.AuthResponseDto;
+import com.agentbanking.auth.infrastructure.web.dto.MyProfileResponse;
 import com.agentbanking.auth.infrastructure.web.dto.RefreshTokenDto;
 import com.agentbanking.common.exception.ErrorResponse;
 import jakarta.validation.Valid;
@@ -20,31 +23,39 @@ public class AuthController {
 
     private final AuthenticateUserUseCaseImpl authenticateUserUseCase;
     private final ManageSessionUseCase manageSessionUseCase;
+    private final ManageUserUseCaseImpl manageUserUseCase;
 
     public AuthController(AuthenticateUserUseCaseImpl authenticateUserUseCase,
-                         ManageSessionUseCase manageSessionUseCase) {
+                          ManageSessionUseCase manageSessionUseCase,
+                          ManageUserUseCaseImpl manageUserUseCase) {
         this.authenticateUserUseCase = authenticateUserUseCase;
         this.manageSessionUseCase = manageSessionUseCase;
+        this.manageUserUseCase = manageUserUseCase;
     }
 
     @PostMapping("/token")
     public ResponseEntity<?> authenticate(@Valid @RequestBody AuthRequestDto authRequest) {
-        String username = authRequest.getUsername();
-        String password = authRequest.getPassword();
+        try {
+            String username = authRequest.getUsername();
+            String password = authRequest.getPassword();
 
-        AuthenticationResult result = authenticateUserUseCase.authenticate(username, password);
+            AuthenticationResult result = authenticateUserUseCase.authenticate(username, password);
 
-        if (result == null) {
+            if (result == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ErrorResponse.of("ERR_AUTH_INVALID_CREDENTIALS", "Invalid username or password", "DECLINE", UUID.randomUUID().toString()));
+            }
+
+            AuthResponseDto response = new AuthResponseDto();
+            response.setAccessToken(result.accessToken());
+            response.setRefreshToken(result.refreshToken());
+            response.setExpiresIn(result.expiresIn());
+
+            return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                .body(ErrorResponse.of("ERR_INVALID_CREDENTIALS", "Invalid username or password", "DECLINE", UUID.randomUUID().toString()));
+                .body(ErrorResponse.of("ERR_AUTH_INVALID_CREDENTIALS", "Invalid username or password", "DECLINE", UUID.randomUUID().toString()));
         }
-
-        AuthResponseDto response = new AuthResponseDto();
-        response.setAccessToken(result.accessToken());
-        response.setRefreshToken(result.refreshToken());
-        response.setExpiresIn(result.expiresIn());
-
-        return ResponseEntity.ok(response);
     }
 
     @PostMapping("/refresh")
@@ -82,5 +93,30 @@ public class AuthController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(ErrorResponse.of("ERR_INVALID_USER_ID", "Invalid user ID format", "DECLINE", UUID.randomUUID().toString()));
         }
+    }
+
+    @GetMapping("/me")
+    public ResponseEntity<MyProfileResponse> getMyProfile(
+            @RequestHeader("X-User-Id") String userId) {
+        UserRecord user = manageUserUseCase.getProfile(
+            java.util.UUID.fromString(userId));
+        if (user == null) {
+            return ResponseEntity.notFound().build();
+        }
+        MyProfileResponse profile = new MyProfileResponse(
+            user.userId() != null ? user.userId().toString() : null,
+            user.username(),
+            user.email(),
+            user.fullName(),
+            user.userType() != null ? user.userType().name() : null,
+            user.status() != null ? user.status().name() : null,
+            user.agentId() != null ? user.agentId().toString() : null,
+            user.mustChangePassword(),
+            user.temporaryPasswordExpiresAt(),
+            user.createdAt(),
+            user.lastLoginAt(),
+            user.permissions()
+        );
+        return ResponseEntity.ok(profile);
     }
 }

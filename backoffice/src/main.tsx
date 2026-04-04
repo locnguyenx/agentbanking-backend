@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import ReactDOM from 'react-dom/client'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { Toaster } from 'react-hot-toast'
 import { Layout } from './components/Layout'
 import { Login } from './pages/Login'
 import { Dashboard } from './pages/Dashboard'
@@ -10,6 +11,7 @@ import { UserManagement } from './pages/UserManagement'
 import { Transactions } from './pages/Transactions'
 import { Settlement } from './pages/Settlement'
 import { KycReview } from './pages/KycReview'
+import { Profile } from './pages/Profile'
 import './styles/global.css'
 
 const queryClient = new QueryClient()
@@ -55,6 +57,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
+        <Toaster position="top-right" />
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/" element={
@@ -68,6 +71,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
             <Route path="transactions" element={<Transactions />} />
             <Route path="settlement" element={<Settlement />} />
             <Route path="kyc-review" element={<KycReview />} />
+            <Route path="profile" element={<Profile />} />
           </Route>
         </Routes>
       </BrowserRouter>

@@ -45,7 +45,7 @@ class AgentUserCreationTest {
         CreateAgentCommand command = new CreateAgentCommand(
                 "AGENT001",
                 "Test Business",
-                AgentTier.BASIC,
+                AgentTier.MICRO,
                 BigDecimal.valueOf(3.0),
                 BigDecimal.valueOf(101.5),
                 "720101-01-1234",
@@ -107,7 +107,7 @@ class AgentUserCreationTest {
         CreateAgentCommand command = new CreateAgentCommand(
                 "AGENT003",
                 "Test Business 3",
-                AgentTier.BASIC,
+                AgentTier.MICRO,
                 BigDecimal.valueOf(3.0),
                 BigDecimal.valueOf(101.5),
                 "720103-01-1234",
@@ -174,7 +174,7 @@ class AgentUserCreationTest {
         CreateAgentCommand command = new CreateAgentCommand(
                 "AGENT005",
                 "Test Business 5",
-                AgentTier.BASIC,
+                AgentTier.MICRO,
                 BigDecimal.valueOf(3.0),
                 BigDecimal.valueOf(101.5),
                 "720105-01-1234",
@@ -213,7 +213,7 @@ class AgentUserCreationTest {
                 UUID.randomUUID(),
                 "EXISTING001",
                 "Existing Business",
-                AgentTier.BASIC,
+                AgentTier.MICRO,
                 AgentStatus.ACTIVE,
                 BigDecimal.valueOf(3.0),
                 BigDecimal.valueOf(101.5),
@@ -238,7 +238,7 @@ class AgentUserCreationTest {
         CreateAgentCommand command = new CreateAgentCommand(
                 "AGENT007",
                 "Test Business 7",
-                AgentTier.BASIC,
+                AgentTier.MICRO,
                 BigDecimal.valueOf(3.0),
                 BigDecimal.valueOf(101.5),
                 "720107-01-1234",

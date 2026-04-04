@@ -47,25 +47,23 @@ class WithdrawalTest extends BaseIntegrationTest {
 
         var response = gatewayPost("/api/v1/withdrawal", TestContext.agentToken, requestBody);
 
-        // Note: The response may be 500 if ledger service has issues
-        // We capture whatever response comes back for analysis
         var status = response.expectBody(String.class).returnResult().getStatus();
         String responseBody = response.expectBody(String.class).returnResult().getResponseBody();
 
-        System.out.println("Withdrawal status: " + (status != null ? status.value() : "null"));
-        System.out.println("Withdrawal response: " + responseBody);
+        assertNotNull(status, "Response status should not be null");
+        assertEquals(200, status.value(), "Withdrawal should return 200");
 
-        if (status != null && status.value() == 200) {
-            try {
-                JsonNode body = objectMapper.readTree(responseBody);
-                assertEquals("SUCCESS", body.get("status").asText(), "Status should be SUCCESS");
-                assertNotNull(body.get("transactionId"), "Transaction ID should exist");
-                assertEquals("MYR", body.get("currency").asText(), "Currency should be MYR");
-            } catch (Exception e) {
-                fail("Failed to parse withdrawal response: " + e.getMessage());
-            }
+        assertNotNull(responseBody, "Response body should not be null");
+        JsonNode body;
+        try {
+            body = objectMapper.readTree(responseBody);
+        } catch (Exception e) {
+            fail("Failed to parse withdrawal response: " + e.getMessage());
+            return;
         }
-        // If not 200, we log but don't fail - the test documents what happens
+        assertEquals("SUCCESS", body.get("status").asText(), "Status should be SUCCESS");
+        assertNotNull(body.get("transactionId"), "Transaction ID should exist");
+        assertEquals("MYR", body.get("currency").asText(), "Currency should be MYR");
     }
 
     // ================================================================
@@ -93,18 +91,18 @@ class WithdrawalTest extends BaseIntegrationTest {
         var status = response.expectBody(String.class).returnResult().getStatus();
         String responseBody = response.expectBody(String.class).returnResult().getResponseBody();
 
-        System.out.println("Daily limit test status: " + (status != null ? status.value() : "null"));
-        System.out.println("Daily limit test response: " + responseBody);
+        assertNotNull(status, "Response status should not be null");
+        assertEquals(400, status.value(), "Withdrawal over daily limit should return 400");
 
-        // Expect either 400 (business rule) or 500 (if backend has issues)
-        if (status != null && status.value() == 400) {
-            try {
-                JsonNode body = objectMapper.readTree(responseBody);
-                assertNotNull(body.get("error"), "Error should be present");
-            } catch (Exception e) {
-                fail("Failed to parse error response: " + e.getMessage());
-            }
+        assertNotNull(responseBody, "Response body should not be null");
+        JsonNode body;
+        try {
+            body = objectMapper.readTree(responseBody);
+        } catch (Exception e) {
+            fail("Failed to parse error response: " + e.getMessage());
+            return;
         }
+        assertNotNull(body.get("error"), "Error should be present");
     }
 
     // ================================================================
@@ -142,7 +140,8 @@ class WithdrawalTest extends BaseIntegrationTest {
 
         var status1 = response1.expectBody(String.class).returnResult().getStatus();
         String body1 = response1.expectBody(String.class).returnResult().getResponseBody();
-        System.out.println("First request status: " + (status1 != null ? status1.value() : "null"));
+
+        assertNotNull(status1, "First request status should not be null");
 
         // Second request with same idempotency key
         var response2 = gatewayClient.post()
@@ -158,13 +157,12 @@ class WithdrawalTest extends BaseIntegrationTest {
 
         var status2 = response2.expectBody(String.class).returnResult().getStatus();
         String body2 = response2.expectBody(String.class).returnResult().getResponseBody();
-        System.out.println("Second request status: " + (status2 != null ? status2.value() : "null"));
+
+        assertNotNull(status2, "Second request status should not be null");
 
         // Both should return the same status
-        if (status1 != null && status2 != null) {
-            assertEquals(status1.value(), status2.value(), 
-                    "Idempotent requests should return same status");
-        }
+        assertEquals(status1.value(), status2.value(), 
+                "Idempotent requests should return same status");
     }
 
     // ================================================================
@@ -192,8 +190,18 @@ class WithdrawalTest extends BaseIntegrationTest {
         var status = response.expectBody(String.class).returnResult().getStatus();
         String responseBody = response.expectBody(String.class).returnResult().getResponseBody();
 
-        System.out.println("MyKad withdrawal status: " + (status != null ? status.value() : "null"));
-        System.out.println("MyKad withdrawal response: " + responseBody);
+        assertNotNull(status, "Response status should not be null");
+        assertEquals(200, status.value(), "MyKad withdrawal should return 200");
+
+        assertNotNull(responseBody, "Response body should not be null");
+        JsonNode body;
+        try {
+            body = objectMapper.readTree(responseBody);
+        } catch (Exception e) {
+            fail("Failed to parse MyKad withdrawal response: " + e.getMessage());
+            return;
+        }
+        assertEquals("SUCCESS", body.get("status").asText(), "Status should be SUCCESS");
     }
 
     // ================================================================

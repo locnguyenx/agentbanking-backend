@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { X, Edit2, Users, Search, Filter, Download, ChevronLeft, ChevronRight, MoreVertical, MapPin, CheckCircle, Clock, XCircle } from 'lucide-react'
+import toast from 'react-hot-toast'
 import api from '../api/client'
 
 interface Agent {
@@ -66,19 +67,24 @@ export function Agents() {
   }
 
   const createAgentMutation = useMutation({
-    mutationFn: (data: { agentCode: string; businessName: string; tier: string; phoneNumber: string; location: string }) => 
+    mutationFn: (data: { agentCode: string; businessName: string; tier: string; phoneNumber: string; mykadNumber: string }) => 
       api.createAgent({
         agentCode: data.agentCode,
         businessName: data.businessName,
         tier: data.tier,
         merchantGpsLat: 3.139003,
         merchantGpsLng: 101.686855,
-        mykadNumber: '000000000000',
+        mykadNumber: data.mykadNumber,
         phoneNumber: data.phoneNumber
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['agents'] })
       setShowAddModal(false)
+      toast.success('Agent created successfully!')
+    },
+    onError: (error: any) => {
+      console.error('Failed to create agent:', error)
+      toast.error(error?.response?.data?.error?.message || `Failed to create agent: ${error.message || 'Unknown error'}`)
     }
   })
 
@@ -88,10 +94,10 @@ export function Agents() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['agents'] })
       setEditAgent(null)
-      alert('Agent updated successfully!')
+      toast.success('Agent updated successfully!')
     },
     onError: (error: any) => {
-      alert(`Failed to update agent: ${error.message}`)
+      toast.error(`Failed to update agent: ${error.message}`)
     }
   })
 
@@ -99,10 +105,10 @@ export function Agents() {
     mutationFn: (id: string) => api.deactivateAgent(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['agents'] })
-      alert('Agent deactivated successfully!')
+      toast.success('Agent deactivated successfully!')
     },
     onError: (error: any) => {
-      alert(`Failed to deactivate agent: ${error.message}`)
+      toast.error(`Failed to deactivate agent: ${error.message}`)
     }
   })
 
@@ -150,8 +156,8 @@ export function Agents() {
       agentCode: `AGT-${String(agents.length + 1).padStart(3, '0')}`,
       businessName: formData.get('name') as string,
       phoneNumber: formData.get('phone') as string,
-      location: formData.get('location') as string,
-      tier: formData.get('tier') as string || 'BRONZE'
+      mykadNumber: formData.get('mykad') as string,
+      tier: formData.get('tier') as string || 'STANDARD'
     })
     setCurrentPage(1)
   }
@@ -192,10 +198,10 @@ export function Agents() {
       api.createAgentUser(agentId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['agentUserStatuses'] })
-      alert('User account created successfully!')
+      toast.success('User account created successfully!')
     },
     onError: (error: any) => {
-      alert(`Failed to create user account: ${error.response?.data?.error?.message || error.message}`)
+      toast.error(error.response?.data?.error?.message || `Failed to create user account: ${error.message}`)
     }
   })
 
@@ -397,16 +403,28 @@ export function Agents() {
                             <CheckCircle size={12} /> Created
                           </span>
                         )
-                      } else if (status === 'PENDING') {
+                      } else if (status === 'INACTIVE' || status === 'LOCKED') {
                         return (
                           <span style={{ display: 'flex', alignItems: 'center', gap: 4, color: '#f59e0b', fontSize: 12, fontWeight: 500 }}>
-                            <Clock size={12} /> Pending
+                            <Clock size={12} /> Inactive
                           </span>
                         )
                       } else if (status === 'NOT_CREATED') {
                         return (
                           <span style={{ display: 'flex', alignItems: 'center', gap: 4, color: '#ef4444', fontSize: 12, fontWeight: 500 }}>
                             <XCircle size={12} /> Not Created
+                          </span>
+                        )
+                      } else if (status === 'FAILED') {
+                        return (
+                          <span style={{ display: 'flex', alignItems: 'center', gap: 4, color: '#dc2626', fontSize: 12, fontWeight: 500 }}>
+                            <XCircle size={12} /> Failed
+                          </span>
+                        )
+                      } else if (status === 'PENDING') {
+                        return (
+                          <span style={{ display: 'flex', alignItems: 'center', gap: 4, color: '#6366f1', fontSize: 12, fontWeight: 500 }}>
+                            <Clock size={12} /> Pending
                           </span>
                         )
                       } else {
@@ -486,7 +504,8 @@ export function Agents() {
                           >
                             Edit Agent
                           </button>
-                          {getAgentUserStatus(agent.agentId)?.status === 'NOT_CREATED' && (
+                          {(getAgentUserStatus(agent.agentId)?.status === 'NOT_CREATED' || 
+                            getAgentUserStatus(agent.agentId)?.status === 'FAILED') && (
                             <button 
                               style={{
                                 display: 'block',
@@ -501,7 +520,9 @@ export function Agents() {
                               }}
                               onClick={() => handleCreateAgentUser(agent.agentId)}
                             >
-                              Create User Account
+                              {getAgentUserStatus(agent.agentId)?.status === 'FAILED' 
+                                ? 'Retry User Creation' 
+                                : 'Create User Account'}
                             </button>
                           )}
                           <button 
@@ -591,24 +612,24 @@ export function Agents() {
             <form onSubmit={handleAddAgent}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                 <div>
-                  <label style={{ display: 'block', marginBottom: 6, fontWeight: 500 }}>Agent Name</label>
-                  <input type="text" name="name" className="input" placeholder="Enter agent name" required />
+                  <label style={{ display: 'block', marginBottom: 6, fontWeight: 500 }}>Business Name</label>
+                  <input type="text" name="name" className="input" placeholder="Enter business name" required />
                 </div>
                 <div>
                   <label style={{ display: 'block', marginBottom: 6, fontWeight: 500 }}>Phone Number</label>
                   <input type="text" name="phone" className="input" placeholder="012-3456789" required />
                 </div>
                 <div>
-                  <label style={{ display: 'block', marginBottom: 6, fontWeight: 500 }}>Location</label>
-                  <input type="text" name="location" className="input" placeholder="City" required />
+                  <label style={{ display: 'block', marginBottom: 6, fontWeight: 500 }}>MyKad Number</label>
+                  <input type="text" name="mykad" className="input" placeholder="YYYYMMDDXXXXXX" pattern="[0-9]{12}" maxLength={12} title="12-digit MyKad number" required />
                 </div>
                 <div>
                   <label style={{ display: 'block', marginBottom: 6, fontWeight: 500 }}>Agent Tier</label>
                   <select name="tier" className="input" required>
                     <option value="">Select Tier</option>
-                    <option value="BASIC">Basic</option>
+                    <option value="MICRO">Micro</option>
                     <option value="STANDARD">Standard</option>
-                    <option value="PREMIUM">Premium</option>
+                    <option value="PREMIER">Premier</option>
                   </select>
                 </div>
                 <div style={{ display: 'flex', gap: 12, marginTop: 8 }}>
@@ -752,11 +773,11 @@ export function Agents() {
                         )}
                       </div>
                     )
-                  } else if (userStatus.status === 'PENDING') {
+                  } else if (userStatus.status === 'INACTIVE' || userStatus.status === 'LOCKED') {
                     return (
                       <div style={{ marginTop: 8 }}>
                         <span className="badge badge-warning" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                          <Clock size={12} /> Pending
+                          <Clock size={12} /> Inactive
                         </span>
                       </div>
                     )
@@ -772,6 +793,34 @@ export function Agents() {
                           style={{ marginTop: 12, padding: '8px 16px', fontSize: 13 }}
                         >
                           Create User Account
+                        </button>
+                      </div>
+                    )
+                  } else if (userStatus.status === 'FAILED') {
+                    return (
+                      <div style={{ marginTop: 8 }}>
+                        <span className="badge badge-error" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                          <XCircle size={12} /> Failed
+                        </span>
+                        {userStatus.error && (
+                          <p style={{ 
+                            margin: '8px 0 0 0', 
+                            fontSize: 13, 
+                            color: '#dc2626',
+                            background: '#fef2f2',
+                            padding: '8px 12px',
+                            borderRadius: 6,
+                            border: '1px solid #fecaca'
+                          }}>
+                            Error: {userStatus.error}
+                          </p>
+                        )}
+                        <button 
+                          className="btn btn-primary" 
+                          onClick={() => { handleCreateAgentUser(viewAgent.agentId); setViewAgent(null); }}
+                          style={{ marginTop: 12, padding: '8px 16px', fontSize: 13 }}
+                        >
+                          Retry User Creation
                         </button>
                       </div>
                     )

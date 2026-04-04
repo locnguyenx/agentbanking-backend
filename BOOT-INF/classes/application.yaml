@@ -1,0 +1,577 @@
+server:
+  port: 8080
+
+springdoc:
+  api-docs:
+    enabled: true
+    path: /v3/api-docs
+  swagger-ui:
+    enabled: true
+    path: /swagger-ui.html
+    urls:
+      - url: /v3/api-docs
+        name: All Services
+      - url: /docs/auth/v3/api-docs
+        name: Auth/IAM Service
+      - url: /docs/rules/v3/api-docs
+        name: Rules Service
+      - url: /docs/ledger/v3/api-docs
+        name: Ledger Service
+      - url: /docs/onboarding/v3/api-docs
+        name: Onboarding Service
+      - url: /docs/switch/v3/api-docs
+        name: Switch Adapter Service
+      - url: /docs/biller/v3/api-docs
+        name: Biller Service
+
+spring:
+  application:
+    name: api-gateway
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          secret: ${JWT_SECRET:your-super-secret-jwt-key-change-in-production-minimum-32-chars-long}
+  cloud:
+    gateway:
+      routes:
+        # Auth/IAM Service (public endpoints - no JWT required)
+        - id: auth-bootstrap
+          uri: http://auth-iam-service:8087
+          predicates:
+            - Path=/auth/users/bootstrap
+        - id: auth-token
+          uri: http://auth-iam-service:8087
+          predicates:
+            - Path=/auth/token
+        - id: auth-refresh
+          uri: http://auth-iam-service:8087
+          predicates:
+            - Path=/auth/refresh
+        - id: auth-wellknown
+          uri: http://auth-iam-service:8087
+          predicates:
+            - Path=/.well-known/jwks.json
+        - id: auth-docs
+          uri: http://auth-iam-service:8087
+          predicates:
+            - Path=/docs/auth/**
+
+        # ============================================================
+        # External Auth Token endpoints (public - no JwtAuth required)
+        # ============================================================
+        - id: external-auth-token
+          uri: http://auth-iam-service:8087
+          predicates:
+            - Path=/api/v1/auth/token
+          filters:
+            - RewritePath=/api/v1/auth/token, /auth/token
+
+        - id: external-auth-refresh
+          uri: http://auth-iam-service:8087
+          predicates:
+            - Path=/api/v1/auth/refresh
+          filters:
+            - RewritePath=/api/v1/auth/refresh, /auth/refresh
+
+        - id: external-auth-revoke
+          uri: http://auth-iam-service:8087
+          predicates:
+            - Path=/api/v1/auth/revoke
+          filters:
+            - JwtAuth
+            - RewritePath=/api/v1/auth/revoke, /auth/revoke
+
+        # ============================================================
+        # External Password endpoints (forgot/reset public, change protected)
+        # ============================================================
+        - id: external-auth-password-forgot
+          uri: http://auth-iam-service:8087
+          predicates:
+            - Path=/api/v1/auth/password/forgot
+          filters:
+            - RewritePath=/api/v1/auth/password/forgot, /auth/password/forgot
+
+        - id: external-auth-password-reset
+          uri: http://auth-iam-service:8087
+          predicates:
+            - Path=/api/v1/auth/password/reset
+          filters:
+            - RewritePath=/api/v1/auth/password/reset, /auth/password/reset
+
+        - id: external-auth-password-change
+          uri: http://auth-iam-service:8087
+          predicates:
+            - Path=/api/v1/auth/password/change
+          filters:
+            - JwtAuth
+            - RewritePath=/api/v1/auth/password/change, /auth/password/change
+
+        # ============================================================
+        # External Agent User Management endpoints (protected)
+        # ============================================================
+        - id: external-backoffice-agent-user-status
+          uri: http://auth-iam-service:8087
+          predicates:
+            - Path=/api/v1/backoffice/agents/*/user-status
+          filters:
+            - JwtAuth
+            - RewritePath=/api/v1/backoffice/agents/(?<agentId>.*)/user-status, /internal/users/agent/${agentId}/status
+
+        - id: external-backoffice-agent-create-user
+          uri: http://auth-iam-service:8087
+          predicates:
+            - Path=/api/v1/backoffice/agents/*/create-user
+          filters:
+            - JwtAuth
+            - RewritePath=/api/v1/backoffice/agents/(?<agentId>.*)/create-user, /internal/users/agent/${agentId}/create
+
+        # Password endpoints (public)
+        - id: auth-password-forgot
+          uri: http://auth-iam-service:8087
+          predicates:
+            - Path=/auth/password/forgot
+        - id: auth-password-reset
+          uri: http://auth-iam-service:8087
+          predicates:
+            - Path=/auth/password/reset
+        - id: auth-password-change
+          uri: http://auth-iam-service:8087
+          predicates:
+            - Path=/auth/password/change
+          filters:
+            - JwtAuth
+        - id: internal-auth-agent-user
+          uri: http://auth-iam-service:8087
+          predicates:
+            - Path=/internal/users/agent
+          filters:
+            - RewritePath=/internal/users/agent, /internal/users/agent
+        
+        # Auth/IAM Service (protected endpoints - JWT required)
+        - id: auth-users
+          uri: http://auth-iam-service:8087
+          predicates:
+            - Path=/api/v1/auth/users
+          filters:
+            - JwtAuth
+            - RewritePath=/api/v1/auth/users, /auth/users
+        - id: auth-roles
+          uri: http://auth-iam-service:8087
+          predicates:
+            - Path=/auth/roles, /auth/roles/*
+          filters:
+            - JwtAuth
+            - RewritePath=/auth/roles/(?<segment>.*), /auth/roles/${segment}
+        - id: auth-permissions
+          uri: http://auth-iam-service:8087
+          predicates:
+            - Path=/auth/permissions, /auth/permissions/*
+          filters:
+            - JwtAuth
+            - RewritePath=/auth/permissions/(?<segment>.*), /auth/permissions/${segment}
+        - id: auth-sessions
+          uri: http://auth-iam-service:8087
+          predicates:
+            - Path=/auth/sessions, /auth/sessions/*
+          filters:
+            - JwtAuth
+            - RewritePath=/auth/sessions/(?<segment>.*), /auth/sessions/${segment}
+        - id: auth-audit
+          uri: http://auth-iam-service:8087
+          predicates:
+            - Path=/auth/audit/**
+          filters:
+            - JwtAuth
+        
+        # Rules Service
+        - id: rules-service
+          uri: http://rules-service:8081
+          predicates:
+            - Path=/internal/fees/**, /internal/check-velocity, /internal/limits/**
+          filters:
+            - RewritePath=/internal/(?<segment>.*), /internal/${segment}
+        
+        # Ledger Service
+        - id: ledger-service
+          uri: http://ledger-service:8082
+          predicates:
+            - Path=/internal/debit, /internal/credit, /internal/balance/**, /internal/reverse/**
+          filters:
+            - RewritePath=/internal/(?<segment>.*), /internal/${segment}
+        
+        # Onboarding Service
+        - id: onboarding-service
+          uri: http://onboarding-service:8083
+          predicates:
+            - Path=/internal/verify-mykad, /internal/biometric, /internal/kyc/review-queue
+          filters:
+            - RewritePath=/internal/(?<segment>.*), /internal/${segment}
+        
+        # Switch Adapter Service
+        - id: switch-adapter-service
+          uri: http://switch-adapter-service:8084
+          predicates:
+            - Path=/internal/auth, /internal/reversal, /internal/duitnow
+          filters:
+            - RewritePath=/internal/(?<segment>.*), /internal/${segment}
+        
+        # Biller Service
+        - id: biller-service
+          uri: http://biller-service:8085
+          predicates:
+            - Path=/internal/validate-ref, /internal/pay-bill, /internal/topup
+          filters:
+            - RewritePath=/internal/(?<segment>.*), /internal/${segment}
+         
+        # External API routes (through JWT filter + transformation)
+        - id: external-withdrawal
+          uri: http://ledger-service:8082
+          predicates:
+            - Path=/api/v1/withdrawal
+          filters:
+            - JwtAuth
+            - RequestTransform=withdrawal
+            - RewritePath=/api/v1/withdrawal, /internal/debit
+        
+        - id: external-deposit
+          uri: http://ledger-service:8082
+          predicates:
+            - Path=/api/v1/deposit
+          filters:
+            - JwtAuth
+            - RequestTransform=deposit
+            - RewritePath=/api/v1/deposit, /internal/credit
+        
+        - id: external-balance-inquiry
+          uri: http://ledger-service:8082
+          predicates:
+            - Path=/api/v1/balance-inquiry
+          filters:
+            - JwtAuth
+            - RequestTransform=balance-inquiry
+            - RewritePath=/api/v1/balance-inquiry, /internal/balance-inquiry
+        
+        - id: external-agent-balance
+          uri: http://ledger-service:8082
+          predicates:
+            - Path=/api/v1/agent/balance
+          filters:
+            - JwtAuth
+            - RewritePath=/api/v1/agent/balance, /internal/balance
+        
+        - id: external-kyc-verify
+          uri: http://onboarding-service:8083
+          predicates:
+            - Path=/api/v1/kyc/verify
+          filters:
+            - JwtAuth
+            - RequestTransform=kyc-verify
+            - RewritePath=/api/v1/kyc/verify, /internal/verify-mykad
+        
+        - id: external-kyc-biometric
+          uri: http://onboarding-service:8083
+          predicates:
+            - Path=/api/v1/kyc/biometric
+          filters:
+            - JwtAuth
+            - RequestTransform=kyc-biometric
+            - RewritePath=/api/v1/kyc/biometric, /internal/biometric
+        
+        - id: external-bill-pay
+          uri: http://biller-service:8085
+          predicates:
+            - Path=/api/v1/bill/pay
+          filters:
+            - JwtAuth
+            - RequestTransform=bill-pay
+            - RewritePath=/api/v1/bill/pay, /internal/pay-bill
+        
+        - id: external-topup
+          uri: http://biller-service:8085
+          predicates:
+            - Path=/api/v1/topup
+          filters:
+            - JwtAuth
+            - RequestTransform=topup
+            - RewritePath=/api/v1/topup, /internal/topup
+        
+        - id: external-duitnow
+          uri: http://switch-adapter-service:8084
+          predicates:
+            - Path=/api/v1/transfer/duitnow
+          filters:
+            - JwtAuth
+            - RequestTransform=duitnow
+            - RewritePath=/api/v1/transfer/duitnow, /internal/duitnow
+        
+        - id: external-retail-sale
+          uri: http://ledger-service:8082
+          predicates:
+            - Path=/api/v1/retail/sale
+          filters:
+            - JwtAuth
+            - RequestTransform=retail-sale
+            - RewritePath=/api/v1/retail/sale, /internal/merchant/retail-sale
+        
+        - id: external-retail-pin-purchase
+          uri: http://ledger-service:8082
+          predicates:
+            - Path=/api/v1/retail/pin-purchase
+          filters:
+            - JwtAuth
+            - RequestTransform=retail-pin-purchase
+            - RewritePath=/api/v1/retail/pin-purchase, /internal/merchant/pin-purchase
+        
+        - id: external-retail-cashback
+          uri: http://ledger-service:8082
+          predicates:
+            - Path=/api/v1/retail/cashback
+          filters:
+            - JwtAuth
+            - RequestTransform=retail-cashback
+            - RewritePath=/api/v1/retail/cashback, /internal/merchant/cash-back
+        
+        - id: external-ewallet-withdraw
+          uri: http://biller-service:8085
+          predicates:
+            - Path=/api/v1/ewallet/withdraw
+          filters:
+            - JwtAuth
+            - RequestTransform=ewallet
+            - RewritePath=/api/v1/ewallet/withdraw, /internal/ewallet/withdrawal
+        
+        - id: external-ewallet-topup
+          uri: http://biller-service:8085
+          predicates:
+            - Path=/api/v1/ewallet/topup
+          filters:
+            - JwtAuth
+            - RequestTransform=ewallet
+            - RewritePath=/api/v1/ewallet/topup, /internal/ewallet/topup
+        
+        - id: external-essp
+          uri: http://biller-service:8085
+          predicates:
+            - Path=/api/v1/essp/purchase
+          filters:
+            - JwtAuth
+            - RequestTransform=essp
+            - RewritePath=/api/v1/essp/purchase, /internal/essp/purchase
+        
+        # Missing routes from E2E tests
+        - id: external-rules-fees
+          uri: http://rules-service:8081
+          predicates:
+            - Path=/api/v1/rules/fees
+          filters:
+            - JwtAuth
+            - RequestTransform=rules-fees
+            - RewritePath=/api/v1/rules/fees, /internal/fees
+        
+        - id: external-ledger-balance
+          uri: http://ledger-service:8082
+          predicates:
+            - Path=/api/v1/ledger/balance/**
+          filters:
+            - JwtAuth
+            - RewritePath=/api/v1/ledger/balance, /internal/balance
+        
+        - id: external-onboarding-verify-mykad
+          uri: http://onboarding-service:8083
+          predicates:
+            - Path=/api/v1/onboarding/verify-mykad
+          filters:
+            - JwtAuth
+            - RewritePath=/api/v1/onboarding/verify-mykad, /internal/verify-mykad
+        
+        - id: external-biller-jompay
+          uri: http://biller-service:8085
+          predicates:
+            - Path=/api/v1/billpayment/jompay
+          filters:
+            - JwtAuth
+            - RequestTransform=jompay
+            - RewritePath=/api/v1/billpayment/jompay, /internal/billpayment/jompay
+        
+        - id: external-onboarding-submit-application
+          uri: http://onboarding-service:8083
+          predicates:
+            - Path=/api/v1/onboarding/submit-application
+          filters:
+            - JwtAuth
+            - RequestTransform=onboarding
+            - RewritePath=/api/v1/onboarding/submit-application, /internal/onboarding/application
+         
+        # Backoffice routes
+        - id: backoffice-dashboard
+          uri: http://ledger-service:8082
+          predicates:
+            - Path=/api/v1/backoffice/dashboard
+          filters:
+            - JwtAuth
+            - RewritePath=/api/v1/backoffice/dashboard, /internal/backoffice/dashboard
+        
+        - id: backoffice-agents-list
+          uri: http://onboarding-service:8083
+          predicates:
+            - Path=/api/v1/backoffice/agents
+          filters:
+            - JwtAuth
+            - RewritePath=/api/v1/backoffice/agents, /backoffice/agents
+        
+        - id: backoffice-agents-detail
+          uri: http://onboarding-service:8083
+          predicates:
+            - Path=/api/v1/backoffice/agents/{id}
+          filters:
+            - JwtAuth
+            - RewritePath=/api/v1/backoffice/agents/(?<segment>.*), /backoffice/agents/${segment}
+        
+        - id: backoffice-transactions
+          uri: http://ledger-service:8082
+          predicates:
+            - Path=/api/v1/backoffice/transactions
+          filters:
+            - JwtAuth
+            - RewritePath=/api/v1/backoffice/transactions, /internal/backoffice/transactions
+        
+        - id: backoffice-settlement-export
+          uri: http://ledger-service:8082
+          predicates:
+            - Path=/api/v1/backoffice/settlement/export/**
+          filters:
+            - JwtAuth
+            - RewritePath=/api/v1/backoffice/settlement/export, /backoffice/settlement/export
+
+        - id: backoffice-settlement
+          uri: http://ledger-service:8082
+          predicates:
+            - Path=/api/v1/backoffice/settlement/**
+          filters:
+            - JwtAuth
+            - RewritePath=/api/v1/backoffice/settlement, /backoffice/settlement
+
+        - id: backoffice-kyc-review
+          uri: http://onboarding-service:8083
+          predicates:
+            - Path=/api/v1/backoffice/kyc/review-queue
+          filters:
+            - JwtAuth
+            - RewritePath=/api/v1/backoffice/kyc/review-queue, /internal/kyc/review-queue
+        
+        - id: backoffice-discrepancy-maker
+          uri: http://ledger-service:8082
+          predicates:
+            - Path=/api/v1/backoffice/discrepancy/*/maker-action
+          filters:
+            - JwtAuth
+            - RewritePath=/api/v1/backoffice/discrepancy/(?<caseId>.*)/maker-action, /internal/reconciliation/discrepancy/maker-propose
+        
+        - id: backoffice-discrepancy-checker-approve
+          uri: http://ledger-service:8082
+          predicates:
+            - Path=/api/v1/backoffice/discrepancy/*/checker-approve
+          filters:
+            - JwtAuth
+            - RewritePath=/api/v1/backoffice/discrepancy/(?<caseId>.*)/checker-approve, /internal/reconciliation/discrepancy/checker-approve
+        
+        - id: backoffice-discrepancy-checker-reject
+          uri: http://ledger-service:8082
+          predicates:
+            - Path=/api/v1/backoffice/discrepancy/*/checker-reject
+          filters:
+            - JwtAuth
+            - RewritePath=/api/v1/backoffice/discrepancy/(?<caseId>.*)/checker-reject, /internal/reconciliation/discrepancy/checker-reject
+        
+        - id: backoffice-audit-logs
+          uri: http://auth-iam-service:8087
+          predicates:
+            - Path=/api/v1/backoffice/audit-logs
+          filters:
+            - JwtAuth
+            - RewritePath=/api/v1/backoffice/audit-logs, /auth/audit/logs
+        
+        # Admin routes (User Management, Roles) - now pointing to auth-iam-service
+        - id: admin-users-list
+          uri: http://auth-iam-service:8087
+          predicates:
+            - Path=/api/v1/backoffice/admin/users
+          filters:
+            - JwtAuth
+            - RewritePath=/api/v1/backoffice/admin/users, /auth/users
+        
+        - id: admin-users-detail
+          uri: http://auth-iam-service:8087
+          predicates:
+            - Path=/api/v1/backoffice/admin/users/*
+          filters:
+            - JwtAuth
+            - RewritePath=/api/v1/backoffice/admin/users/(?<segment>.*), /auth/users/${segment}
+        
+        - id: admin-roles
+          uri: http://auth-iam-service:8087
+          predicates:
+            - Path=/api/v1/backoffice/admin/roles
+          filters:
+            - JwtAuth
+            - RewritePath=/api/v1/backoffice/admin/roles, /auth/roles
+        
+        # API Docs proxy routes
+        - id: docs-auth
+          uri: http://auth-iam-service:8087
+          predicates:
+            - Path=/docs/auth/**
+          filters:
+            - RewritePath=/docs/auth/(?<segment>.*), /${segment}
+        
+        - id: docs-rules
+          uri: http://rules-service:8081
+          predicates:
+            - Path=/docs/rules/**
+          filters:
+            - RewritePath=/docs/rules/(?<segment>.*), /${segment}
+        
+        - id: docs-ledger
+          uri: http://ledger-service:8082
+          predicates:
+            - Path=/docs/ledger/**
+          filters:
+            - RewritePath=/docs/ledger/(?<segment>.*), /${segment}
+        
+        - id: docs-onboarding
+          uri: http://onboarding-service:8083
+          predicates:
+            - Path=/docs/onboarding/**
+          filters:
+            - RewritePath=/docs/onboarding/(?<segment>.*), /${segment}
+        
+        - id: docs-switch
+          uri: http://switch-adapter-service:8084
+          predicates:
+            - Path=/docs/switch/**
+          filters:
+            - RewritePath=/docs/switch/(?<segment>.*), /${segment}
+        
+        - id: docs-biller
+          uri: http://biller-service:8085
+          predicates:
+            - Path=/docs/biller/**
+          filters:
+            - RewritePath=/docs/biller/(?<segment>.*), /${segment}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,gateway
+  endpoint:
+    health:
+      show-details: always
+
+logging:
+  level:
+    com.agentbanking.gateway: DEBUG
+    org.springframework.security: DEBUG
+    org.springframework.security.oauth2: DEBUG
+    org.springframework.security.oauth2.jwt: DEBUG

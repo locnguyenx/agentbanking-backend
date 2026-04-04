@@ -246,6 +246,11 @@ public class ManageUserUseCaseImpl implements ManageUserUseCase {
     }
 
     @Override
+    public UserRecord getProfile(UUID userId) {
+        return getUserById(userId);
+    }
+
+    @Override
     public boolean changePassword(UUID userId, String currentPassword, String newPassword) {
         UserRecord user = userRepository.findById(userId).orElse(null);
         if (user == null) {

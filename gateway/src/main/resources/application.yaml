@@ -107,6 +107,14 @@ spring:
             - JwtAuth
             - RewritePath=/api/v1/auth/password/change, /auth/password/change
 
+        - id: external-auth-me
+          uri: http://auth-iam-service:8087
+          predicates:
+            - Path=/api/v1/auth/me
+          filters:
+            - JwtAuth
+            - RewritePath=/api/v1/auth/me, /auth/me
+
         # ============================================================
         # External Agent User Management endpoints (protected)
         # ============================================================
@@ -436,6 +444,14 @@ spring:
             - JwtAuth
             - RewritePath=/api/v1/backoffice/transactions, /internal/backoffice/transactions
         
+        - id: backoffice-settlement-export
+          uri: http://ledger-service:8082
+          predicates:
+            - Path=/api/v1/backoffice/settlement/export
+          filters:
+            - JwtAuth
+            - RewritePath=/api/v1/backoffice/settlement/export, /internal/backoffice/settlement/export
+
         - id: backoffice-settlement
           uri: http://ledger-service:8082
           predicates:
@@ -443,7 +459,7 @@ spring:
           filters:
             - JwtAuth
             - RewritePath=/api/v1/backoffice/settlement, /internal/backoffice/settlement
-        
+
         - id: backoffice-kyc-review
           uri: http://onboarding-service:8083
           predicates:
@@ -500,6 +516,30 @@ spring:
           filters:
             - JwtAuth
             - RewritePath=/api/v1/backoffice/admin/users/(?<segment>.*), /auth/users/${segment}
+        
+        - id: admin-users-lock
+          uri: http://auth-iam-service:8087
+          predicates:
+            - Path=/api/v1/backoffice/admin/users/*/lock
+          filters:
+            - JwtAuth
+            - RewritePath=/api/v1/backoffice/admin/users/(?<segment>.*)/lock, /auth/users/${segment}/lock
+        
+        - id: admin-users-unlock
+          uri: http://auth-iam-service:8087
+          predicates:
+            - Path=/api/v1/backoffice/admin/users/*/unlock
+          filters:
+            - JwtAuth
+            - RewritePath=/api/v1/backoffice/admin/users/(?<segment>.*)/unlock, /auth/users/${segment}/unlock
+        
+        - id: admin-users-reset-password
+          uri: http://auth-iam-service:8087
+          predicates:
+            - Path=/api/v1/backoffice/admin/users/*/reset-password
+          filters:
+            - JwtAuth
+            - RewritePath=/api/v1/backoffice/admin/users/(?<segment>.*)/reset-password, /auth/users/${segment}/reset-password
         
         - id: admin-roles
           uri: http://auth-iam-service:8087

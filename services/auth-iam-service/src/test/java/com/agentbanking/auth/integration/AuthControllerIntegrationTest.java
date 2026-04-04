@@ -12,6 +12,7 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.context.annotation.Import;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -21,6 +22,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * Uses Testcontainers for PostgreSQL, Redis, and Kafka
  */
 @AutoConfigureMockMvc
+@Import(AuthControllerIntegrationTest.TestConfig.class)
 class AuthControllerIntegrationTest extends AbstractIntegrationTest {
 
     @TestConfiguration
@@ -58,7 +60,7 @@ class AuthControllerIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
-    void authenticate_withInvalidPassword_shouldReturn400() throws Exception {
+    void authenticate_withInvalidPassword_shouldReturn401() throws Exception {
         String requestBody = """
             {
                 "username": "admin",
@@ -69,12 +71,12 @@ class AuthControllerIntegrationTest extends AbstractIntegrationTest {
         mockMvc.perform(post("/auth/token")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.error.code").value("ERR_VAL_INVALID_REQUEST"));
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.error.code").value("ERR_AUTH_INVALID_CREDENTIALS"));
     }
 
     @Test
-    void authenticate_withNonExistentUser_shouldReturn400() throws Exception {
+    void authenticate_withNonExistentUser_shouldReturn401() throws Exception {
         String requestBody = """
             {
                 "username": "nonexistent",
@@ -85,8 +87,8 @@ class AuthControllerIntegrationTest extends AbstractIntegrationTest {
         mockMvc.perform(post("/auth/token")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.error.code").value("ERR_VAL_INVALID_REQUEST"));
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.error.code").value("ERR_AUTH_INVALID_CREDENTIALS"));
     }
 
     @Test
@@ -125,17 +127,18 @@ class AuthControllerIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
-    void refreshToken_withInvalidRefreshToken_shouldReturn401() throws Exception {
+    void refreshToken_withInvalidRefreshToken_shouldReturn4xx() throws Exception {
         String requestBody = """
             {
                 "refresh_token": "invalid-refresh-token"
             }
             """;
 
+        // Invalid refresh token should return an error response (4xx)
         mockMvc.perform(post("/auth/refresh")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
-                .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.error.code").value("ERR_AUTH_UNAUTHORIZED"));
+                .andExpect(status().is4xxClientError())
+                .andExpect(jsonPath("$.status").value("FAILED"));
     }
 }

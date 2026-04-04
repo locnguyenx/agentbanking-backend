@@ -2,7 +2,10 @@ package com.agentbanking.gateway.integration.transactions;
 
 import com.agentbanking.gateway.integration.BaseIntegrationTest;
 import com.agentbanking.gateway.integration.setup.TestContext;
+import com.fasterxml.jackson.databind.JsonNode;
 import org.junit.jupiter.api.*;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Phase 5c: Prepaid Top-up Tests
@@ -36,8 +39,19 @@ class TopupTest extends BaseIntegrationTest {
         var status = response.expectBody(String.class).returnResult().getStatus();
         String responseBody = response.expectBody(String.class).returnResult().getResponseBody();
 
-        System.out.println("Topup status: " + (status != null ? status.value() : "null"));
-        System.out.println("Topup response: " + responseBody);
+        assertNotNull(status, "Response status should not be null");
+        assertEquals(200, status.value(), "Topup should return 200");
+
+        assertNotNull(responseBody, "Response body should not be null");
+        JsonNode body;
+        try {
+            body = objectMapper.readTree(responseBody);
+        } catch (Exception e) {
+            fail("Failed to parse topup response: " + e.getMessage());
+            return;
+        }
+        assertEquals("SUCCESS", body.get("status").asText(), "Status should be SUCCESS");
+        assertNotNull(body.get("transactionId"), "Transaction ID should exist");
     }
 
     @Test

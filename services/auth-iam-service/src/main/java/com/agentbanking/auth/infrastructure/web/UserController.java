@@ -2,12 +2,14 @@ package com.agentbanking.auth.infrastructure.web;
 
 import com.agentbanking.auth.application.usecase.ManageUserUseCaseImpl;
 import com.agentbanking.auth.domain.model.UserRecord;
+import com.agentbanking.auth.infrastructure.web.dto.MyProfileResponse;
 import com.agentbanking.auth.infrastructure.web.dto.PasswordResetDto;
 import com.agentbanking.auth.infrastructure.web.dto.UserCreateDto;
 import com.agentbanking.auth.infrastructure.web.dto.UserResponseDto;
 import com.agentbanking.auth.infrastructure.web.dto.UserUpdateDto;
 import jakarta.validation.Valid;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import org.springframework.http.HttpStatus;
@@ -141,21 +143,40 @@ public class UserController {
     }
 
     @PostMapping("/{id}/lock")
-    public ResponseEntity<Void> lockUser(@PathVariable UUID id) {
+    public ResponseEntity<Map<String, Object>> lockUser(@PathVariable UUID id) {
         boolean locked = manageUserUseCase.lockUser(id);
-        return locked ? ResponseEntity.ok().build() : ResponseEntity.notFound().build();
+        if (!locked) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok(Map.of(
+            "userId", id,
+            "status", "LOCKED"
+        ));
     }
 
     @PostMapping("/{id}/unlock")
-    public ResponseEntity<Void> unlockUser(@PathVariable UUID id) {
+    public ResponseEntity<Map<String, Object>> unlockUser(@PathVariable UUID id) {
         boolean unlocked = manageUserUseCase.unlockUser(id);
-        return unlocked ? ResponseEntity.ok().build() : ResponseEntity.notFound().build();
+        if (!unlocked) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok(Map.of(
+            "userId", id,
+            "status", "ACTIVE"
+        ));
     }
 
     @PostMapping("/{id}/reset-password")
-    public ResponseEntity<Void> resetPassword(@PathVariable UUID id, @Valid @RequestBody PasswordResetDto passwordDto) {
+    public ResponseEntity<Map<String, Object>> resetPassword(@PathVariable UUID id, @Valid @RequestBody PasswordResetDto passwordDto) {
         boolean reset = manageUserUseCase.resetPassword(id, passwordDto.newPassword());
-        return reset ? ResponseEntity.ok().build() : ResponseEntity.notFound().build();
+        if (!reset) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok(Map.of(
+            "userId", id,
+            "temporaryPassword", passwordDto.newPassword(),
+            "mustChangePassword", true
+        ));
     }
 
     private UserResponseDto toResponseDto(UserRecord user) {
@@ -165,6 +186,8 @@ public class UserController {
                 user.email(),
                 user.fullName(),
                 user.status(),
+                user.userType(),
+                user.agentId(),
                 user.permissions(),
                 user.createdAt(),
                 user.lastLoginAt()

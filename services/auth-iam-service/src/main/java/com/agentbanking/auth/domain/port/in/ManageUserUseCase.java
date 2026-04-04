@@ -80,6 +80,13 @@ public interface ManageUserUseCase {
     List<UserRecord> getAllUsers();
     
     /**
+     * Get current user's profile
+     * @param userId the user ID
+     * @return the user profile or null if not found
+     */
+    UserRecord getProfile(UUID userId);
+
+    /**
      * Change user's password (requires current password verification)
      * @param userId the user ID
      * @param currentPassword the current password for verification

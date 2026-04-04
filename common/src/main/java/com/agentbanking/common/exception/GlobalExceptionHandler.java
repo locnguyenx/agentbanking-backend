@@ -2,6 +2,7 @@ package com.agentbanking.common.exception;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -30,8 +31,26 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ErrorResponse> handleIllegalArgumentException(IllegalArgumentException e) {
         log.error("Illegal argument: {}", e.getMessage());
+        
+        String message = e.getMessage() != null ? e.getMessage().toLowerCase() : "";
+        
+        // Return 401 for authentication-related errors
+        if (message.contains("credentials") || message.contains("invalid refresh token")) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(
+                ErrorResponse.of("ERR_AUTH_INVALID_CREDENTIALS", "Invalid credentials", "DECLINE")
+            );
+        }
+        
         return ResponseEntity.badRequest().body(
             ErrorResponse.of("ERR_VAL_INVALID_REQUEST", e.getMessage(), "RETRY")
+        );
+    }
+
+    @ExceptionHandler(SecurityException.class)
+    public ResponseEntity<ErrorResponse> handleSecurityException(SecurityException e) {
+        log.error("Security exception: {}", e.getMessage());
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(
+            ErrorResponse.of("ERR_AUTH_UNAUTHORIZED", e.getMessage(), "DECLINE")
         );
     }
 

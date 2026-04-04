@@ -249,6 +249,11 @@ public class UserManagementService implements ManageUserUseCase, CreateAgentUser
     }
 
     @Override
+    public UserRecord getProfile(UUID userId) {
+        return getUserById(userId);
+    }
+
+    @Override
     public UserRecord createAgentUser(UUID agentId, String agentCode, String phone, String email, String businessName) {
         userRepository.findByAgentId(agentId).ifPresent(u -> {
             throw new UserAlreadyExistsException("User already exists for this agent");
@@ -300,6 +305,7 @@ public class UserManagementService implements ManageUserUseCase, CreateAgentUser
         return userRepository.findByAgentId(agentId);
     }
 
+    @Override
     public boolean changePassword(UUID userId, String currentPassword, String newPassword) {
         UserRecord user = userRepository.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException("User not found"));

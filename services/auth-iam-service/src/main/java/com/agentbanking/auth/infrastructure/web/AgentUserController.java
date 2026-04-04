@@ -5,6 +5,7 @@ import com.agentbanking.auth.domain.port.in.CreateAgentUserUseCase;
 import com.agentbanking.auth.domain.port.out.UserRepository;
 import com.agentbanking.auth.infrastructure.web.dto.AgentUserStatusResponse;
 import com.agentbanking.auth.infrastructure.web.dto.CreateAgentUserRequest;
+import com.agentbanking.auth.infrastructure.web.dto.CreateAgentUserRequestFromId;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -27,6 +28,18 @@ public class AgentUserController {
     public ResponseEntity<UserRecord> createAgentUser(@Valid @RequestBody CreateAgentUserRequest request) {
         UserRecord user = createAgentUserUseCase.createAgentUser(
             request.agentId(),
+            request.agentCode(),
+            request.phone(),
+            request.email(),
+            request.businessName()
+        );
+        return ResponseEntity.ok(user);
+    }
+
+    @PostMapping("/agent/{agentId}/create")
+    public ResponseEntity<UserRecord> createAgentUserById(@PathVariable UUID agentId, @Valid @RequestBody CreateAgentUserRequestFromId request) {
+        UserRecord user = createAgentUserUseCase.createAgentUser(
+            agentId,
             request.agentCode(),
             request.phone(),
             request.email(),

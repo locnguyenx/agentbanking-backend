@@ -14,10 +14,12 @@ import org.springframework.web.bind.annotation.*;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/internal")
@@ -217,8 +219,9 @@ public class LedgerController {
         
         return ResponseEntity.ok(Map.of(
             "date", date,
-            "totalDebits", totalWithdrawals,
-            "totalCredits", totalDeposits,
+            "totalDeposits", totalDeposits,
+            "totalWithdrawals", totalWithdrawals,
+            "totalCommissions", BigDecimal.ZERO,
             "netAmount", totalDeposits.subtract(totalWithdrawals),
             "transactions", transactions.stream()
                 .filter(t -> t.createdAt().isAfter(startOfDay) && t.createdAt().isBefore(endOfDay))
@@ -236,26 +239,64 @@ public class LedgerController {
     }
 
     @GetMapping("/transactions/has-pending")
-    public ResponseEntity<Map<String, Object>> hasPendingTransactions(@RequestParam UUID agentId) {
+    public ResponseEntity<Boolean> hasPendingTransactions(@RequestParam UUID agentId) {
         List<TransactionStatus> pendingStatuses = List.of(TransactionStatus.PENDING, TransactionStatus.COMPLETED);
         boolean hasPending = transactionQueryUseCase.existsByAgentIdAndStatusIn(agentId, pendingStatuses);
-        return ResponseEntity.ok(Map.of("hasPending", hasPending));
+        return ResponseEntity.ok(hasPending);
     }
 
     @GetMapping("/transactions/count-by-status")
-    public ResponseEntity<Map<String, Object>> countByAgentIdAndStatus(
+    public ResponseEntity<Long> countByAgentIdAndStatus(
             @RequestParam UUID agentId,
             @RequestParam TransactionStatus status) {
         long count = transactionQueryUseCase.countByAgentIdAndStatus(agentId, status);
-        return ResponseEntity.ok(Map.of("count", count));
+        return ResponseEntity.ok(count);
     }
 
     @GetMapping("/transactions/exists-by-status")
-    public ResponseEntity<Map<String, Object>> existsByAgentIdAndStatusIn(
+    public ResponseEntity<Boolean> existsByAgentIdAndStatusIn(
             @RequestParam UUID agentId,
             @RequestParam List<TransactionStatus> statuses) {
         boolean exists = transactionQueryUseCase.existsByAgentIdAndStatusIn(agentId, statuses);
-        return ResponseEntity.ok(Map.of("exists", exists));
+        return ResponseEntity.ok(exists);
+    }
+
+    @GetMapping("/backoffice/settlement/export")
+    public ResponseEntity<byte[]> exportSettlement(@RequestParam String date) {
+        LocalDate settlementDate = LocalDate.parse(date);
+        LocalDateTime startOfDay = settlementDate.atStartOfDay();
+        LocalDateTime endOfDay = settlementDate.plusDays(1).atStartOfDay();
+        
+        List<TransactionRecord> transactions = transactionQueryUseCase.findRecentTransactions();
+        var dailyTransactions = transactions.stream()
+            .filter(t -> t.createdAt().isAfter(startOfDay) && t.createdAt().isBefore(endOfDay))
+            .collect(Collectors.toList());
+        
+        BigDecimal totalDeposits = dailyTransactions.stream()
+            .filter(t -> "DEPOSIT".equals(t.transactionType()))
+            .map(TransactionRecord::amount)
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+        
+        BigDecimal totalWithdrawals = dailyTransactions.stream()
+            .filter(t -> "WITHDRAWAL".equals(t.transactionType()))
+            .map(TransactionRecord::amount)
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+        
+        StringBuilder csv = new StringBuilder();
+        csv.append("Date,AgentId,TransactionType,Amount,Status\n");
+        for (TransactionRecord t : dailyTransactions) {
+            csv.append(String.format("%s,%s,%s,%s,%s\n",
+                date,
+                t.agentId(),
+                t.transactionType(),
+                t.amount(),
+                t.status()));
+        }
+        
+        return ResponseEntity.ok()
+            .header("Content-Type", "text/csv")
+            .header("Content-Disposition", "attachment; filename=settlement-" + date + ".csv")
+            .body(csv.toString().getBytes());
     }
 
     @PostMapping("/balance-inquiry")

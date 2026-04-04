@@ -1,7 +1,7 @@
 package com.agentbanking.onboarding.domain.model;
 
 public enum AgentTier {
-    BASIC,
+    MICRO,
     STANDARD,
-    PREMIUM
+    PREMIER
 }

@@ -2,7 +2,10 @@ package com.agentbanking.gateway.integration.transactions;
 
 import com.agentbanking.gateway.integration.BaseIntegrationTest;
 import com.agentbanking.gateway.integration.setup.TestContext;
+import com.fasterxml.jackson.databind.JsonNode;
 import org.junit.jupiter.api.*;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Phase 5g: E-Wallet Tests
@@ -36,8 +39,19 @@ class EWalletTest extends BaseIntegrationTest {
         var status = response.expectBody(String.class).returnResult().getStatus();
         String responseBody = response.expectBody(String.class).returnResult().getResponseBody();
 
-        System.out.println("E-wallet withdrawal status: " + (status != null ? status.value() : "null"));
-        System.out.println("E-wallet withdrawal response: " + responseBody);
+        assertNotNull(status, "Response status should not be null");
+        assertEquals(200, status.value(), "E-wallet withdrawal should return 200");
+
+        assertNotNull(responseBody, "Response body should not be null");
+        JsonNode body;
+        try {
+            body = objectMapper.readTree(responseBody);
+        } catch (Exception e) {
+            fail("Failed to parse e-wallet withdrawal response: " + e.getMessage());
+            return;
+        }
+        assertEquals("SUCCESS", body.get("status").asText(), "Status should be SUCCESS");
+        assertNotNull(body.get("transactionId"), "Transaction ID should exist");
     }
 
     @Test
@@ -60,8 +74,19 @@ class EWalletTest extends BaseIntegrationTest {
         var status = response.expectBody(String.class).returnResult().getStatus();
         String responseBody = response.expectBody(String.class).returnResult().getResponseBody();
 
-        System.out.println("E-wallet topup status: " + (status != null ? status.value() : "null"));
-        System.out.println("E-wallet topup response: " + responseBody);
+        assertNotNull(status, "Response status should not be null");
+        assertEquals(200, status.value(), "E-wallet topup should return 200");
+
+        assertNotNull(responseBody, "Response body should not be null");
+        JsonNode body;
+        try {
+            body = objectMapper.readTree(responseBody);
+        } catch (Exception e) {
+            fail("Failed to parse e-wallet topup response: " + e.getMessage());
+            return;
+        }
+        assertEquals("SUCCESS", body.get("status").asText(), "Status should be SUCCESS");
+        assertNotNull(body.get("transactionId"), "Transaction ID should exist");
     }
 
     @Test

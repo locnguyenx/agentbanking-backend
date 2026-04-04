@@ -8,6 +8,7 @@ import com.agentbanking.common.efm.EfmEventPublisher;
 import com.agentbanking.ledger.domain.model.*;
 import com.agentbanking.ledger.domain.port.out.*;
 import com.agentbanking.onboarding.domain.model.AgentRecord;
+import com.agentbanking.onboarding.domain.model.AgentTier;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -366,22 +367,7 @@ public class LedgerService {
               throw new LedgerException(ErrorCodes.ERR_AGENT_NOT_FOUND, "DECLINE");
           }
           AgentRecord agent = agentOpt.get();
-          AgentTier tier;
-          // Map onboarding service tier to ledger service tier
-          String tierName = agent.tier().name(); // BASIC, STANDARD, PREMIUM
-          switch (tierName) {
-              case "BASIC":
-                  tier = AgentTier.MICRO; // Map BASIC to MICRO
-                  break;
-              case "STANDARD":
-                  tier = AgentTier.STANDARD;
-                  break;
-              case "PREMIUM":
-                  tier = AgentTier.PREMIER;
-                  break;
-              default:
-                  tier = AgentTier.MICRO; // default
-          }
+          AgentTier tier = agent.tier(); // Already using MICRO, STANDARD, PREMIER from onboarding
          
          // Calculate MDR
          MdrCalculation mdr = merchantTransactionService.calculateMdr(amount, tier);
@@ -520,27 +506,12 @@ public class LedgerService {
           }
          
           // Get agent for tier
-          Optional<AgentRecord> agentOpt = agentRepository.findById(merchantId);
-          if (agentOpt.isEmpty()) {
-              throw new LedgerException(ErrorCodes.ERR_AGENT_NOT_FOUND, "DECLINE");
-          }
-          AgentRecord agent = agentOpt.get();
-          // Map onboarding service tier to ledger service tier
-          String tierName = agent.tier().name();
-          AgentTier tier;
-          switch (tierName) {
-              case "BASIC":
-                  tier = AgentTier.MICRO;
-                  break;
-              case "STANDARD":
-                  tier = AgentTier.STANDARD;
-                  break;
-              case "PREMIUM":
-                  tier = AgentTier.PREMIER;
-                  break;
-              default:
-                  tier = AgentTier.MICRO;
-          }
+           Optional<AgentRecord> agentOpt = agentRepository.findById(merchantId);
+           if (agentOpt.isEmpty()) {
+               throw new LedgerException(ErrorCodes.ERR_AGENT_NOT_FOUND, "DECLINE");
+           }
+           AgentRecord agent = agentOpt.get();
+           AgentTier tier = agent.tier(); // Already using MICRO, STANDARD, PREMIER from onboarding
          
          // Update agent float: commission added, cashBackAmount subtracted
          AgentFloatRecord agentFloat = agentFloatRepository.findByIdWithLock(merchantId);
@@ -675,29 +646,14 @@ public class LedgerService {
 
          // Get agent for tier
          Optional<AgentRecord> agentOpt = agentRepository.findById(agentId);
-         if (agentOpt.isEmpty()) {
-             throw new LedgerException(ErrorCodes.ERR_AGENT_NOT_FOUND, "DECLINE");
-         }
-         AgentRecord agent = agentOpt.get();
-         
-         // Map onboarding service tier to ledger service tier
-         String tierName = agent.tier().name();
-         AgentTier tier;
-         switch (tierName) {
-             case "BASIC":
-                 tier = AgentTier.MICRO;
-                 break;
-             case "STANDARD":
-                 tier = AgentTier.STANDARD;
-                 break;
-             case "PREMIUM":
-                 tier = AgentTier.PREMIER;
-                 break;
-             default:
-                 tier = AgentTier.MICRO;
-         }
+          if (agentOpt.isEmpty()) {
+              throw new LedgerException(ErrorCodes.ERR_AGENT_NOT_FOUND, "DECLINE");
+          }
+          AgentRecord agent = agentOpt.get();
+          
+           AgentTier tier = agent.tier(); // Already using MICRO, STANDARD, PREMIER from onboarding
 
-         // Calculate commission (agent earns commission on PIN sales)
+          // Calculate commission (agent earns commission on PIN sales)
          BigDecimal commission = merchantTransactionService.calculatePinPurchaseCommission(amount, tier);
 
          // Credit agent float with commission

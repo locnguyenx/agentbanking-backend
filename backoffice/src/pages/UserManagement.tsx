@@ -228,7 +228,8 @@ export function UserManagement() {
             <option value="All">All Status</option>
             <option value="ACTIVE">Active</option>
             <option value="LOCKED">Locked</option>
-            <option value="DISABLED">Disabled</option>
+            <option value="DELETED">Deleted</option>
+            <option value="INACTIVE">Inactive</option>
           </select>
           <button className="btn btn-outline">
             <Download size={18} />
@@ -243,12 +244,12 @@ export function UserManagement() {
           const total = users.length
           const active = users.filter(u => u.status === 'ACTIVE').length
           const locked = users.filter(u => u.status === 'LOCKED').length
-          const disabled = users.filter(u => u.status === 'DISABLED').length
+          const inactive = users.filter(u => u.status === 'INACTIVE').length
           return [
             { label: 'Total Users', value: total.toString(), color: '#1e3a5f' },
             { label: 'Active', value: active.toString(), color: '#10b981' },
             { label: 'Locked', value: locked.toString(), color: '#f59e0b' },
-            { label: 'Disabled', value: disabled.toString(), color: '#ef4444' },
+            { label: 'Inactive', value: inactive.toString(), color: '#3b82f6' },
           ].map((stat, index) => (
             <div key={index} className="card" style={{ padding: 20, textAlign: 'center' }}>
               <p style={{ fontSize: 13, color: '#64748b', marginBottom: 4 }}>{stat.label}</p>
@@ -269,6 +270,7 @@ export function UserManagement() {
                 <th>Email</th>
                 <th>Status</th>
                 <th>User Type</th>
+                <th>Agent ID</th>
                 <th>Last Login</th>
                 <th>Actions</th>
               </tr>
@@ -284,7 +286,9 @@ export function UserManagement() {
                   <td>
                     <span className={`badge ${
                       user.status === 'ACTIVE' ? 'badge-success' : 
-                      user.status === 'LOCKED' ? 'badge-warning' : 'badge-error'
+                      user.status === 'LOCKED' ? 'badge-warning' :
+                      user.status === 'INACTIVE' ? 'badge-info' :
+                      user.status === 'DELETED' ? 'badge-error' : ''
                     }`}>
                       {user.status}
                     </span>
@@ -300,6 +304,11 @@ export function UserManagement() {
                     }}>
                       {user.userType || 'INTERNAL'}
                     </span>
+                  </td>
+                  <td style={{ fontSize: 13, fontFamily: 'monospace', color: '#64748b' }}>
+                    {user.userType === 'EXTERNAL' && user.agentId 
+                      ? user.agentId.slice(0, 8) + '...' 
+                      : '—'}
                   </td>
                   <td style={{ color: '#64748b' }}>
                     {user.lastLoginAt ? new Date(user.lastLoginAt).toLocaleDateString() : 'Never'}
@@ -590,7 +599,7 @@ export function UserManagement() {
               </div>
               <div style={{ background: '#f8fafc', padding: 16, borderRadius: 12 }}>
                 <label style={{ fontSize: 11, color: '#64748b', textTransform: 'uppercase', letterSpacing: 0.5, fontWeight: 600 }}>Status</label>
-                <p style={{ margin: '8px 0 0 0' }}><span className={`badge ${viewUser.status === 'ACTIVE' ? 'badge-success' : viewUser.status === 'LOCKED' ? 'badge-warning' : 'badge-error'}`}>{viewUser.status}</span></p>
+                <p style={{ margin: '8px 0 0 0' }}><span className={`badge ${viewUser.status === 'ACTIVE' ? 'badge-success' : viewUser.status === 'LOCKED' ? 'badge-warning' : viewUser.status === 'INACTIVE' ? 'badge-info' : 'badge-error'}`}>{viewUser.status}</span></p>
               </div>
               <div style={{ background: '#f8fafc', padding: 16, borderRadius: 12 }}>
                 <label style={{ fontSize: 11, color: '#64748b', textTransform: 'uppercase', letterSpacing: 0.5, fontWeight: 600 }}>Email</label>
@@ -711,7 +720,7 @@ export function UserManagement() {
                   </div>
                   <div>
                     <label style={{ fontSize: 11, color: '#64748b', textTransform: 'uppercase', fontWeight: 600 }}>Status</label>
-                    <p style={{ margin: '4px 0 0 0' }}><span className={`badge ${editUser.status === 'ACTIVE' ? 'badge-success' : editUser.status === 'LOCKED' ? 'badge-warning' : 'badge-error'}`}>{editUser.status}</span></p>
+                    <p style={{ margin: '4px 0 0 0' }}><span className={`badge ${editUser.status === 'ACTIVE' ? 'badge-success' : editUser.status === 'LOCKED' ? 'badge-warning' : editUser.status === 'INACTIVE' ? 'badge-info' : 'badge-error'}`}>{editUser.status}</span></p>
                   </div>
                 </div>
                 <div style={{ display: 'flex', gap: 12, marginTop: 8 }}>

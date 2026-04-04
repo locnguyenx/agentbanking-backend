@@ -1,8 +1,13 @@
 package com.agentbanking.gateway.integration;
 
+import com.agentbanking.gateway.integration.setup.TestContext;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+
+import static com.agentbanking.gateway.integration.BaseIntegrationTest.MYR_CURRENCY;
+import static com.agentbanking.gateway.integration.BaseIntegrationTest.ENCRYPTED_CARD;
+import static com.agentbanking.gateway.integration.BaseIntegrationTest.DUKPT_PIN;
 
 /**
  * BDD Section 1: Rules & Fee Engine Integration Tests
@@ -24,7 +29,9 @@ class RulesFeeEngineIntegrationTest extends BaseIntegrationTest {
         @Test
         @DisplayName("BDD-R01 [HP]: Configure fee structure for Micro agent cash withdrawal")
         void withdrawal_microAgent_withFixedFee_shouldApplyFee() {
-            String token = getMicroAgentToken();
+            // TODO: When test infrastructure supports tier-specific agents, use getMicroAgentToken()
+            // For now, uses TestContext.agentToken (STANDARD tier)
+            String token = TestContext.agentToken;
             String requestBody = """
                 {
                     "amount": 500.00,
@@ -47,7 +54,9 @@ class RulesFeeEngineIntegrationTest extends BaseIntegrationTest {
         @Test
         @DisplayName("BDD-R01-PCT [HP]: Percentage-based fee for Premier agent cash withdrawal")
         void withdrawal_premierAgent_withPercentageFee_shouldApplyFee() {
-            String token = getPremierAgentToken();
+            // TODO: When test infrastructure supports tier-specific agents, use getPremierAgentToken()
+            // For now, uses TestContext.agentToken (STANDARD tier)
+            String token = TestContext.agentToken;
             String requestBody = """
                 {
                     "amount": 10000.00,
@@ -68,7 +77,9 @@ class RulesFeeEngineIntegrationTest extends BaseIntegrationTest {
         @Test
         @DisplayName("BDD-R04 [HP]: Percentage-based fee calculation with rounding")
         void withdrawal_withPercentageFee_shouldRoundCorrectly() {
-            String token = getStandardAgentToken();
+            // TODO: When test infrastructure supports tier-specific agents, use getStandardAgentToken()
+            // For now, uses TestContext.agentToken (STANDARD tier)
+            String token = TestContext.agentToken;
             String requestBody = """
                 {
                     "amount": 333.33,
@@ -94,7 +105,8 @@ class RulesFeeEngineIntegrationTest extends BaseIntegrationTest {
         @Test
         @DisplayName("BDD-R02 [HP]: Daily transaction limit check passes")
         void withdrawal_withinDailyLimit_shouldPass() {
-            String token = getStandardAgentToken();
+            // TODO: When test infrastructure supports tier-specific agents, use getStandardAgentToken()
+            String token = TestContext.agentToken;
             String requestBody = """
                 {
                     "amount": 3000.00,
@@ -114,7 +126,8 @@ class RulesFeeEngineIntegrationTest extends BaseIntegrationTest {
         @Test
         @DisplayName("BDD-R02-EC-03 [EC]: Transaction amount is zero")
         void withdrawal_zeroAmount_shouldReturnError() {
-            String token = getMicroAgentToken();
+            // TODO: When test infrastructure supports tier-specific agents, use getMicroAgentToken()
+            String token = TestContext.agentToken;
             String requestBody = """
                 {
                     "amount": 0.00,
@@ -135,7 +148,8 @@ class RulesFeeEngineIntegrationTest extends BaseIntegrationTest {
         @Test
         @DisplayName("BDD-R02-EC-04 [EC]: Transaction amount is negative")
         void withdrawal_negativeAmount_shouldReturnError() {
-            String token = getMicroAgentToken();
+            // TODO: When test infrastructure supports tier-specific agents, use getMicroAgentToken()
+            String token = TestContext.agentToken;
             String requestBody = """
                 {
                     "amount": -100.00,
@@ -162,7 +176,8 @@ class RulesFeeEngineIntegrationTest extends BaseIntegrationTest {
         @Test
         @DisplayName("BDD-R03 [HP]: Velocity check passes")
         void withdrawal_velocityCheckPasses_shouldSucceed() {
-            String token = getStandardAgentToken();
+            // TODO: When test infrastructure supports tier-specific agents, use getStandardAgentToken()
+            String token = TestContext.agentToken;
             String requestBody = """
                 {
                     "amount": 500.00,

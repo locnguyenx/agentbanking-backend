@@ -4,6 +4,7 @@
 **Date:** 2026-03-30
 **Status:** Draft
 **Module:** Auth & IAM Service (`com.agentbanking.auth`), Onboarding Service (`com.agentbanking.onboarding`)
+**Related Design:** `docs/superpowers/specs/auth-iam-service/2026-03-29-auth-iam-service-design.md`
 **BRD Reference:** `docs/superpowers/specs/agent-user-management/2026-03-30-agent-user-management-brd.md`
 **BDD Reference:** `docs/superpowers/specs/agent-user-management/2026-03-30-agent-user-management-bdd.md`
 

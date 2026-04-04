@@ -261,6 +261,9 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-onboarding:5432/onboarding_db
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: postgres
+      SERVICES_LEDGER-SERVICE_URL: http://ledger-service:8082
+      AUTH_SERVICE_URL: http://auth-iam-service:8087
+      AML-SCREENING_URL: http://mock-server:8090
     depends_on:
       postgres-onboarding:
         condition: service_healthy
