@@ -20,6 +20,16 @@ public class TransactionQuoteUseCaseImpl implements TransactionQuoteUseCase {
     @Override
     public QuoteResult calculateQuote(String agentId, String agentTier, String amount,
                                       String serviceCode, String fundingSource, String billerRouting) {
+        if (amount == null || amount.isBlank()) {
+            throw new IllegalArgumentException("amount is required");
+        }
+        if (serviceCode == null || serviceCode.isBlank()) {
+            throw new IllegalArgumentException("serviceCode is required");
+        }
+        if (agentTier == null || agentTier.isBlank()) {
+            throw new IllegalArgumentException("agentTier is required");
+        }
+
         try {
             BigDecimal amountDecimal = new BigDecimal(amount);
 
