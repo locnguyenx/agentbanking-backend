@@ -38,6 +38,9 @@ public final class ErrorCodes {
     public static final String ERR_AGENT_HAS_PENDING_TRANSACTIONS = "ERR_BIZ_AGENT_HAS_PENDING_TRANSACTIONS";
     public static final String ERR_DUPLICATE_AGENT = "ERR_BIZ_DUPLICATE_AGENT";
     public static final String ERR_AGENT_NOT_FOUND = "ERR_BIZ_AGENT_NOT_FOUND";
+    public static final String ERR_BIZ_QUOTE_CALCULATION_FAILED = "ERR_BIZ_QUOTE_CALCULATION_FAILED";
+    public static final String ERR_BIZ_PROXY_NOT_FOUND = "ERR_BIZ_PROXY_NOT_FOUND";
+    public static final String ERR_BIZ_COMPLIANCE_CHECK_FAILED = "ERR_BIZ_COMPLIANCE_CHECK_FAILED";
 
     // External System Errors (ERR_EXT_xxx)
     public static final String ERR_SWITCH_DECLINED = "ERR_EXT_SWITCH_DECLINED";
@@ -51,6 +54,7 @@ public final class ErrorCodes {
     public static final String ERR_DUITNOW_FAILED = "ERR_EXT_DUITNOW_FAILED";
     public static final String ERR_BILLER_PAYMENT_FAILED = "ERR_EXT_BILLER_PAYMENT_FAILED";
     public static final String ERR_TOPUP_FAILED = "ERR_EXT_TOPUP_FAILED";
+    public static final String ERR_EXT_PROXY_ENQUIRY_FAILED = "ERR_EXT_PROXY_ENQUIRY_FAILED";
 
     // Auth Errors (ERR_AUTH_xxx)
     public static final String ERR_TOKEN_EXPIRED = "ERR_AUTH_TOKEN_EXPIRED";
