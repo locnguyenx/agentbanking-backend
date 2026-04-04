@@ -22,9 +22,11 @@ export interface User {
   email: string
   fullName: string
   status: string
-  userType?: string
-  agentId?: string
-  createdAt: string
+  userType: 'INTERNAL' | 'EXTERNAL'
+  agentId?: string | null
+  mustChangePassword?: boolean
+  temporaryPasswordExpiresAt?: string
+  createdAt?: string
   lastLoginAt?: string
 }
 
