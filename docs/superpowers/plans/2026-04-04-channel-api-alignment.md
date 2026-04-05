@@ -51,7 +51,7 @@
 
 ---
 
-## Task 1: Add Error Codes to Common Module
+## Task 1: Add Error Codes to Common Module [DONE]
 
 **BDD Scenarios:** Supports all BDD scenarios (error handling prerequisite)
 **BRD Requirements:** FR-001.7, FR-002.7, FR-003.6
@@ -83,7 +83,7 @@ git commit -m "feat: add error codes for quote, proxy enquiry, and compliance st
 
 ---
 
-## Task 2: Transaction Quote — Domain Ports & Feign Client (switch-adapter-service)
+## Task 2: Transaction Quote — Domain Ports & Feign Client (switch-adapter-service) [DONE]
 
 **BDD Scenarios:** S1.1 (Happy Path), S1.2 (Missing field), S1.3 (Invalid funding source), S1.4 (No auth)
 **BRD Requirements:** US-001, FR-001.1 through FR-001.8
@@ -216,7 +216,7 @@ git commit -m "feat: add transaction quote domain ports and fee calculation Feig
 
 ---
 
-## Task 3: Transaction Quote — Use Case Implementation & Test (switch-adapter-service)
+## Task 3: Transaction Quote — Use Case Implementation & Test (switch-adapter-service) [DONE]
 
 **BDD Scenarios:** S1.1, S1.2, S1.3, S1.4
 **BRD Requirements:** US-001, FR-001.1 through FR-001.8
@@ -380,7 +380,7 @@ git commit -m "test+feat: implement transaction quote use case with TDD (FR-001)
 
 ---
 
-## Task 4: Transaction Quote — DTOs & Controller Endpoint (switch-adapter-service)
+## Task 4: Transaction Quote — DTOs & Controller Endpoint (switch-adapter-service) [DONE]
 
 **BDD Scenarios:** S1.1, S1.2, S1.3, S1.4
 **BRD Requirements:** FR-001.1 through FR-001.8
@@ -501,7 +501,7 @@ git commit -m "feat: add transaction quote endpoint and DTOs to SwitchController
 
 ---
 
-## Task 5: Proxy Enquiry — Domain Ports & Feign Client (switch-adapter-service)
+## Task 5: Proxy Enquiry — Domain Ports & Feign Client (switch-adapter-service) [DONE]
 
 **BDD Scenarios:** S2.1 (Happy Path), S2.2 (Missing proxyId), S2.3 (Missing proxyType), S2.4 (Not found), S2.5 (No auth)
 **BRD Requirements:** US-002, FR-002.1 through FR-002.7
@@ -585,7 +585,7 @@ git commit -m "feat: add proxy enquiry domain ports and DuitNow proxy gateway st
 
 ---
 
-## Task 6: Proxy Enquiry — Use Case Implementation & Test (switch-adapter-service)
+## Task 6: Proxy Enquiry — Use Case Implementation & Test (switch-adapter-service) [DONE]
 
 **BDD Scenarios:** S2.1, S2.2, S2.3, S2.4, S2.5
 **BRD Requirements:** FR-002.1 through FR-002.7
@@ -728,7 +728,7 @@ git commit -m "test+feat: implement proxy enquiry use case with TDD (FR-002)"
 
 ---
 
-## Task 7: Proxy Enquiry — Controller Endpoint (switch-adapter-service)
+## Task 7: Proxy Enquiry — Controller Endpoint (switch-adapter-service) [DONE]
 
 **BDD Scenarios:** S2.1, S2.2, S2.3, S2.4, S2.5
 **BRD Requirements:** FR-002.1 through FR-002.7
@@ -779,7 +779,7 @@ git commit -m "feat: add proxy enquiry endpoint to SwitchController (FR-002)"
 
 ---
 
-## Task 8: Compliance Status — Domain Port, Use Case & Test (rules-service)
+## Task 8: Compliance Status — Domain Port, Use Case & Test (rules-service) [DONE]
 
 **BDD Scenarios:** S3.1 (Unlocked), S3.2 (Locked), S3.3 (No auth)
 **BRD Requirements:** US-003, FR-003.1 through FR-003.6
@@ -937,7 +937,7 @@ git commit -m "test+feat: implement compliance status use case with TDD (FR-003)
 
 ---
 
-## Task 9: Compliance Status — Controller Endpoint (rules-service)
+## Task 9: Compliance Status — Controller Endpoint (rules-service) [DONE]
 
 **BDD Scenarios:** S3.1, S3.2, S3.3
 **BRD Requirements:** FR-003.1 through FR-003.6
@@ -985,7 +985,7 @@ git commit -m "feat: add compliance status endpoint to RulesController (FR-003)"
 
 ---
 
-## Task 10: Register Use Case Beans in DomainServiceConfig
+## Task 10: Register Use Case Beans in DomainServiceConfig [DONE]
 
 **BDD Scenarios:** All scenarios (bean registration prerequisite for wiring)
 **BRD Requirements:** All (AGENTS.md Law V compliance)
@@ -1089,7 +1089,7 @@ git commit -m "feat: register use case beans in DomainServiceConfig (Law V compl
 
 ---
 
-## Task 11: Gateway Routes
+## Task 11: Gateway Routes [DONE]
 
 **BDD Scenarios:** All scenarios (routing prerequisite)
 **BRD Requirements:** FR-001.2, FR-002.2, FR-003.2
@@ -1162,7 +1162,7 @@ git commit -m "feat: add gateway routes for quote, proxy enquiry, and compliance
 
 ---
 
-## Task 12: OpenAPI Spec Fixes
+## Task 12: OpenAPI Spec Fixes [DONE]
 
 **BDD Scenarios:** S4.1 (Monetary types), S4.2 (Security), S4.3 (Error responses), S4.4 (Content types)
 **BRD Requirements:** US-004, FR-004, FR-005, FR-006
@@ -1304,7 +1304,7 @@ git commit -m "fix: OpenAPI spec quality — string types for money, security, e
 
 ---
 
-## Task 13: Run All Tests & Verify
+## Task 13: Run All Tests & Verify [DONE]
 
 **BDD Scenarios:** All scenarios
 **BRD Requirements:** All
