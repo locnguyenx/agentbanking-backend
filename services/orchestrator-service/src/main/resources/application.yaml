@@ -63,3 +63,23 @@ resilience4j:
 logging:
   level:
     com.agentbanking.orchestrator: INFO
+
+# Temporal configuration
+temporal:
+  namespace: default
+  address: ${TEMPORAL_ADDRESS:localhost:7233}
+  task-queue: agent-banking-tasks
+  worker:
+    max-concurrent-workflow-task-executors: 10
+    max-concurrent-activity-task-executors: 20
+  workflow:
+    execution-timeout: 5m
+    run-timeout: 2m
+    task-timeout: 30s
+
+# Additional Feign URLs
+biller-service:
+  url: ${BILLER_SERVICE_URL:http://localhost:8084}
+
+cbs-connector:
+  url: ${CBS_CONNECTOR_URL:http://localhost:8085}
