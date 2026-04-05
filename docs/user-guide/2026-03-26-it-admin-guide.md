@@ -15,13 +15,16 @@ This guide covers system administration tasks for the Agent Banking Platform, in
 | Service | Port | Purpose |
 |---------|------|---------|
 | API Gateway | 8080 | External API entry point |
+| Audit Service | 8088 | Audit log aggregation |
 | Rules Service | 8081 | Transaction rules engine |
 | Ledger Service | 8082 | Financial ledger & float |
 | Onboarding Service | 8083 | Agent onboarding & KYC |
 | Switch Adapter | 8084 | Payment network adapter |
 | Biller Service | 8085 | Bill payment processing |
+| Orchestrator | 8086 | Transaction Saga coordination |
+| Auth/IAM | 8087 | Authentication & authorization |
 | Mock Server | 8089 | Development/testing |
-| PostgreSQL | 5432 | Primary database |
+| PostgreSQL (per service) | 5433-5440 | Service databases |
 | Redis | 6379 | Caching & session |
 | Kafka | 9092 | Message broker |
 
@@ -402,11 +405,60 @@ spring:
 
 | Method | Path | Description |
 |--------|------|-------------|
-| GET | /admin/health | System health |
-| GET | /admin/metrics | System metrics |
-| POST | /admin/users | Create user |
-| DELETE | /admin/users/{id} | Delete user |
-| GET | /admin/audit | Query audit logs |
+| GET | /admin/health/all | Aggregated health of all services |
+| GET | /admin/metrics/{service} | JVM & HTTP metrics for a service |
+| GET | /admin/audit-logs | Query audit logs with filters |
+| GET | /admin/audit-logs/export | Export audit logs as CSV |
+
+### Backoffice IT Admin Dashboard
+
+Access the IT Admin dashboard via the Backoffice UI at `/system-admin`.
+
+#### Features
+
+1. **Service Health Dashboard**
+   - View health status of all microservices at a glance
+   - Status indicators: UP (green), DOWN (red), DEGRADED (amber)
+   - Click on any service to view its metrics
+   - Auto-refresh capability
+
+2. **Performance Metrics**
+   - JVM metrics: Memory usage, thread count, CPU usage, uptime
+   - HTTP metrics: Request count, error count, average response time
+   - Select individual services from dropdown
+
+3. **Cross-Service Audit Logs**
+   - Searchable audit log table
+   - Filter by service, action, user, outcome, date range
+   - Pagination support
+   - Export to CSV
+
+#### Access Requirements
+
+- Role required: `IT_ADMIN`
+- Access via Backoffice UI (authenticated)
+- Or direct API access via gateway with JWT token
+
+#### API Examples
+
+```bash
+# Get all service health
+curl -H "Authorization: Bearer $TOKEN" \
+  http://localhost:8080/api/v1/admin/health/all
+
+# Get metrics for specific service
+curl -H "Authorization: Bearer $TOKEN" \
+  http://localhost:8080/api/v1/admin/metrics/ledger
+
+# Query audit logs
+curl -H "Authorization: Bearer $TOKEN" \
+  "http://localhost:8080/api/v1/admin/audit-logs?serviceName=auth-iam-service&page=0&size=20"
+
+# Export audit logs
+curl -H "Authorization: Bearer $TOKEN" \
+  "http://localhost:8080/api/v1/admin/audit-logs/export?from=2026-04-01T00:00:00" \
+  -o audit-logs.csv
+```
 
 ### Service Discovery
 
