@@ -7,6 +7,8 @@ import com.agentbanking.rules.domain.port.in.CreateFeeConfigUseCase;
 import com.agentbanking.rules.domain.port.in.FeeQueryUseCase;
 import com.agentbanking.rules.domain.port.in.FeeQueryUseCase.FeeQueryResult;
 import com.agentbanking.rules.domain.port.in.VelocityCheckUseCase;
+import com.agentbanking.rules.domain.port.in.ComplianceStatusUseCase;
+import com.agentbanking.common.exception.ErrorResponse;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -21,13 +23,16 @@ public class RulesController {
     private final FeeQueryUseCase feeQueryUseCase;
     private final VelocityCheckUseCase velocityCheckUseCase;
     private final CreateFeeConfigUseCase createFeeConfigUseCase;
+    private final ComplianceStatusUseCase complianceStatusUseCase;
 
     public RulesController(FeeQueryUseCase feeQueryUseCase,
                            VelocityCheckUseCase velocityCheckUseCase,
-                           CreateFeeConfigUseCase createFeeConfigUseCase) {
+                           CreateFeeConfigUseCase createFeeConfigUseCase,
+                           ComplianceStatusUseCase complianceStatusUseCase) {
         this.feeQueryUseCase = feeQueryUseCase;
         this.velocityCheckUseCase = velocityCheckUseCase;
         this.createFeeConfigUseCase = createFeeConfigUseCase;
+        this.complianceStatusUseCase = complianceStatusUseCase;
     }
 
     @PostMapping("/fees/calculate")
@@ -127,5 +132,26 @@ public class RulesController {
             "dailyLimitAmount", "10000.00",
             "dailyLimitCount", 10
         ));
+    }
+
+    @GetMapping("/compliance/status")
+    public ResponseEntity<?> getComplianceStatus(@RequestHeader(value = "X-Agent-Id", required = false) String agentId) {
+        try {
+            String effectiveAgentId = agentId != null ? agentId : "unknown";
+            ComplianceStatusUseCase.ComplianceStatusResult result =
+                complianceStatusUseCase.checkCompliance(effectiveAgentId);
+
+            return ResponseEntity.ok(Map.of(
+                "status", result.status(),
+                "reason", result.reason() != null ? result.reason() : "",
+                "checkedAt", result.checkedAt().toString()
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(ErrorResponse.of(
+                "ERR_BIZ_COMPLIANCE_CHECK_FAILED",
+                e.getMessage(),
+                "RETRY"
+            ));
+        }
     }
 }
