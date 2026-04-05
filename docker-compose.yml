@@ -134,6 +134,25 @@ services:
       timeout: 5s
       retries: 5
 
+  # PostgreSQL for Audit Service
+  postgres-audit:
+    image: postgres:16-alpine
+    profiles: [infra, all]
+    environment:
+      POSTGRES_DB: auditdb
+      POSTGRES_USER: audit_user
+      POSTGRES_PASSWORD: audit_password
+    ports:
+      - "5440:5432"
+    volumes:
+      - postgres-audit-data:/var/lib/postgresql/data
+    mem_limit: 256m
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U audit_user -d auditdb"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
   # Redis for caching and idempotency
   redis:
     image: redis:7-alpine
@@ -389,6 +408,31 @@ services:
       timeout: 5s
       retries: 10
 
+  # Audit Service (Audit Log Aggregation)
+  audit-service:
+    build:
+      context: .
+      dockerfile: ./services/audit-service/Dockerfile
+    profiles: [backend, all]
+    ports:
+      - "8088:8088"
+    mem_limit: 256m
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-audit:5432/auditdb
+      SPRING_DATASOURCE_USERNAME: audit_user
+      SPRING_DATASOURCE_PASSWORD: audit_password
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    depends_on:
+      postgres-audit:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8088/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   # API Gateway
   gateway:
     build:
@@ -443,3 +487,4 @@ volumes:
   pgdata-biller:
   pgdata-orchestrator:
   pgdata-auth:
+  postgres-audit-data:

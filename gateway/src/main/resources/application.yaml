@@ -619,6 +619,51 @@ spring:
           filters:
             - RewritePath=/docs/biller/(?<segment>.*), /${segment}
 
+        # Admin - Health (aggregate all)
+        - id: admin-health-all
+          uri: http://audit-service:8088
+          predicates:
+            - Path=/api/v1/admin/health/all
+          filters:
+            - JwtAuth
+            - RewritePath=/api/v1/admin/health/all, /admin/health/all
+
+        # Admin - Health (individual service)
+        - id: admin-health-service
+          uri: http://gateway:8080
+          predicates:
+            - Path=/api/v1/admin/health/{service}
+          filters:
+            - JwtAuth
+            - ServiceRoute
+
+        # Admin - Metrics (individual service - routed to audit-service for aggregation)
+        - id: admin-metrics
+          uri: http://audit-service:8088
+          predicates:
+            - Path=/api/v1/admin/metrics/{service}
+          filters:
+            - JwtAuth
+            - RewritePath=/api/v1/admin/metrics/(?<service>.*), /admin/metrics/${service}
+
+        # Admin - Audit Logs
+        - id: admin-audit-logs
+          uri: http://audit-service:8088
+          predicates:
+            - Path=/api/v1/admin/audit-logs
+          filters:
+            - JwtAuth
+            - RewritePath=/api/v1/admin/audit-logs, /audit/logs
+
+        # Admin - Audit Logs Export
+        - id: admin-audit-logs-export
+          uri: http://audit-service:8088
+          predicates:
+            - Path=/api/v1/admin/audit-logs/export
+          filters:
+            - JwtAuth
+            - RewritePath=/api/v1/admin/audit-logs/export, /audit/logs/export
+
 management:
   endpoints:
     web:
