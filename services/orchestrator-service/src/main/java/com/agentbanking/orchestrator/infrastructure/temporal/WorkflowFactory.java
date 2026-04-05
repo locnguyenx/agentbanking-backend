@@ -4,6 +4,7 @@ import com.agentbanking.orchestrator.application.workflow.BillPaymentWorkflow;
 import com.agentbanking.orchestrator.application.workflow.DepositWorkflow;
 import com.agentbanking.orchestrator.application.workflow.DuitNowTransferWorkflow;
 import com.agentbanking.orchestrator.application.workflow.WithdrawalWorkflow;
+import io.temporal.api.enums.v1.WorkflowIdReusePolicy;
 import io.temporal.client.WorkflowClient;
 import io.temporal.client.WorkflowOptions;
 import io.temporal.client.WorkflowStub;
@@ -28,7 +29,7 @@ public class WorkflowFactory {
                 .setWorkflowId(idempotencyKey)
                 .setTaskQueue(taskQueue)
                 .setWorkflowIdReusePolicy(
-                        io.temporal.common.WorkflowIdReusePolicy.WORKFLOW_ID_REUSE_POLICY_REJECT_DUPLICATE)
+                        WorkflowIdReusePolicy.WORKFLOW_ID_REUSE_POLICY_REJECT_DUPLICATE)
                 .build();
         WithdrawalWorkflow workflow = workflowClient.newWorkflowStub(
                 WithdrawalWorkflow.class, options);
@@ -42,7 +43,7 @@ public class WorkflowFactory {
                 .setWorkflowId(idempotencyKey)
                 .setTaskQueue(taskQueue)
                 .setWorkflowIdReusePolicy(
-                        io.temporal.common.WorkflowIdReusePolicy.WORKFLOW_ID_REUSE_POLICY_REJECT_DUPLICATE)
+                        WorkflowIdReusePolicy.WORKFLOW_ID_REUSE_POLICY_REJECT_DUPLICATE)
                 .build();
         DepositWorkflow workflow = workflowClient.newWorkflowStub(
                 DepositWorkflow.class, options);
@@ -56,7 +57,7 @@ public class WorkflowFactory {
                 .setWorkflowId(idempotencyKey)
                 .setTaskQueue(taskQueue)
                 .setWorkflowIdReusePolicy(
-                        io.temporal.common.WorkflowIdReusePolicy.WORKFLOW_ID_REUSE_POLICY_REJECT_DUPLICATE)
+                        WorkflowIdReusePolicy.WORKFLOW_ID_REUSE_POLICY_REJECT_DUPLICATE)
                 .build();
         BillPaymentWorkflow workflow = workflowClient.newWorkflowStub(
                 BillPaymentWorkflow.class, options);
@@ -70,7 +71,7 @@ public class WorkflowFactory {
                 .setWorkflowId(idempotencyKey)
                 .setTaskQueue(taskQueue)
                 .setWorkflowIdReusePolicy(
-                        io.temporal.common.WorkflowIdReusePolicy.WORKFLOW_ID_REUSE_POLICY_REJECT_DUPLICATE)
+                        WorkflowIdReusePolicy.WORKFLOW_ID_REUSE_POLICY_REJECT_DUPLICATE)
                 .build();
         DuitNowTransferWorkflow workflow = workflowClient.newWorkflowStub(
                 DuitNowTransferWorkflow.class, options);
