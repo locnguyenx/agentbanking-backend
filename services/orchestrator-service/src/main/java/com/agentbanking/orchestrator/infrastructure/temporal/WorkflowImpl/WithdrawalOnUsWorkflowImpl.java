@@ -34,7 +34,7 @@ public class WithdrawalOnUsWorkflowImpl implements WithdrawalOnUsWorkflow {
     public WithdrawalOnUsWorkflowImpl() {
         ActivityOptions defaultOptions = ActivityOptions.newBuilder()
                 .setStartToCloseTimeout(Duration.ofSeconds(10))
-                .setRetryOptions(io.temporal.api.common.v1.RetryOptions.newBuilder()
+                .setRetryOptions(io.temporal.common.RetryOptions.newBuilder()
                         .setMaximumAttempts(3)
                         .setInitialInterval(Duration.ofSeconds(1))
                         .setMaximumInterval(Duration.ofSeconds(4))
@@ -43,14 +43,14 @@ public class WithdrawalOnUsWorkflowImpl implements WithdrawalOnUsWorkflow {
 
         ActivityOptions noRetryOptions = ActivityOptions.newBuilder()
                 .setStartToCloseTimeout(Duration.ofSeconds(10))
-                .setRetryOptions(io.temporal.api.common.v1.RetryOptions.newBuilder()
+                .setRetryOptions(io.temporal.common.RetryOptions.newBuilder()
                         .setMaximumAttempts(1)
                         .build())
                 .build();
 
         ActivityOptions cbsOptions = ActivityOptions.newBuilder()
                 .setStartToCloseTimeout(Duration.ofSeconds(15))
-                .setRetryOptions(io.temporal.api.common.v1.RetryOptions.newBuilder()
+                .setRetryOptions(io.temporal.common.RetryOptions.newBuilder()
                         .setMaximumAttempts(1)
                         .build())
                 .build();

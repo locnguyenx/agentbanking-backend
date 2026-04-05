@@ -35,7 +35,7 @@ public class WithdrawalWorkflowImpl implements WithdrawalWorkflow {
     public WithdrawalWorkflowImpl() {
         ActivityOptions defaultOptions = ActivityOptions.newBuilder()
                 .setStartToCloseTimeout(Duration.ofSeconds(10))
-                .setRetryOptions(io.temporal.api.common.v1.RetryOptions.newBuilder()
+                .setRetryOptions(io.temporal.common.RetryOptions.newBuilder()
                         .setMaximumAttempts(3)
                         .setInitialInterval(Duration.ofSeconds(1))
                         .setMaximumInterval(Duration.ofSeconds(4))
@@ -44,14 +44,14 @@ public class WithdrawalWorkflowImpl implements WithdrawalWorkflow {
 
         ActivityOptions noRetryOptions = ActivityOptions.newBuilder()
                 .setStartToCloseTimeout(Duration.ofSeconds(10))
-                .setRetryOptions(io.temporal.api.common.v1.RetryOptions.newBuilder()
+                .setRetryOptions(io.temporal.common.RetryOptions.newBuilder()
                         .setMaximumAttempts(1)
                         .build())
                 .build();
 
         ActivityOptions switchAuthOptions = ActivityOptions.newBuilder()
                 .setStartToCloseTimeout(Duration.ofSeconds(25))
-                .setRetryOptions(io.temporal.api.common.v1.RetryOptions.newBuilder()
+                .setRetryOptions(io.temporal.common.RetryOptions.newBuilder()
                         .setMaximumAttempts(1)
                         .build())
                 .build();
@@ -59,7 +59,7 @@ public class WithdrawalWorkflowImpl implements WithdrawalWorkflow {
         ActivityOptions reversalOptions = ActivityOptions.newBuilder()
                 .setStartToCloseTimeout(Duration.ofSeconds(10))
                 .setScheduleToCloseTimeout(Duration.ofSeconds(60))
-                .setRetryOptions(io.temporal.api.common.v1.RetryOptions.newBuilder()
+                .setRetryOptions(io.temporal.common.RetryOptions.newBuilder()
                         .setMaximumAttempts(Integer.MAX_VALUE)
                         .setInitialInterval(Duration.ofSeconds(60))
                         .setMaximumInterval(Duration.ofSeconds(60))

@@ -36,7 +36,7 @@ public class BillPaymentWorkflowImpl implements BillPaymentWorkflow {
     public BillPaymentWorkflowImpl() {
         ActivityOptions defaultOptions = ActivityOptions.newBuilder()
                 .setStartToCloseTimeout(Duration.ofSeconds(10))
-                .setRetryOptions(io.temporal.api.common.v1.RetryOptions.newBuilder()
+                .setRetryOptions(io.temporal.common.RetryOptions.newBuilder()
                         .setMaximumAttempts(3)
                         .setInitialInterval(Duration.ofSeconds(1))
                         .setMaximumInterval(Duration.ofSeconds(4))
@@ -45,14 +45,14 @@ public class BillPaymentWorkflowImpl implements BillPaymentWorkflow {
 
         ActivityOptions noRetryOptions = ActivityOptions.newBuilder()
                 .setStartToCloseTimeout(Duration.ofSeconds(10))
-                .setRetryOptions(io.temporal.api.common.v1.RetryOptions.newBuilder()
+                .setRetryOptions(io.temporal.common.RetryOptions.newBuilder()
                         .setMaximumAttempts(1)
                         .build())
                 .build();
 
         ActivityOptions payBillerOptions = ActivityOptions.newBuilder()
                 .setStartToCloseTimeout(Duration.ofSeconds(15))
-                .setRetryOptions(io.temporal.api.common.v1.RetryOptions.newBuilder()
+                .setRetryOptions(io.temporal.common.RetryOptions.newBuilder()
                         .setMaximumAttempts(1)
                         .build())
                 .build();
