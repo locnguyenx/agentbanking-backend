@@ -16,6 +16,7 @@ import com.agentbanking.orchestrator.application.activity.SendDuitNowTransferAct
 import com.agentbanking.orchestrator.application.activity.SendReversalToSwitchActivity;
 import com.agentbanking.orchestrator.application.activity.ValidateAccountActivity;
 import com.agentbanking.orchestrator.application.activity.ValidateBillActivity;
+import com.agentbanking.orchestrator.application.activity.VerifyBiometricActivity;
 import io.temporal.client.WorkflowClient;
 import io.temporal.worker.Worker;
 import io.temporal.worker.WorkerFactory;
@@ -51,7 +52,8 @@ public class TemporalWorkerConfig {
                                   PayBillerActivity payBillerActivity,
                                   NotifyBillerActivity notifyBillerActivity,
                                   ProxyEnquiryActivity proxyEnquiryActivity,
-                                  SendDuitNowTransferActivity sendDuitNowTransferActivity) {
+                                  SendDuitNowTransferActivity sendDuitNowTransferActivity,
+                                  VerifyBiometricActivity verifyBiometricActivity) {
         Worker worker = factory.newWorker(taskQueue);
 
         worker.registerActivitiesImplementations(
@@ -70,7 +72,8 @@ public class TemporalWorkerConfig {
                 (io.temporal.activity.Activity) payBillerActivity,
                 (io.temporal.activity.Activity) notifyBillerActivity,
                 (io.temporal.activity.Activity) proxyEnquiryActivity,
-                (io.temporal.activity.Activity) sendDuitNowTransferActivity
+                (io.temporal.activity.Activity) sendDuitNowTransferActivity,
+                (io.temporal.activity.Activity) verifyBiometricActivity
         );
 
         return worker;
