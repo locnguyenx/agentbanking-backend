@@ -28,6 +28,7 @@ dependencies {
     implementation 'org.postgresql:postgresql'
     implementation 'org.flywaydb:flyway-core:9.22.3'
     implementation 'io.temporal:temporal-sdk:1.25.1'
+    implementation 'io.temporal:temporal-spring-boot-starter:1.25.1'
     implementation project(':common')
     
     testImplementation 'org.springframework.boot:spring-boot-starter-test'

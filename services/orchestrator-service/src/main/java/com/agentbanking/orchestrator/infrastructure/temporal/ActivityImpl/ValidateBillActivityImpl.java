@@ -4,9 +4,11 @@ import com.agentbanking.orchestrator.application.activity.ValidateBillActivity;
 import com.agentbanking.orchestrator.domain.port.out.BillerServicePort;
 import com.agentbanking.orchestrator.domain.port.out.BillerServicePort.BillValidationInput;
 import com.agentbanking.orchestrator.domain.port.out.BillerServicePort.BillValidationResult;
+import io.temporal.spring.boot.ActivityImpl;
 import org.springframework.stereotype.Component;
 
 @Component
+@ActivityImpl(workers = "agent-banking-tasks")
 public class ValidateBillActivityImpl implements ValidateBillActivity {
 
     private final BillerServicePort billerServicePort;

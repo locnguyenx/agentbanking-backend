@@ -10,6 +10,7 @@ import com.agentbanking.orchestrator.domain.port.out.EventPublisherPort.Transact
 import com.agentbanking.orchestrator.domain.port.out.LedgerServicePort.*;
 import com.agentbanking.orchestrator.domain.port.out.RulesServicePort.*;
 import io.temporal.activity.ActivityOptions;
+import io.temporal.spring.boot.WorkflowImpl;
 import io.temporal.workflow.Workflow;
 import org.slf4j.Logger;
 
@@ -17,6 +18,7 @@ import java.math.BigDecimal;
 import java.time.Duration;
 import java.util.UUID;
 
+@WorkflowImpl(workers = "agent-banking-tasks")
 public class WithdrawalOnUsWorkflowImpl implements WithdrawalOnUsWorkflow {
 
     private static final Logger log = Workflow.getLogger(WithdrawalOnUsWorkflowImpl.class);
