@@ -1,6 +1,7 @@
 package com.agentbanking.gateway.integration;
 
 import com.agentbanking.gateway.integration.setup.TestContext;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -8,6 +9,7 @@ import org.junit.jupiter.api.Test;
 import static com.agentbanking.gateway.integration.BaseIntegrationTest.MYR_CURRENCY;
 import static com.agentbanking.gateway.integration.BaseIntegrationTest.ENCRYPTED_CARD;
 import static com.agentbanking.gateway.integration.BaseIntegrationTest.DUKPT_PIN;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
  * BDD Section 1: Rules & Fee Engine Integration Tests
@@ -20,6 +22,12 @@ import static com.agentbanking.gateway.integration.BaseIntegrationTest.DUKPT_PIN
 class RulesFeeEngineIntegrationTest extends BaseIntegrationTest {
 
     private static final String WITHDRAWAL_ENDPOINT = "/api/v1/withdrawal";
+
+    @BeforeAll
+    static void checkAuthSetup() {
+        assumeTrue(TestContext.isAuthSetupComplete(), 
+            "Skipping RulesFeeEngineIntegrationTest — auth setup not complete (agentToken is null)");
+    }
 
     // ========== BDD-R01: Fee Configuration ==========
     @Nested
