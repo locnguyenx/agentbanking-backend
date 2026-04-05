@@ -196,7 +196,7 @@ spring:
         - id: rules-service
           uri: http://rules-service:8081
           predicates:
-            - Path=/internal/fees/**, /internal/check-velocity, /internal/limits/**
+            - Path=/internal/fees/**, /internal/check-velocity, /internal/limits/**, /internal/compliance/status
           filters:
             - RewritePath=/internal/(?<segment>.*), /internal/${segment}
         
@@ -220,7 +220,7 @@ spring:
         - id: switch-adapter-service
           uri: http://switch-adapter-service:8084
           predicates:
-            - Path=/internal/auth, /internal/reversal, /internal/duitnow
+            - Path=/internal/auth, /internal/reversal, /internal/duitnow, /internal/balance-inquiry, /internal/transactions/quote, /internal/transfer/proxy/enquiry
           filters:
             - RewritePath=/internal/(?<segment>.*), /internal/${segment}
         
@@ -410,6 +410,33 @@ spring:
             - JwtAuth
             - RequestTransform=onboarding
             - RewritePath=/api/v1/onboarding/submit-application, /internal/onboarding/application
+         
+        # External Transaction Quote route
+        - id: external-transactions-quote
+          uri: http://switch-adapter-service:8084
+          predicates:
+            - Path=/api/v1/transactions/quote
+          filters:
+            - JwtAuth
+            - RewritePath=/api/v1/transactions/quote, /internal/transactions/quote
+
+        # External Proxy Enquiry route
+        - id: external-proxy-enquiry
+          uri: http://switch-adapter-service:8084
+          predicates:
+            - Path=/api/v1/transfer/proxy/enquiry
+          filters:
+            - JwtAuth
+            - RewritePath=/api/v1/transfer/proxy/enquiry, /internal/transfer/proxy/enquiry
+
+        # External Compliance Status route
+        - id: external-compliance-status
+          uri: http://rules-service:8081
+          predicates:
+            - Path=/api/v1/compliance/status
+          filters:
+            - JwtAuth
+            - RewritePath=/api/v1/compliance/status, /internal/compliance/status
          
         # Backoffice routes
         - id: backoffice-dashboard
