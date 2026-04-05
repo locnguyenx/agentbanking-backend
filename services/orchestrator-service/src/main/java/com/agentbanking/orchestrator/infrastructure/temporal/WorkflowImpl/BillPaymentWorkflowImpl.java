@@ -109,7 +109,7 @@ public class BillPaymentWorkflowImpl implements BillPaymentWorkflow {
 
             // Step 5: Pay biller
             BillPaymentResult paymentResult = payBillerActivity.payBill(
-                    new BillPaymentInput(input.billerCode(), input.ref1(), input.ref2(),
+                    new com.agentbanking.orchestrator.domain.port.out.BillerServicePort.BillPaymentInput(input.billerCode(), input.ref1(), input.ref2(),
                             input.amount(), input.idempotencyKey()));
             if (!paymentResult.success()) {
                 releaseFloatActivity.releaseFloat(

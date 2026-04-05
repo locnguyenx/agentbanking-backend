@@ -944,3 +944,12 @@ public WorkflowResult execute(WithdrawalWorkflowInput input) {
 2. **Workflow history retention** — How long should Temporal retain workflow history? (Default: 1 year, configurable)
 3. **Backoffice polling interval** — What should the recommended polling interval be for POS terminals? (Recommended: 500ms)
 4. **Force-resolve SLA** — What is the maximum time a transaction can remain in COMPENSATING state before requiring admin intervention? (Recommended: 4 hours)
+
+## 18. Review Notes from Human Partner (not discussed)
+
+1. Need Backoffice UI for required actions. Consider put it as a function of `FR-17: Reconciliation & Discrepancy Resolution`, `FR-18: Reversals & Disputes` in old brd `docs/superpowers/specs/agent-banking-platform/2026-03-25-agent-banking-platform-brd.md`
+2. Many transactional user stories in the old brd are not revised, i.e Prepaid Top-up, eWallet & eSSP, Merchant Services...
+3. Update openapi.yaml and the API Gateway for new apis
+4. Please deeply analyse to find if we need additional processing / configuration from other existing services / external apis so that new orchestrator's workflows work properly. E.g: a parameter in rules service that define the biometric threshold of deposit transaction in scenario BDD-WF-HP-D01, how to invoke VerifyBiometricActivity in scenario BDD-WF-EC-D02...
+5. Do new orchestrator's workflows handle Conditional STP cases in section `18. STP Processing` of old bdd `docs/superpowers/specs/agent-banking-platform/2026-03-25-agent-banking-platform-bdd.md`?
+6. Tests for other services/components changes, e2e integration tests for gateway

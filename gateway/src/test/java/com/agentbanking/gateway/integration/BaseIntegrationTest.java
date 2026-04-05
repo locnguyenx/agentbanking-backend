@@ -375,22 +375,22 @@ public abstract class BaseIntegrationTest {
     // Old token methods (deprecated - use TestContext tokens)
     @Deprecated
     protected String getMicroAgentToken() {
-        return getToken("agent001", "AgentPass123!");
+        return getToken("agent001", "12345678");
     }
 
     @Deprecated
     protected String getStandardAgentToken() {
-        return getToken("agent001", "AgentPass123!");
+        return getToken("agent001", "12345678");
     }
 
     @Deprecated
     protected String getPremierAgentToken() {
-        return getToken("agent001", "AgentPass123!");
+        return getToken("agent001", "12345678");
     }
 
     @Deprecated
     protected String getOperatorToken() {
-        return getToken("operator001", "OperatorPass123!");
+        return getToken("operator001", "12345678");
     }
 
     @Deprecated
@@ -405,17 +405,17 @@ public abstract class BaseIntegrationTest {
 
     @Deprecated
     protected String getMakerToken() {
-        return getToken("maker001", "MakerPass123!");
+        return getToken("maker001", "12345678");
     }
 
     @Deprecated
     protected String getCheckerToken() {
-        return getToken("checker001", "CheckerPass123!");
+        return getToken("checker001", "12345678");
     }
 
     @Deprecated
     protected String getSupervisorToken() {
-        return getToken("supervisor001", "SupervisorPass123!");
+        return getToken("supervisor001", "12345678");
     }
 
     // Old request methods (deprecated - use gatewayPost, gatewayGet)

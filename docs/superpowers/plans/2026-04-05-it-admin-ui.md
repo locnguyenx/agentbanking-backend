@@ -71,7 +71,7 @@ backoffice/src/api/client.ts                 # Add admin API endpoints
 
 ---
 
-### Task 1: Add AUDIT_LOGS topic to KafkaTopics registry
+### Task 1: Add AUDIT_LOGS topic to KafkaTopics registry [DONE]
 
 **BDD Scenarios:** Supports Scenario 5.1: Service publishes audit event to Kafka
 **BRD Requirements:** FR-4.3 - Each microservice publishes audit events to Kafka topic `audit-logs`
@@ -81,14 +81,14 @@ backoffice/src/api/client.ts                 # Add admin API endpoints
 **Files:**
 - Modify: `common/src/main/java/com/agentbanking/common/messaging/KafkaTopics.java`
 
-- [ ] **Step 1: Add AUDIT_LOGS constant**
+- [x] **Step 1: Add AUDIT_LOGS constant**
 
 Read `common/src/main/java/com/agentbanking/common/messaging/KafkaTopics.java` and add:
 ```java
 public static final String AUDIT_LOGS = "audit-logs";
 ```
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git add common/src/main/java/com/agentbanking/common/messaging/KafkaTopics.java
@@ -97,7 +97,7 @@ git commit -m "feat: add AUDIT_LOGS topic to KafkaTopics registry"
 
 ---
 
-### Task 2: Create AuditEventPublisher in common module
+### Task 2: Create AuditEventPublisher in common module [DONE]
 
 **BDD Scenarios:** Supports Scenario 5.1: Service publishes audit event to Kafka
 **BRD Requirements:** FR-4.3 - Shared AuditEventPublisher from common module
@@ -109,7 +109,7 @@ git commit -m "feat: add AUDIT_LOGS topic to KafkaTopics registry"
 - Create: `common/src/main/java/com/agentbanking/common/audit/KafkaAuditEventPublisher.java`
 - Create: `common/src/main/java/com/agentbanking/common/audit/AuditEventType.java`
 
-- [ ] **Step 1: Create AuditEventType enum**
+- [x] **Step 1: Create AuditEventType enum**
 
 ```java
 package com.agentbanking.common.audit;
@@ -131,7 +131,7 @@ public enum AuditEventType {
 }
 ```
 
-- [ ] **Step 2: Create AuditEventPublisher interface**
+- [x] **Step 2: Create AuditEventPublisher interface**
 
 ```java
 package com.agentbanking.common.audit;
@@ -163,56 +163,22 @@ public interface AuditEventPublisher {
 }
 ```
 
-- [ ] **Step 3: Create KafkaAuditEventPublisher**
+- [x] **Step 3: Create KafkaAuditEventPublisher**
 
-```java
-package com.agentbanking.common.audit;
+Note: Moved to audit-service infrastructure layer since it depends on spring-cloud-stream which common doesn't have. Will be created in Task 5.
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.cloud.stream.function.StreamBridge;
-import org.springframework.stereotype.Component;
-
-@Component
-public class KafkaAuditEventPublisher implements AuditEventPublisher {
-
-    private static final Logger log = LoggerFactory.getLogger(KafkaAuditEventPublisher.class);
-    private static final String BINDING = "auditLog-out-0";
-    private final StreamBridge streamBridge;
-    private final ObjectMapper objectMapper;
-
-    public KafkaAuditEventPublisher(StreamBridge streamBridge) {
-        this.streamBridge = streamBridge;
-        this.objectMapper = new ObjectMapper();
-        this.objectMapper.registerModule(new JavaTimeModule());
-        this.objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
-    }
-
-    @Override
-    public void publish(AuditEvent event) {
-        try {
-            streamBridge.send(BINDING, event);
-            log.debug("Published audit event: {} for {} {}", event.action(), event.entityType(), event.entityId());
-        } catch (Exception e) {
-            log.error("Failed to publish audit event: {}", e.getMessage(), e);
-        }
-    }
-}
-```
-
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add common/src/main/java/com/agentbanking/common/audit/
-git commit -m "feat: add AuditEventPublisher interface and Kafka implementation to common module"
+git commit -m "feat: add AuditEventPublisher interface and AuditEventType enum to common module"
 ```
+
+**Note:** `KafkaAuditEventPublisher` moved to audit-service (Task 5) since common module doesn't have spring-cloud-stream dependency.
 
 ---
 
-### Task 3: Create audit-service skeleton
+### Task 3: Create audit-service skeleton [DONE]
 
 **BDD Scenarios:** Supports Scenario 5.2
 **BRD Requirements:** FR-4.1
@@ -368,7 +334,7 @@ git commit -m "feat: create audit-service skeleton with build config and applica
 
 ---
 
-### Task 4: Create audit-service domain layer (NO Spring imports)
+### Task 4: Create audit-service domain layer (NO Spring imports) [DONE]
 
 **BDD Scenarios:** Supports Scenario 5.2, Scenario 4.1: View audit logs
 **BRD Requirements:** FR-4.1, FR-4.4

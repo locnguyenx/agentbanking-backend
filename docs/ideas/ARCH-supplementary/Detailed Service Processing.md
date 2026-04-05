@@ -4,6 +4,66 @@ To complete your **Business Core Tier** blueprint, here is the detailed function
 
 ---
 
+## **The Dual-Leg Nature of the Transaction**
+
+In an Agent Banking architecture, we have a critical dimension: **The Dual-Leg Nature of the Transaction**, and **Value-Added Services (VAS)**. 
+
+### The Concept: The "Dual-Leg" Transaction
+In Agent Banking, a transaction never just hits the CBS or the External Switch. It **always** hits your Business Core Tier **Ledger & Float Service** first. 
+
+Every transaction has two legs that must balance:
+1.  **The Agent Leg:** Handled by your internal Agent Ledger (deducting or adding to the Agent's digital float).
+2.  **The Customer/Target Leg:** Handled by either CBS (On-Us), PayNet (Off-Us), or a Biller.
+
+---
+
+Based on the boundary between internal Bank systems (CBS) and external networks (PayNet), following is the complete, refined grouping of transactions:
+
+### Category 1: "On-Us" (Inside the Bank)
+**Scenario:** A BSN customer interacts with a BSN Agent.
+* **The Fund Source:** Customer's CASA (Current/Savings Account) at BSN.
+* **Authentication Method:** MyKad (Biometric) or Mobile App OTP.
+* **The Processing Path:**
+    * **Agent Leg:** Orchestrator calls the internal `Ledger Service` to block/update the Agent Float.
+    * **Customer Leg:** Orchestrator makes a direct API call to the **CBS (Core Banking System)** to instantly debit/credit the customer's account.
+* **Special case:** If the On-Us customer uses a **BSN ATM Card** instead of MyKad, the Orchestrator usually routes this to the bank's **Card Management System (CMS) or internal EFT Switch** (like Base24 or Way4), *not* directly to the CBS. The CMS then talks to the CBS.
+
+### Category 2: "Off-Us" / Interbank (Outside the Bank)
+**Scenario:** A Maybank customer goes to a BSN Agent to withdraw cash or send money.
+* **The Fund Source:** Customer's account at Maybank.
+* **Authentication Method:** Maybank ATM Card (PIN) or DuitNow QR.
+* **The Processing Path:**
+    * **Agent Leg:** Orchestrator calls `Ledger Service` to block/update the Agent Float.
+    * **Customer Leg:** Orchestrator sends the transaction to your **Switch Adapter Service**, which translates it to ISO 8583 / ISO 20022 and sends it to **PayNet**.
+* **The Networks (Malaysia Context):**
+    * **MEPS (ISO 8583):** Used if the customer inserts a Maybank ATM Card and enters a PIN.
+    * **DuitNow / IBG (ISO 20022):** Used if the transaction is an account-to-account transfer or dynamic QR scan.
+
+### Category 3: Value-Added Services / Billers (The Missing Category)
+**Scenario:** A cash-paying walk-in customer (unbanked) goes to the Agent to pay their Tenaga Nasional Berhad (TNB) electricity bill or top up their Celcom prepaid.
+* **The Fund Source:** Physical Cash (handed to the Agent). No customer bank account is involved.
+* **The Processing Path:**
+    * **Agent Leg:** Orchestrator calls `Ledger Service` to **debit (block)** the Agent's Float (since the Agent collected physical cash, they now owe the bank).
+    * **Target Leg:** Orchestrator calls the **Biller Service**, which routes via API to aggregators (like Fiuu), direct Telco APIs, or **JomPAY** (via PayNet).
+* **Why this matters:** This is often the highest volume transaction type for rural agents. It bypasses the CBS entirely during the day, only hitting the CBS during the End-of-Day (EOD) settlement when the Bank pays the Biller.
+
+---
+
+### Summary of the Orchestrator's Routing Logic
+
+To visualize how your **Transaction Orchestrator** handles this, think of it as a router making decisions based on the transaction payload:
+
+| Transaction Type | Who handles the Agent Leg? | Who handles the Customer/Target Leg? |
+| :--- | :--- | :--- |
+| **Cash Deposit (MyKad)** | Ledger Service (Business Core Tier) | **CBS API** (Directly credits BSN Account) |
+| **Cash Withdrawal (BSN Card)**| Ledger Service (Business Core Tier) | **Internal CMS / Switch** (Validates PIN, debits BSN Account) |
+| **Interbank Transfer (DuitNow)**| Ledger Service (Business Core Tier) | **Switch Adapter $\rightarrow$ PayNet** (DuitNow network) |
+| **Bill Payment (JomPAY)** | Ledger Service (Business Core Tier) | **Biller Service $\rightarrow$ JomPAY / Aggregator** |
+
+**Your key takeaway:** You didn't miss the external vs. internal concept, but you must remember that **CBS is only invoked if a specific BSN retail account is being debited or credited.** If it's a card, an external bank, or a utility bill, the Orchestrator routes the second leg to specialized adapters (CMS, PayNet, Biller APIs), while the Agent Float is managed purely within your new microservice architecture.
+
+---
+
 ## 1. Onboarding Service
 *The "Identity & Compliance" engine.*
 
@@ -29,19 +89,18 @@ To complete your **Business Core Tier** blueprint, here is the detailed function
 
 ---
 
-## 2. Switch Adapter Service (Tier 2 - Business Logic)
-*The "Transaction Strategist." It manages the lifecycle of an external request without knowing the "language" of the target network.*
+## 2. Switch Adapter Service (Business Core Tier)
 
-* **Purpose:** To decide which external rail to use (e.g., PayNet vs. Internal Card Switch) and manage the state of the "Financial Handshake" (Saga).
+* **Purpose:** To decide which external rail to use (e.g., PayNet vs. Internal Card Switch).
 * **Trigger:** Called by the **Transaction Orchestrator** when a transaction requires external authorization.
 * **Business Validation Rules:**
-    * **Routing Logic:** Select the correct downstream Tier 3 engine based on `BIN` (Bank Identification Number) or `BillerCategory`.
+    * **Routing Logic:** Select the correct downstream Tier 4 engine based on `BIN` (Bank Identification Number) or `BillerCategory`.
     * **Duplicate Detection:** Check the `Idempotency-Key` to ensure the same request isn't sent to the network twice.
 * **Processing:**
-    1.  Maps the Orchestrator's generic JSON into a **Canonical Banking Request** (a standard JSON format your Tier 3 expects).
-    2.  Calls the **Tier 3 ISO Translation Engine** (via gRPC or REST).
-    3.  Handles "In-Flight" timeouts: If Tier 3 doesn't respond, the Switch Adapter initiates the "Reversal Strategy."
-    4.  Translates the Tier 3 JSON response (e.g., `Result: 00`) into a Tier 2 business status (e.g., `Status: APPROVED`).
+    1.  Maps the Orchestrator's generic JSON into a **Canonical Banking Request** (a standard JSON format your Tier 4 expects).
+    2.  Calls the **Tier 4 ISO Translation Engine** (via gRPC or REST).
+    3.  Handles "In-Flight" timeouts: If Tier 4 doesn't respond, the Switch Adapter initiates the "Reversal Strategy."
+    4.  Translates the Tier 4 JSON response (e.g., `Result: 00`) into a Business Core Tier business status (e.g., `Status: APPROVED`).
 * **Input / Output:**
     * **Input:** `Transaction_JSON` (Amount, PAN, PIN_Block, Terminal_ID).
     * **Output:** `Network_Response_JSON` (Approval_Code, RRN, Trace_Number).
@@ -55,7 +114,7 @@ To complete your **Business Core Tier** blueprint, here is the detailed function
 * **Purpose:** To ensure the customer is paying the correct bill and show the outstanding amount.
 * **Trigger:** Called by the **Orchestrator** when an agent enters a Biller Code and Ref-1.
 * **Business Validation Rules:** * **Format Check:** Ref-1 must match the biller's specific regex (e.g., TNB is 12 digits).
-* **Processing:** 1.  Calls **JomPAY API** or the direct Biller API (e.g., Astro).
+* **Processing:** 1.  Calls **Biller Gateway - JomPAY API** or the direct Biller API (e.g., Astro).
     2.  Retrieves the "Account Holder Name" for verification.
 * **Input/Output:** * *Input:* `BillerCode`, `Ref1`.
     * *Output:* `AccountName`, `AmountDue`, `ValidationStatus`.
@@ -91,31 +150,59 @@ To complete your **Business Core Tier** blueprint, here is the detailed function
 
 ---
 
-## 5. Transaction Orchestrator
-*The "Conductor" of the symphony.*
+## 5. Transaction Orchestrator (Temporal Workflow Engine)
 
-### A. Workflow Coordination (`ExecuteSaga`)
-* **Purpose:** To manage the multi-step "Handshake" (Reserve Float $\rightarrow$ Switch Auth $\rightarrow$ Commit Ledger).
-* **Trigger:** Called by the **API Gateway** for every transaction request.
-* **Processing:** 1.  **Orchestration:** Calls Ledger to `BlockFloat`. 
-    2.  If Success, calls Switch to `Authorize`.
-    3.  If Switch Success, calls Ledger to `Commit`.
-    4.  If any step fails, calls `Rollback`.
-* **Input/Output:** * *Input:* `ClientRequestJSON`.
-    * *Output:* `FinalResponseJSON`.
+Since we are using **Temporal** as the framework and handling **Dual-Leg Transactions** (Agent Leg + Target Leg), the Orchestrator is no longer just a simple generic "Saga runner." It is a highly intelligent **Workflow Engine and Router**. 
 
-### B. Error Handling (`Compensate`)
-* **Purpose:** To ensure the system is "Clean" if a mid-way failure occurs.
-* **Trigger:** Any exception or timeout during a workflow.
-* **Processing:** 1.  Triggers the **Reverse/Undo** logic on the Ledger and Switch to ensure no "Zombie" locks remain.
-* **Input/Output:** * *Input:* `FailedStepID`, `TxnContext`.
-    * *Output:* `CleanupStatus`.
+*The "Air Traffic Controller" of the bank.* Powered by Temporal, it manages the lifecycle, routing, and state of all Dual-Leg transactions. It contains no business logic regarding *how* to update a balance or parse an ISO message; its sole responsibility is ensuring that distributed steps execute reliably, in the correct order, and roll back safely if a failure occurs.
+
+### A. Transaction Routing (`DetermineWorkflow`)
+* **Purpose:** To analyze the incoming API request and route it to the correct specialized Temporal Workflow based on the "Target Leg" of the transaction.
+* **Trigger:** Called by the **API Gateway** when an Agent initiates any financial transaction.
+* **Processing:**
+    1.  Inspects the `TransactionType` and `TargetBIN` (Bank Identification Number) or Biller Code.
+    2.  **Routes to On-Us Workflow:** If Target == BSN CBS (e.g., MyKad Cash Deposit).
+    3.  **Routes to Off-Us Workflow:** If Target == External Bank (e.g., DuitNow / MEPS).
+    4.  **Routes to VAS Workflow:** If Target == JomPAY or Utility Biller.
+* **Input/Output:** * *Input:* `ClientRequestJSON`
+    * *Output:* `WorkflowExecutionID` (Instantly returned to the client so the mobile app can poll or listen via WebSockets for the final status).
+
+### B. Dual-Leg Workflow Execution (`ExecuteTemporalWorkflow`)
+* **Purpose:** To execute the specific step-by-step sequence required for the chosen transaction type, ensuring the Agent's Ledger and the External Target stay perfectly synced.
+* **Trigger:** Invoked internally by the Router.
+* **Processing (Example: Off-Us DuitNow Transfer):**
+    1.  **Activity 1:** Call `RulesService` to verify Agent velocity limits.
+    2.  **Activity 2:** Call `LedgerService.BlockFloat` to reserve funds. *(Registers `RollbackTransaction` as the compensation action).*
+    3.  **Activity 3:** Call `SwitchAdapter.SendISO20022` to forward the request to PayNet.
+    4.  **Activity 4:** Await asynchronous confirmation from PayNet.
+    5.  **Activity 5:** Call `LedgerService.CommitTransaction` to finalize the accounting.
+* **Input/Output:** * *Input:* `ParsedTransactionContext`
+    * *Output:* `FinalResponseJSON` (Success or Failure).
+
+### C. Automated Resilience & Compensation (`HandleFailure`)
+* **Purpose:** To ensure the system remains "Clean" without manual intervention when networks drop, timeouts occur, or external systems decline a request.
+* **Trigger:** Thrown exceptions, PayNet timeouts, or HTTP 500s from the CBS/Biller.
+* **Processing:**
+    1.  **Transient Errors:** Uses Temporal's native retry policies to automatically retry `Activity 3` (e.g., if the Switch Adapter briefly loses connection to PayNet).
+    2.  **Terminal Errors:** If the Switch returns `HTTP 402 Declined` or retries are exhausted, Temporal automatically triggers the registered compensation.
+    3.  **The Rollback:** Executes `LedgerService.RollbackTransaction` to unblock the Agent's float.
+* **Input/Output:** * *Input:* `ActivityFailureException`
+    * *Output:* `ReversalStatus` and `AuditLogEntry`.
+
+### D. Human-in-the-Loop Signaling (`ManualIntervention`)
+* **Purpose:** To handle rare edge cases where a transaction gets stuck in an ambiguous state (e.g., PayNet goes offline for 4 hours, and the Agent's float is stuck in `PENDING`).
+* **Trigger:** An authorized Bank Admin clicks "Force Resolve" in the Backoffice UI.
+* **Processing:**
+    1.  Sends a **Temporal Signal** to the running, paused workflow.
+    2.  The workflow intercepts the signal, logs the Admin's ID for audit purposes, and forces the workflow to either execute `Commit` or `Rollback` based on the Admin's command.
+* **Input/Output:** * *Input:* `WorkflowID`, `AdminAction (COMMIT/REVERSE)`, `AdminID`.
+    * *Output:* `WorkflowTerminatedStatus`.
 
 ---
 
+This rewrite clearly defines the Orchestrator's role using modern workflow concepts, making it obvious to developers *where* the routing happens and *how* the Agent's ledger is protected.
 
-
-**Would you like me to draft the "Sequence Diagram" for a "Cash-In (Deposit)" transaction, showing exactly how these services exchange this data in order?**
+---
 
 ## **6. Ledger & Float Service**
 
@@ -217,7 +304,7 @@ Below is the comprehensive functional breakdown of the Ledger & Float Service.
 
 ---
 
-### Summary of Ledger Impacts by Transaction Type
+### 7. Summary of Ledger Impacts by Transaction Type
 
 | Transaction | Float Impact | Dr (Debit) | Cr (Credit) |
 | :--- | :--- | :--- | :--- |
@@ -228,7 +315,7 @@ Below is the comprehensive functional breakdown of the Ledger & Float Service.
 
 ---
 
-### 6. Ledger & Float Service (rewritten as Tier 2 - Business Logic)
+### 8. Ledger & Float Service (rewritten as Business Core Tier - Business Logic)
 *The "Virtual Accountant." It manages the bank’s internal liability to the agents.*
 
 #### A. Virtual Float Management (`Block/Commit/Credit`)
@@ -253,18 +340,18 @@ Below is the comprehensive functional breakdown of the Ledger & Float Service.
 * **Processing:**
     1.  Calculates: `(Withdrawals + Earnings) - (Deposits + BillPays)`.
     2.  Produces a **Standardized Settlement File** (JSON or CSV).
-    3.  Pushes this file to the **Tier 3 CBS Connector**.
+    3.  Pushes this file to the **Tier 4 CBS Connector**.
 * **Input / Output:**
     * **Input:** `Business_Date`.
-    * **Output:** `Settlement_Data_Package` (Sent to Tier 3).
+    * **Output:** `Settlement_Data_Package` (Sent to Tier 4).
 
 ---
 
-## **TIER 3 SERVICES**
+# **Tier 4 SERVICES**
 
-Tier 3 is the "Dirty Work" layer. It exists to protect your clean, modern Business Core (Tier 2) from the messy, legacy, and often temperamental protocols of the outside world.
+Tier 4 is the "Dirty Work" layer. It exists to protect your clean, modern Business Core (Business Core Tier) from the messy, legacy, and often temperamental protocols of the outside world.
 
-Here is the functional breakdown for the **Tier 3: Translation Layer** services.
+Here is the functional breakdown for the **Tier 4: Translation Layer** services.
 
 ---
 
@@ -272,7 +359,7 @@ Here is the functional breakdown for the **Tier 3: Translation Layer** services.
 *The "Linguist" that speaks binary and XML for the financial rails.*
 
 * **Purpose:** To transform internal Business JSON into the strict binary bitmaps required by PayNet (ISO 8583) or the complex XML structures for DuitNow (ISO 20022).
-* **Trigger:** Called by the **Tier 2 Switch Adapter** whenever an external authorization or network management (Echo/Logon) is required.
+* **Trigger:** Called by the **Business Core Tier Switch Adapter** whenever an external authorization or network management (Echo/Logon) is required.
 * **Business Validation Rules:**
     * **Field Presence:** Must ensure all "Mandatory" ISO fields for a specific MTI (Message Type Indicator) are present before transmission.
     * **STAN Management:** Must generate and track the System Trace Audit Number (STAN) for the external network.
@@ -280,7 +367,7 @@ Here is the functional breakdown for the **Tier 3: Translation Layer** services.
     1.  **Marshalling:** Converts JSON fields into binary/hex bitmaps.
     2.  **Socket Management:** Maintains a "Keep-Alive" TCP/IP connection with the PayNet/Card Switch.
     3.  **Echo/Heartbeat:** Automatically sends network "Echo" messages every 30-60 seconds to ensure the line isn't dead.
-    4.  **Unmarshalling:** Parses the incoming binary response back into a clean JSON for Tier 2.
+    4.  **Unmarshalling:** Parses the incoming binary response back into a clean JSON for Business Core Tier.
 * **Input/Output:**
     * **Input (Internal):** `Canonical_Txn_JSON` (Amount, PAN, TraceID).
     * **Output (External):** `Binary_ISO_Bitmap` (MTI 0200).
@@ -290,10 +377,10 @@ Here is the functional breakdown for the **Tier 3: Translation Layer** services.
 ### 2. CBS Connector (Core Banking Bridge)
 *The "Legacy Liaison" for the bank's mainframe.*
 
-* **Purpose:** To act as the single point of contact for the Core Banking System (CBS), shielding Tier 2 from legacy SOAP, MQ, or fixed-length string protocols.
-* **Trigger:** Called by **Tier 2 Onboarding** (Account Inquiry) or **Tier 2 Ledger** (EOD Net Settlement upload).
+* **Purpose:** To act as the single point of contact for the Core Banking System (CBS), shielding Business Core Tier from legacy SOAP, MQ, or fixed-length string protocols.
+* **Trigger:** Called by **Business Core Tier Onboarding** (Account Inquiry) or **Business Core Tier Ledger** (EOD Net Settlement upload).
 * **Business Validation Rules:**
-    * **Timeout Handling:** CBS is often slow; this connector must manage long timeouts without blocking Tier 2 threads.
+    * **Timeout Handling:** CBS is often slow; this connector must manage long timeouts without blocking Business Core Tier threads.
     * **Format Strictness:** Mainframes are unforgiving with spaces/padding; this service ensures 100% alignment with the CBS spec.
 * **Processing:**
     1.  **XML Marshalling:** Wraps JSON data into SOAP envelopes or MQ message headers.
@@ -308,10 +395,10 @@ Here is the functional breakdown for the **Tier 3: Translation Layer** services.
 ### 3. HSM Wrapper (Security Bridge)
 *The "Vault Guardian" for sensitive encryption.*
 
-* **Purpose:** To handle all communication with the physical **Hardware Security Module (HSM)**. Tier 2 should *never* see a raw PIN or a clear-text encryption key.
+* **Purpose:** To handle all communication with the physical **Hardware Security Module (HSM)**. Business Core Tier should *never* see a raw PIN or a clear-text encryption key.
 * **Trigger:** Called by the **ISO Translation Engine** (during message packing) or the **Switch Adapter** (during PIN validation).
 * **Business Validation Rules:**
-    * **Key Isolation:** No encryption keys should exist in Tier 2 application memory; they reside only in the HSM.
+    * **Key Isolation:** No encryption keys should exist in Business Core Tier application memory; they reside only in the HSM.
 * **Processing:**
     1.  **Command Formatting:** Formats proprietary HSM commands (e.g., Thales "CA" or "BA" commands).
     2.  **PIN Translation:** Takes a PIN block encrypted under a Zone Personal Key (ZPK) and asks the HSM to re-encrypt it under the Local Master Key (LMK).
@@ -325,7 +412,7 @@ Here is the functional breakdown for the **Tier 3: Translation Layer** services.
 *The "Normalizer" for diverse utility APIs.*
 
 * **Purpose:** To provide a unified interface for multiple different biller providers (TNB, Astro, JomPAY, Fiuu) who all use different API standards.
-* **Trigger:** Called by **Tier 2 Biller Service**.
+* **Trigger:** Called by **Business Core Tier Biller Service**.
 * **Business Validation Rules:**
     * **Biller Routing:** Directs requests to the correct 3rd party URL based on the `Biller_ID`.
     * **Security Header Injection:** Automatically injects 3rd party API keys and OAuth tokens.
@@ -338,9 +425,9 @@ Here is the functional breakdown for the **Tier 3: Translation Layer** services.
 
 ---
 
-### Summary of Tier 3 Operations
+### Summary of Tier 4 Operations
 
-| Service | Protocol In (Tier 2) | Protocol Out (Tier 4) | Key Responsibility |
+| Service | Protocol In (Business Core Tier) | Protocol Out (Tier 4) | Key Responsibility |
 | :--- | :--- | :--- | :--- |
 | **ISO Engine** | gRPC / REST | **ISO 8583 / 20022** | Binary Bitmaps & Sockets |
 | **CBS Connector** | REST / JSON | **SOAP / MQ / Fixed-Length** | Mainframe Communication |
@@ -349,33 +436,35 @@ Here is the functional breakdown for the **Tier 3: Translation Layer** services.
 
 ---
 
-### The Interaction: Tier 2 $\rightarrow$ Tier 3
+### The Interaction: Business Core Tier $\rightarrow$ Tier 4
 
-| Tier 2 Service (Logic) | Calls | Tier 3 Service (Translator) | Data Exchanged |
+| Business Core Tier Service (Logic) | Calls | Tier 4 Service (Translator) | Data Exchanged |
 | :--- | :--- | :--- | :--- |
 | **Switch Adapter** | $\rightarrow$ | **ISO Translation Engine** | **JSON** (Logic) $\leftrightarrow$ **Binary/ISO** (Network) |
 | **Ledger Service** | $\rightarrow$ | **CBS Connector** | **JSON** (Sub-ledger) $\leftrightarrow$ **SOAP/MQ** (Mainframe) |
 | **Biller Service** | $\rightarrow$ | **Biller Gateway** | **JSON** (Unified) $\leftrightarrow$ **XML/REST** (Multiple Billers) |
 
+> **Notes:** Ledger Service & Biller Service connect directly to the downstream/external interfaces in Tier 4, no need to thru the ISO Translation Engine
+
 ### Why this is better for your "Off Track" AI problem:
-By separating the **Logic (Tier 2)** from the **Translation (Tier 3)**, you give the AI much smaller "Context Windows." 
+By separating the **Logic (Business Core Tier)** from the **Translation (Tier 4)**, you give the AI much smaller "Context Windows." 
 * If you ask it to work on the **Switch Adapter**, it only needs to know how to handle a JSON "Approval" or "Decline." 
 * It doesn't get distracted by the complexity of ISO 8583 bitmaps, which is usually where AI agents start to hallucinate or get confused.
 
-**Would you like me to draft the "JSON Contract" (the API definition) that the Tier 2 Switch Adapter uses to talk to the Tier 3 ISO Translation Engine?** This is the bridge that keeps your architecture clean.
-
 ---
 
-# **API DEFINITION OF TIER 3 ISO TRANSLATION ENGINE**
+# **API DEFINITION ("JSON Contract") OF Tier 4 ISO TRANSLATION ENGINE**
 
-To keep your architecture clean, the **Tier 2 to Tier 3 Contract** acts as an **Anti-Corruption Layer (ACL)**. It ensures that the Switch Adapter (Tier 2) only speaks "Banking Business," while the ISO Translation Engine (Tier 3) handles the "Network Protocol" heavy lifting.
+This section is about the "JSON Contract" (the API definition) that the **Business Core Tier Switch Adapter** uses to talk to the **Tier 4 ISO Translation Engine**. This is the bridge that keeps your architecture clean.
+
+To keep your architecture clean, the **Business Core Tier to Tier 4 Contract** acts as an **Anti-Corruption Layer (ACL)**. It ensures that the Switch Adapter (Business Core Tier) only speaks "Banking Business," while the ISO Translation Engine (Tier 4) handles the "Network Protocol" heavy lifting.
 
 This contract should be defined as a **REST or gRPC API**. Below is the JSON specification for this interface.
 
 ---
 
-## 1. The Request Contract (Tier 2 $\rightarrow$ Tier 3)
-When Tier 2 wants to authorize a transaction, it sends this **Canonical Request**. Notice there are no mentions of "MTI" or "Bitmaps"—only business data.
+## 1. The Request Contract (Business Core Tier $\rightarrow$ Tier 4)
+When Business Core Tier wants to authorize a transaction, it sends this **Canonical Request**. Notice there are no mentions of "MTI" or "Bitmaps"—only business data.
 
 ### Endpoint: `POST /api/v3/network/authorize`
 
@@ -411,8 +500,8 @@ When Tier 2 wants to authorize a transaction, it sends this **Canonical Request*
 
 ---
 
-## 2. The Response Contract (Tier 3 $\rightarrow$ Tier 2)
-Tier 3 receives the binary response from the bank, applies the **Error Mapping Table** we discussed, and returns this "Clean" JSON.
+## 2. The Response Contract (Tier 4 $\rightarrow$ Business Core Tier)
+Tier 4 receives the binary response from the bank, applies the **Error Mapping Table** we discussed, and returns this "Clean" JSON.
 
 ```json
 {
@@ -436,14 +525,14 @@ Tier 3 receives the binary response from the bank, applies the **Error Mapping T
 
 ---
 
-## 3. Key Field Logic (The "Magic" of Tier 3)
+## 3. Key Field Logic (The "Magic" of Tier 4)
 
-| Field Name | Logic Responsibility | Why it's in Tier 3 |
+| Field Name | Logic Responsibility | Why it's in Tier 4 |
 | :--- | :--- | :--- |
-| **`stan`** | System Trace Audit Number | Tier 3 generates this incrementally for every network message (000001 to 999999). |
-| **`rrn`** | Retrieval Reference Number | Tier 3 extracts this from ISO Field 37 to ensure Tier 2 has it for reversals. |
-| **`pin_block`** | Security Translation | Tier 3 takes the `ZPK` encrypted PIN and asks the **HSM Wrapper** to translate it. |
-| **`mti`** | Message Type Indicator | Tier 3 maps `CASH_WITHDRAWAL` to `0200` automatically. |
+| **`stan`** | System Trace Audit Number | Tier 4 generates this incrementally for every network message (000001 to 999999). |
+| **`rrn`** | Retrieval Reference Number | Tier 4 extracts this from ISO Field 37 to ensure Business Core Tier has it for reversals. |
+| **`pin_block`** | Security Translation | Tier 4 takes the `ZPK` encrypted PIN and asks the **HSM Wrapper** to translate it. |
+| **`mti`** | Message Type Indicator | Tier 4 maps `CASH_WITHDRAWAL` to `0200` automatically. |
 
 ---
 
@@ -473,13 +562,17 @@ paths:
 ---
 
 ## 5. Why This Stops AI "Off-Track" Issues
-By enforcing this contract, you prevent the AI from trying to calculate "ISO Checksums" or "Binary Padding" inside your **Switch Adapter (Tier 2)**. 
+By enforcing this contract, you prevent the AI from trying to calculate "ISO Checksums" or "Binary Padding" inside your **Switch Adapter (Business Core Tier)**. 
 
-If the AI tries to add a field like `iso_field_48`, you can immediately flag it: *"No, that belongs in the Tier 3 ISO Engine logic. Tier 2 only sees the business fields in this JSON contract."*
+If the AI tries to add a field like `iso_field_48`, you can immediately flag it: *"No, that belongs in the Tier 4 ISO Engine logic. Business Core Tier only sees the business fields in this JSON contract."*
 
-**Would you like me to draft the "Retry & Reversal Policy" for this interface?** This document tells the Switch Adapter (Tier 2) exactly how long to wait for a Tier 3 response before it must automatically trigger a "Safety Reversal."
+---
 
-This **Retry & Reversal Policy** is the "Seatbelt" of your banking platform. In a distributed 4-tier architecture, the most dangerous state is the "Unknown State"—where Tier 2 has sent a request, but the network drops before Tier 3 can return the response. 
+# **RETRY & REVERSAL POLICY FOR THE Tier 4 TRANSLATION ENGINE -> TIER2**
+
+This is **Retry & Reversal Policy** for the Tier 4 ISO Translation Engine. This document tells the Switch Adapter (Business Core Tier) exactly how long to wait for a Tier 4 response before it must automatically trigger a "Safety Reversal."
+
+This **Retry & Reversal Policy** is the "Seatbelt" of your banking platform. In a distributed 4-tier architecture, the most dangerous state is the "Unknown State"—where Business Core Tier has sent a request, but the network drops before Tier 4 can return the response. 
 
 Without this policy, you risk "Orphan Transactions" where a customer’s money is locked or deducted, but the agent never receives confirmation to hand over the cash.
 
@@ -491,8 +584,8 @@ In Malaysian banking (PayNet/MFRS standards), the total round-trip for a financi
 
 | Stage | Timeout Limit | Action on Timeout |
 | :--- | :--- | :--- |
-| **Tier 2 $\rightarrow$ Tier 3** | 25 Seconds | Tier 2 stops waiting and initiates **Automatic Reversal**. |
-| **Tier 3 $\rightarrow$ Tier 4** | 20 Seconds | Tier 3 sends a `NETWORK_TIMEOUT` error to Tier 2. |
+| **Business Core Tier $\rightarrow$ Tier 4** | 25 Seconds | Business Core Tier stops waiting and initiates **Automatic Reversal**. |
+| **Tier 4 $\rightarrow$ Tier 4** | 20 Seconds | Tier 4 sends a `NETWORK_TIMEOUT` error to Business Core Tier. |
 | **Database Lock** | 5 Seconds | If the Ledger cannot lock the float in 5s, fail the txn immediately. |
 
 ---
@@ -511,11 +604,11 @@ We treat "Inquiry" and "Advice" differently from "Financial Authorizations."
 
 ## 3. The "Safety Reversal" Flow (The 0400 Message)
 
-If Tier 2 hits the 25-second timeout, it must execute the **Automatic Reversal Saga**:
+If Business Core Tier hits the 25-second timeout, it must execute the **Automatic Reversal Saga**:
 
-1.  **Mark Internal State:** Tier 2 updates the `transaction_history` status from `PENDING` to `REVERSAL_INITIATED`.
-2.  **Trigger Network Reversal:** Tier 2 calls the **Tier 3 ISO Engine** with a `REVERSAL_REQUEST` (ISO MTI 0400). This tells PayNet: *"If you approved the previous RM 100, cancel it now."*
-3.  **Release Virtual Float:** Once Tier 3 confirms the 0400 was sent (or if Tier 3 itself is down), Tier 2 calls the **Ledger Service** to `Rollback` the float lock.
+1.  **Mark Internal State:** Business Core Tier updates the `transaction_history` status from `PENDING` to `REVERSAL_INITIATED`.
+2.  **Trigger Network Reversal:** Business Core Tier calls the **Tier 4 ISO Engine** with a `REVERSAL_REQUEST` (ISO MTI 0400). This tells PayNet: *"If you approved the previous RM 100, cancel it now."*
+3.  **Release Virtual Float:** Once Tier 4 confirms the 0400 was sent (or if Tier 4 itself is down), Business Core Tier calls the **Ledger Service** to `Rollback` the float lock.
 4.  **Notify Terminal:** The POS terminal displays: *"Transaction Timeout. Funds Reversed. Please try again."*
 
 ---
@@ -524,8 +617,8 @@ If Tier 2 hits the 25-second timeout, it must execute the **Automatic Reversal S
 
 A Reversal is a **mandatory** message. If the network is down and the 0400 message fails to reach PayNet, your system cannot just "forget" about it.
 
-* **Store-and-Forward (SAF):** Tier 3 must save failed Reversal messages in a local **Persistent Queue (Redis/PostgreSQL)**.
-* **Background Worker:** A background process in Tier 3 will keep attempting to send that 0400 message every 60 seconds until a `SUCCESS` is received from the Switch. 
+* **Store-and-Forward (SAF):** Tier 4 must save failed Reversal messages in a local **Persistent Queue (Redis/PostgreSQL)**.
+* **Background Worker:** A background process in Tier 4 will keep attempting to send that 0400 message every 60 seconds until a `SUCCESS` is received from the Switch. 
 * **Audit Trail:** Every attempt must be logged in the `reversal_audit` table for the EOD reconciliation.
 
 ---
@@ -545,9 +638,9 @@ By defining this policy, you prevent the AI from suggesting "Just try the withdr
 
 ## Error Mapping Table
 
-In a high-stakes banking environment, you cannot let raw legacy error codes like `ISO-05` or `CBS-E999` bubble up to your **Business Core (Tier 2)**. If you do, your Orchestrator will become a mess of `if-else` statements trying to handle every possible mainframe glitch.
+In a high-stakes banking environment, you cannot let raw legacy error codes like `ISO-05` or `CBS-E999` bubble up to your **Business Core (Business Core Tier)**. If you do, your Orchestrator will become a mess of `if-else` statements trying to handle every possible mainframe glitch.
 
-Instead, **Tier 3 (The Translation Layer)** must "Normalize" these errors. It takes the "Legacy Noise" and maps it to a **Clean Business Exception** that Tier 2 understands and can act upon (e.g., triggering a Saga Rollback).
+Instead, **Tier 4 (The Translation Layer)** must "Normalize" these errors. It takes the "Legacy Noise" and maps it to a **Clean Business Exception** that Business Core Tier understands and can act upon (e.g., triggering a Saga Rollback).
 
 ---
 
@@ -555,7 +648,7 @@ Instead, **Tier 3 (The Translation Layer)** must "Normalize" these errors. It ta
 
 This table defines the "Normalization" logic within your **ISO Translation Engine** and **CBS Connector**.
 
-| Legacy Source | External Code | Legacy Description | **Business Tier 2 Error** | **Action Category** |
+| Legacy Source | External Code | Legacy Description | **Business Business Core Tier Error** | **Action Category** |
 | :--- | :--- | :--- | :--- | :--- |
 | **ISO 8583** | `00` | Approved or Completed | `SUCCESS` | Finalize |
 | **ISO 8583** | `51` | Insufficient Funds | `INSUFFICIENT_FUNDS` | Notify Customer |
@@ -571,7 +664,7 @@ This table defines the "Normalization" logic within your **ISO Translation Engin
 ---
 
 ### 2. Why "Action Categories" Matter
-In the **Transaction Orchestrator (Tier 2)**, we don't care that the error was `AB05` or `91`. We only care about the **Category**:
+In the **Transaction Orchestrator (Business Core Tier)**, we don't care that the error was `AB05` or `91`. We only care about the **Category**:
 
 * **Notify Customer:** These are "Clean" failures. Just stop the transaction and tell the customer why (e.g., Wrong PIN).
 * **Trigger Reversal:** These are "Technical" failures. Since the network timed out, you don't know if the money moved. You **must** call the `Rollback` logic in the Ledger to release the agent's float.
@@ -580,9 +673,9 @@ In the **Transaction Orchestrator (Tier 2)**, we don't care that the error was `
 ---
 
 ### 3. The "Error Object" Contract
-When Tier 3 sends an error back to Tier 2, it should use a standardized JSON structure. This ensures your the AI Agent knows exactly where to find the error details.
+When Tier 4 sends an error back to Business Core Tier, it should use a standardized JSON structure. This ensures your the AI Agent knows exactly where to find the error details.
 
-**Example Response from Tier 3 to Tier 2:**
+**Example Response from Tier 4 to Business Core Tier:**
 ```json
 {
   "status": "FAILED",
@@ -603,13 +696,15 @@ When Tier 3 sends an error back to Tier 2, it should use a standardized JSON str
 
 ### 4. Final 4-Tier Architecture Summary
 * **Tier 1 (Access):** Displays "Insufficient Funds" to the user.
-* **Tier 2 (Business Core):** Receives `INSUFFICIENT_FUNDS`, marks the txn as `FAILED`, and releases the float lock.
-* **Tier 3 (Translation):** Receives `ISO-51` from PayNet and translates it using the Mapping Table.
+* **Business Core Tier (Business Core):** Receives `INSUFFICIENT_FUNDS`, marks the txn as `FAILED`, and releases the float lock.
+* **Tier 4 (Translation):** Receives `ISO-51` from PayNet and translates it using the Mapping Table.
 * **Tier 4 (External):** Sends the raw binary `51` code.
 
-**Would you like me to generate the Java `enum` and a `MappingUtility` class for Tier 3 that implements this exact table?** It will make your "Saga Error Handling" much more robust.
+**Would you like me to generate the Java `enum` and a `MappingUtility` class for Tier 4 that implements this exact table?** It will make your "Saga Error Handling" much more robust.
 
-# **SPECIALIZED TRANSACTION PROCESSING**
+# **TRANSACTION PROCESSING STEP-BY-STEP**
+
+This section will deep-dive to the PROCESSING STEP-BY-STEP of specific transaction that required special handling.
 
 ## **DuitNow transaction**
 
@@ -622,7 +717,7 @@ Using our **4-Tier Architecture**, here is exactly how that RM 100 moves from a 
 ### Phase 1: The Counter Interaction (Access Layer)
 
 1.  **Initiation:** The customer gives the Agent RM 100 in physical cash and provides a **DuitNow Proxy** (Mobile Number, NRIC, or Account Number).
-2.  **Input:** The Agent enters the details into the POS Terminal (Tier 1). The Terminal sends a **JSON Request** to the **API Gateway**, which routes it to the **Transaction Orchestrator (Tier 2)**.
+2.  **Input:** The Agent enters the details into the POS Terminal (Tier 1). The Terminal sends a **JSON Request** to the **API Gateway**, which routes it to the **Transaction Orchestrator (Business Core Tier)**.
 
 ---
 
@@ -633,22 +728,20 @@ Using our **4-Tier Architecture**, here is exactly how that RM 100 moves from a 
 4.  **Float Reservation (The "Block"):** The Orchestrator calls the **Ledger & Float Service**.
     * *Action:* The Ledger performs a **Pessimistic Lock** on the Agent’s float. It subtracts RM 100 from the `available_balance` but keeps the `actual_balance` unchanged. This "locks" the money so the Agent cannot spend it twice.
 
-
-
 ---
 
 ### Phase 3: External Clearing (Translation Layer & PayNet)
 
-5.  **ISO 20022 Translation:** The Orchestrator calls the **Switch Adapter**. The Switch Adapter passes the JSON to the **ISO Translation Engine (Tier 3)**.
-    * *Action:* Tier 3 converts the modern JSON into a complex **ISO 20022 XML message** (pain.001/pacs.008). 
-6.  **National Switch Handshake:** Tier 3 sends this XML to **PayNet (Tier 4)** via a secure socket.
-    * *Action:* PayNet talks to the Recipient’s Bank in real-time. The Recipient’s Bank confirms the account is valid and accepts the funds. PayNet sends back a "Success" XML response to our Tier 3 engine.
+5.  **ISO 20022 Translation:** The Orchestrator calls the **Switch Adapter**. The Switch Adapter passes the JSON to the **ISO Translation Engine (Tier 4)**.
+    * *Action:* Tier 4 converts the modern JSON into a complex **ISO 20022 XML message** (pain.001/pacs.008). 
+6.  **National Switch Handshake:** Tier 4 sends this XML to **PayNet (Tier 4)** via a secure socket.
+    * *Action:* PayNet talks to the Recipient’s Bank in real-time. The Recipient’s Bank confirms the account is valid and accepts the funds. PayNet sends back a "Success" XML response to our Tier 4 engine.
 
 ---
 
 ### Phase 4: Finalization & Settlement
 
-7.  **Response Normalization:** The **ISO Translation Engine (Tier 3)** receives the XML, maps the PayNet success code to our internal `SUCCESS` status, and sends a clean JSON back to the Orchestrator.
+7.  **Response Normalization:** The **ISO Translation Engine (Tier 4)** receives the XML, maps the PayNet success code to our internal `SUCCESS` status, and sends a clean JSON back to the Orchestrator.
 8.  **Ledger Commitment:** The Orchestrator calls the **Ledger Service** to `Commit`.
     * *Action:* The "Block" is removed, and the Agent’s `actual_balance` is permanently reduced by RM 100. The system generates an accounting entry: **Debit Agent Float** / **Credit Bank Settlement Account**.
 9.  **Receipt & Notification:** The Terminal prints a **Banking Slip** for the customer. Simultaneously, the **Notification Gateway** sends an SMS or Push Notification to the recipient.
@@ -659,12 +752,10 @@ Using our **4-Tier Architecture**, here is exactly how that RM 100 moves from a 
 
 If PayNet is down or the recipient's account is closed, the **Retry & Reversal Policy** kicks in:
 
-* **Tier 3** receives an error (e.g., `AC04` - Closed Account).
-* **Tier 2 Orchestrator** receives the normalized `ACCOUNT_INACTIVE` error.
+* **Tier 4** receives an error (e.g., `AC04` - Closed Account).
+* **Business Core Tier Orchestrator** receives the normalized `ACCOUNT_INACTIVE` error.
 * **The Rollback:** The Orchestrator tells the Ledger to **unblock** the RM 100. The Agent’s `available_balance` is restored instantly.
 * **The Result:** The Agent returns the physical cash to the customer and explains the error. No money is lost.
-
-
 
 ---
 

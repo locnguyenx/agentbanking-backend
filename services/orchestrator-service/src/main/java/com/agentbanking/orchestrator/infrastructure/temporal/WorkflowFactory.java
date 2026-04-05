@@ -23,6 +23,16 @@ public class WorkflowFactory {
         this.workflowClient = workflowClient;
     }
 
+    public String startWorkflow(String idempotencyKey, String transactionType, Object input) {
+        return switch (transactionType) {
+            case "CASH_WITHDRAWAL" -> startWithdrawalWorkflow(idempotencyKey, (WithdrawalWorkflow.WithdrawalInput) input);
+            case "CASH_DEPOSIT" -> startDepositWorkflow(idempotencyKey, (DepositWorkflow.DepositInput) input);
+            case "BILL_PAYMENT" -> startBillPaymentWorkflow(idempotencyKey, (BillPaymentWorkflow.BillPaymentInput) input);
+            case "DUITNOW_TRANSFER" -> startDuitNowTransferWorkflow(idempotencyKey, (DuitNowTransferWorkflow.DuitNowTransferInput) input);
+            default -> throw new IllegalArgumentException("Unknown transaction type: " + transactionType);
+        };
+    }
+
     public String startWithdrawalWorkflow(String idempotencyKey,
                                           WithdrawalWorkflow.WithdrawalInput input) {
         WorkflowOptions options = WorkflowOptions.newBuilder()

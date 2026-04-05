@@ -480,11 +480,11 @@ services:
         condition: service_healthy
 
   temporal:
-    image: temporalio/auto-setup:1.25
+    image: temporalio/auto-setup:1.24
     ports:
       - "7233:7233"
     environment:
-      - DB=postgresql
+      - DB=postgres12
       - POSTGRES_SEEDS=temporal-postgres
       - POSTGRES_USER=temporal
       - POSTGRES_PWD=temporal
@@ -501,7 +501,7 @@ services:
       - temporal-postgres-data:/var/lib/postgresql/data
 
   temporal-ui:
-    image: temporalio/ui:2.27
+    image: temporalio/ui:latest
     ports:
       - "8082:8080"
     environment:

@@ -45,16 +45,16 @@ public class TestContext {
     public static final String ADMIN_PASSWORD = "password";
 
     public static final String AGENT_USERNAME = "agent001";
-    public static final String AGENT_PASSWORD = "AgentPass123!";
+    public static final String AGENT_PASSWORD = "12345678";
 
     public static final String OPERATOR_USERNAME = "operator001";
-    public static final String OPERATOR_PASSWORD = "OperatorPass123!";
+    public static final String OPERATOR_PASSWORD = "12345678";
 
     public static final String MAKER_USERNAME = "maker001";
-    public static final String MAKER_PASSWORD = "MakerPass123!";
+    public static final String MAKER_PASSWORD = "12345678";
 
     public static final String CHECKER_USERNAME = "checker001";
-    public static final String CHECKER_PASSWORD = "CheckerPass123!";
+    public static final String CHECKER_PASSWORD = "12345678";
 
     public static final String COMPLIANCE_USERNAME = "compliance001";
     public static final String COMPLIANCE_PASSWORD = "CompliancePass123!";
@@ -63,7 +63,7 @@ public class TestContext {
     public static final String TELLER_PASSWORD = "TellerPass123!";
 
     public static final String SUPERVISOR_USERNAME = "supervisor001";
-    public static final String SUPERVISOR_PASSWORD = "SupervisorPass123!";
+    public static final String SUPERVISOR_PASSWORD = "12345678";
 
     // Agent configuration
     public static final String TEST_AGENT_CODE = "AGT-E2E-001";

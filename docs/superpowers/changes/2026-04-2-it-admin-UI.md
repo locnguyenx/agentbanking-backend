@@ -48,13 +48,7 @@ Show the status of all services. Should be showed in realtime, or manually refre
 
 For each service, allow administrator to view realtime system metrics.
 
-At this moment, administrator use api to view the metrics like below:
-| Endpoint | Description |
-|----------|-------------|
-| `/actuator/health` | Health status |
-| `/actuator/metrics` | All metrics |
-| `/actuator/metrics/http.server.requests` | HTTP request metrics |
-| `/actuator/prometheus` | Prometheus format |
+At this moment, administrator use api to view the metrics like below: All metrics, HTTP request metrics, Prometheus format
 
 please consult the best practices to view metrics via UI.
 
@@ -70,3 +64,4 @@ Show log details for each operation:
 - IP address
 - Result (success/failure)
 - ...
+- 

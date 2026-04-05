@@ -128,8 +128,8 @@ test_authentication() {
     
     log_info "To test valid authentication, ensure these users exist:"
     log_info "  - admin/password (IT Admin)"
-    log_info "  - agent001/AgentPass123! (Agent)"
-    log_info "  - operator001/OperatorPass123! (Bank Operator)"
+    log_info "  - agent001/12345678 (Agent)"
+    log_info "  - operator001/12345678 (Bank Operator)"
 }
 
 test_protected_endpoints_with_tokens() {
@@ -139,8 +139,8 @@ test_protected_endpoints_with_tokens() {
     log_info "Attempting to get JWT tokens..."
     
     local admin_token=$(get_token "admin" "password")
-    local agent_token=$(get_token "agent001" "AgentPass123!")
-    local operator_token=$(get_token "operator001" "OperatorPass123!")
+    local agent_token=$(get_token "agent001" "12345678")
+    local operator_token=$(get_token "operator001" "12345678")
     
     if [ -z "$admin_token" ]; then
         log_info "No admin token available - skipping admin tests"

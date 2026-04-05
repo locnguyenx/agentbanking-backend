@@ -119,7 +119,7 @@ public class DuitNowTransferWorkflowImpl implements DuitNowTransferWorkflow {
 
             // Step 5: Send DuitNow transfer
             DuitNowTransferResult transferResult = sendDuitNowTransferActivity.sendDuitNowTransfer(
-                    new DuitNowTransferInput(proxyResult.bankCode(), proxyResult.recipientName(),
+                    new com.agentbanking.orchestrator.domain.port.out.SwitchAdapterPort.DuitNowTransferInput(proxyResult.bankCode(), proxyResult.recipientName(),
                             input.amount(), transactionId));
             if (!transferResult.success()) {
                 releaseFloatActivity.releaseFloat(

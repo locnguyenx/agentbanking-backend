@@ -36,7 +36,7 @@
 
 **Demo Credentials (Development Only):**
 - Admin: `admin` / `password`
-- Agent users: `AGT-001`, `AGT-002`, etc. / `12345678`
+- Agent users: `AGT-E2E-001`, `AGT-002`, etc. / `12345678`
 - Staff users: `operator001`, `teller001`, etc. / `12345678`
 
 ### 1.2 First Login — Password Change

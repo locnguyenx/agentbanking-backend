@@ -195,25 +195,25 @@ main() {
     
     # Create test users
     subsection "Creating test users"
-    create_user "agent001" "agent001@bank.com" "AgentPass123!" "Test Agent" "$admin_token"
-    create_user "operator001" "operator001@bank.com" "OperatorPass123!" "Test Operator" "$admin_token"
+    create_user "agent001" "agent001@bank.com" "12345678" "Test Agent" "$admin_token"
+    create_user "operator001" "operator001@bank.com" "12345678" "Test Operator" "$admin_token"
     create_user "auditor001" "auditor001@bank.com" "AuditorPass123!" "Test Auditor" "$admin_token"
     create_user "teller001" "teller001@bank.com" "TellerPass123!" "Test Teller" "$admin_token"
-    create_user "maker001" "maker001@bank.com" "MakerPass123!" "Test Maker" "$admin_token"
-    create_user "checker001" "checker001@bank.com" "CheckerPass123!" "Test Checker" "$admin_token"
+    create_user "maker001" "maker001@bank.com" "12345678" "Test Maker" "$admin_token"
+    create_user "checker001" "checker001@bank.com" "12345678" "Test Checker" "$admin_token"
     create_user "compliance001" "compliance001@bank.com" "CompliancePass123!" "Test Compliance" "$admin_token"
-    create_user "supervisor001" "supervisor001@bank.com" "SupervisorPass123!" "Test Supervisor" "$admin_token"
+    create_user "supervisor001" "supervisor001@bank.com" "12345678" "Test Supervisor" "$admin_token"
     
     # Get tokens for all users
     subsection "Getting tokens"
-    local agent_token=$(get_token "agent001" "AgentPass123!")
-    local operator_token=$(get_token "operator001" "OperatorPass123!")
+    local agent_token=$(get_token "agent001" "12345678")
+    local operator_token=$(get_token "operator001" "12345678")
     local auditor_token=$(get_token "auditor001" "AuditorPass123!")
     local teller_token=$(get_token "teller001" "TellerPass123!")
-    local maker_token=$(get_token "maker001" "MakerPass123!")
-    local checker_token=$(get_token "checker001" "CheckerPass123!")
+    local maker_token=$(get_token "maker001" "12345678")
+    local checker_token=$(get_token "checker001" "12345678")
     local compliance_token=$(get_token "compliance001" "CompliancePass123!")
-    local supervisor_token=$(get_token "supervisor001" "SupervisorPass123!")
+    local supervisor_token=$(get_token "supervisor001" "12345678")
     
     # Save tokens
     cat > "$TOKEN_FILE" << EOF
