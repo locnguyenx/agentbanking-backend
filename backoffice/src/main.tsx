@@ -12,6 +12,7 @@ import { Transactions } from './pages/Transactions'
 import { Settlement } from './pages/Settlement'
 import { KycReview } from './pages/KycReview'
 import { Profile } from './pages/Profile'
+import { SystemAdmin } from './pages/SystemAdmin'
 import './styles/global.css'
 
 const queryClient = new QueryClient()
@@ -72,6 +73,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
             <Route path="settlement" element={<Settlement />} />
             <Route path="kyc-review" element={<KycReview />} />
             <Route path="profile" element={<Profile />} />
+            <Route path="system-admin" element={<SystemAdmin />} />
           </Route>
         </Routes>
       </BrowserRouter>

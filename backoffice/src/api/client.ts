@@ -72,7 +72,13 @@ export const api = {
     client.post('/auth/password/change', data).then((r) => r.data),
   logout: () => {
     localStorage.removeItem('backoffice_token')
-  }
+  },
+
+  // System Admin
+  getAdminHealthAll: () => client.get('/admin/health/all').then((r) => r.data),
+  getAdminMetrics: (service: string) => client.get(`/admin/metrics/${service}`).then((r) => r.data),
+  getAdminAuditLogs: (params?: Record<string, string | number>) =>
+    client.get('/admin/audit-logs', { params }).then((r) => r.data),
 }
 
 export default api

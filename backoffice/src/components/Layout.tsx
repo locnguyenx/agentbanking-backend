@@ -9,7 +9,8 @@ import {
   Bell,
   Search,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Settings
 } from 'lucide-react'
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
@@ -22,6 +23,7 @@ const navItems = [
   { path: '/transactions', icon: ArrowLeftRight, label: 'Transactions' },
   { path: '/settlement', icon: FileText, label: 'Settlement' },
   { path: '/kyc-review', icon: FileCheck, label: 'KYC Review' },
+  { path: '/system-admin', icon: Settings, label: 'System Admin' },
 ]
 
 function getUserInitials(fullName: string) {
