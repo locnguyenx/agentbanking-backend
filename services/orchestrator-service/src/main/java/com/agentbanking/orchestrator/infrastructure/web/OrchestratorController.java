@@ -1,10 +1,18 @@
 package com.agentbanking.orchestrator.infrastructure.web;
 
-import com.agentbanking.orchestrator.domain.port.in.ExecuteWithdrawalSagaUseCase;
-import com.agentbanking.orchestrator.domain.port.in.ExecuteWithdrawalSagaUseCase.SagaResult;
-import com.agentbanking.orchestrator.domain.port.in.ExecuteWithdrawalSagaUseCase.WithdrawalSagaCommand;
+import com.agentbanking.orchestrator.domain.model.TransactionType;
+import com.agentbanking.orchestrator.domain.port.in.QueryWorkflowStatusUseCase;
+import com.agentbanking.orchestrator.domain.port.in.StartTransactionUseCase;
+import com.agentbanking.orchestrator.domain.port.in.StartTransactionUseCase.StartTransactionCommand;
+import com.agentbanking.orchestrator.domain.port.in.StartTransactionUseCase.StartTransactionResult;
+import com.agentbanking.orchestrator.infrastructure.web.dto.*;
+import com.agentbanking.orchestrator.infrastructure.temporal.WorkflowFactory;
+import io.temporal.client.WorkflowStub;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -13,53 +21,143 @@ import java.util.Map;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/v1")
+@RequestMapping("/api/v1/transactions")
 public class OrchestratorController {
 
-    private final ExecuteWithdrawalSagaUseCase withdrawalSagaUseCase;
+    private static final Logger log = LoggerFactory.getLogger(OrchestratorController.class);
 
-    public OrchestratorController(ExecuteWithdrawalSagaUseCase withdrawalSagaUseCase) {
-        this.withdrawalSagaUseCase = withdrawalSagaUseCase;
+    private final StartTransactionUseCase startTransactionUseCase;
+    private final QueryWorkflowStatusUseCase queryWorkflowStatusUseCase;
+    private final WorkflowFactory workflowFactory;
+
+    public OrchestratorController(StartTransactionUseCase startTransactionUseCase,
+                                   QueryWorkflowStatusUseCase queryWorkflowStatusUseCase,
+                                   WorkflowFactory workflowFactory) {
+        this.startTransactionUseCase = startTransactionUseCase;
+        this.queryWorkflowStatusUseCase = queryWorkflowStatusUseCase;
+        this.workflowFactory = workflowFactory;
     }
 
-    @PostMapping("/withdraw")
-    public ResponseEntity<Map<String, Object>> withdraw(@Valid @RequestBody WithdrawalRequest request) {
-        WithdrawalSagaCommand command = new WithdrawalSagaCommand(
+    @PostMapping
+    public ResponseEntity<?> startTransaction(@Valid @RequestBody TransactionRequest request) {
+        if (request.idempotencyKey() != null && !request.idempotencyKey().isBlank()) {
+            var existing = queryWorkflowStatusUseCase.getStatus(request.idempotencyKey());
+            if (existing.isPresent()) {
+                log.info("Returning cached response for idempotency key: {}", request.idempotencyKey());
+                return ResponseEntity.ok(mapToTransactionResponse(
+                    new StartTransactionResult("PENDING", request.idempotencyKey(), 
+                        "/api/v1/transactions/" + request.idempotencyKey() + "/status")));
+            }
+        }
+
+        StartTransactionCommand command = new StartTransactionCommand(
+            request.transactionType(),
             request.agentId(),
             request.amount(),
-            request.pan(),
-            request.customerCardMasked(),
             request.idempotencyKey(),
+            request.pan(),
+            request.pinBlock(),
+            request.customerCardMasked(),
+            request.destinationAccount(),
+            request.requiresBiometric(),
+            request.billerCode(),
+            request.ref1(),
+            request.ref2(),
+            request.proxyType(),
+            request.proxyValue(),
+            request.customerMykad(),
             request.geofenceLat(),
-            request.geofenceLng()
+            request.geofenceLng(),
+            request.targetBIN(),
+            request.agentTier()
         );
 
-        SagaResult result = withdrawalSagaUseCase.executeSaga(command);
+        StartTransactionResult result = startTransactionUseCase.start(command);
+        return ResponseEntity.ok(mapToTransactionResponse(result));
+    }
 
-        if ("COMPLETED".equals(result.status())) {
+    @GetMapping("/{workflowId}/status")
+    public ResponseEntity<?> getTransactionStatus(@PathVariable String workflowId) {
+        return queryWorkflowStatusUseCase.getStatus(workflowId)
+            .map(status -> ResponseEntity.ok(mapToWorkflowStatusResponse(status)))
+            .orElse(ResponseEntity.notFound().build());
+    }
+
+    @PostMapping("/{workflowId}/force-resolve")
+    public ResponseEntity<?> forceResolve(
+            @PathVariable String workflowId,
+            @Valid @RequestBody ForceResolveRequest request) {
+        
+        WorkflowStub workflowStub = workflowFactory.getWorkflowStub(workflowId);
+
+        try {
+            var signal = new com.agentbanking.orchestrator.domain.model.ForceResolveSignal(
+                com.agentbanking.orchestrator.domain.model.ForceResolveSignal.Action.valueOf(
+                    request.action().name()),
+                request.reason(),
+                request.adminId()
+            );
+            workflowStub.signal("forceResolve", signal);
             return ResponseEntity.ok(Map.of(
                 "status", "SUCCESS",
-                "transactionId", result.transactionId().toString(),
-                "message", result.message()
+                "message", "Force resolve signal sent for workflow: " + workflowId
             ));
-        } else {
+        } catch (Exception e) {
+            log.error("Failed to send force resolve signal for workflow {}: {}", workflowId, e.getMessage());
             return ResponseEntity.badRequest().body(Map.of(
                 "status", "FAILED",
                 "error", Map.of(
-                    "code", "ERR_BIZ_WITHDRAWAL_FAILED",
-                    "message", result.message()
+                    "code", "ERR_SYS_FORCE_RESOLVE_FAILED",
+                    "message", e.getMessage()
                 )
             ));
         }
     }
 
-    public record WithdrawalRequest(
+    private TransactionResponse mapToTransactionResponse(StartTransactionResult result) {
+        return new TransactionResponse(
+            result.status(),
+            result.workflowId(),
+            result.pollUrl()
+        );
+    }
+
+    private WorkflowStatusResponse mapToWorkflowStatusResponse(
+            QueryWorkflowStatusUseCase.WorkflowStatusResponse status) {
+        var result = status.result();
+        return new WorkflowStatusResponse(
+            status.status() != null ? status.status().name() : "UNKNOWN",
+            status.result() != null ? status.result().transactionId().toString() : null,
+            null,
+            result != null ? result.amount() : null,
+            result != null ? result.customerFee() : null,
+            result != null ? result.referenceNumber() : null,
+            result != null ? result.errorCode() : null,
+            result != null ? result.errorMessage() : null,
+            result != null ? result.actionCode() : null,
+            result != null ? result.completedAt() : null
+        );
+    }
+
+    public record TransactionRequest(
+        @NotNull TransactionType transactionType,
         @NotNull UUID agentId,
         @NotNull BigDecimal amount,
-        @NotNull String pan,
-        String customerCardMasked,
         String idempotencyKey,
+        String pan,
+        String pinBlock,
+        String customerCardMasked,
+        String destinationAccount,
+        boolean requiresBiometric,
+        String billerCode,
+        String ref1,
+        String ref2,
+        String proxyType,
+        String proxyValue,
+        String customerMykad,
         BigDecimal geofenceLat,
-        BigDecimal geofenceLng
+        BigDecimal geofenceLng,
+        String targetBIN,
+        String agentTier
     ) {}
 }
