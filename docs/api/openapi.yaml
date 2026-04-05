@@ -13,16 +13,18 @@ servers:
 - description: Sandbox
   url: https://sandbox.agentbanking.example.com
 paths:
-  /api/v1/auth/token:
+  /api/v1/transactions/quote:
     post:
       tags:
-      - auth-controller (auth-iam-service)
-      operationId: authenticate
+      - transaction-controller (switch-adapter-service)
+      operationId: getTransactionQuote
+      security:
+        - bearerAuth: []
       requestBody:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/AuthRequest'
+              $ref: '#/components/schemas/TransactionQuoteRequest'
         required: true
       responses:
         '200':
@@ -30,104 +32,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AuthResponse'
-        '401':
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-  /api/v1/auth/refresh:
-    post:
-      tags:
-      - auth-controller (auth-iam-service)
-      operationId: refreshToken
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/RefreshTokenRequest'
-        required: true
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AuthResponse'
-        '401':
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-  /api/v1/auth/password/forgot:
-    post:
-      tags:
-      - password-controller (auth-iam-service)
-      operationId: forgotPassword
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ForgotPasswordRequest'
-        required: true
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ForgotPasswordResponse'
-  /api/v1/auth/password/reset:
-    post:
-      tags:
-      - password-controller (auth-iam-service)
-      operationId: resetPassword
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ResetPasswordRequest'
-        required: true
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ResetPasswordResponse'
-        '400':
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-  /api/v1/auth/password/change:
-    post:
-      tags:
-      - password-controller (auth-iam-service)
-      operationId: changePassword
-      parameters:
-      - name: X-User-Id
-        in: header
-        required: true
-        schema:
-          type: string
-          format: uuid
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ChangePasswordRequest'
-        required: true
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ChangePasswordResponse'
+                $ref: '#/components/schemas/TransactionQuoteResponse'
         '400':
           description: Bad Request
           content:
@@ -140,67 +45,78 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-  /api/v1/auth/agent:
-    post:
-      tags:
-      - agent-user-controller (auth-iam-service)
-      operationId: createAgentUser
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CreateAgentUserRequest'
-        required: true
-      responses:
-        '201':
-          description: Created
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AgentUserResponse'
-        '400':
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '409':
-          description: Conflict
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-  /api/v1/auth/agent/{agentId}/status:
+  /api/v1/transfer/proxy/enquiry:
     get:
       tags:
-      - agent-user-controller (auth-iam-service)
-      operationId: getAgentUserStatus
+      - switch-controller (switch-adapter-service)
+      operationId: proxyEnquiry
+      security:
+        - bearerAuth: []
       parameters:
-      - name: agentId
-        in: path
+      - name: proxyId
+        in: query
         required: true
         schema:
           type: string
-          format: uuid
+      - name: proxyType
+        in: query
+        required: true
+        schema:
+          type: string
+          enum: [MOBILE, NRIC, PASSPORT, BIZ_REG_NO]
       responses:
         '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AgentUserStatusResponse'
+                type: object
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '404':
           description: Not Found
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-
+  /api/v1/compliance/status:
+    get:
+      tags:
+      - compliance-controller (rules-service)
+      operationId: getComplianceStatus
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: string
+                enum: [LOCKED, UNLOCKED]
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /api/v1/transfer/duitnow:
     post:
       tags:
       - switch-controller (switch-adapter-service)
       operationId: duitNowTransfer
+      security:
+        - bearerAuth: []
       requestBody:
         content:
           application/json:
@@ -214,11 +130,25 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/TransactionResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /api/v1/balance-inquiry:
     post:
       tags:
       - ledger-controller (ledger-service)
       operationId: balanceInquiry
+      security:
+        - bearerAuth: []
       requestBody:
         content:
           application/json:
@@ -243,6 +173,8 @@ paths:
       tags:
       - rules-controller (rules-service)
       operationId: createFeeConfig
+      security:
+        - bearerAuth: []
       requestBody:
         content:
           application/json:
@@ -267,6 +199,8 @@ paths:
       tags:
       - biller-controller (biller-service)
       operationId: topup
+      security:
+        - bearerAuth: []
       requestBody:
         content:
           application/json:
@@ -291,6 +225,8 @@ paths:
       tags:
       - biller-controller (biller-service)
       operationId: payBill
+      security:
+        - bearerAuth: []
       requestBody:
         content:
           application/json:
@@ -315,6 +251,8 @@ paths:
       tags:
       - biller-controller (biller-service)
       operationId: jomPay
+      security:
+        - bearerAuth: []
       requestBody:
         content:
           application/json:
@@ -339,6 +277,8 @@ paths:
       tags:
       - e-wallet-controller (biller-service)
       operationId: withdrawal
+      security:
+        - bearerAuth: []
       requestBody:
         content:
           application/json:
@@ -369,6 +309,8 @@ paths:
       tags:
       - e-wallet-controller (biller-service)
       operationId: topup_1
+      security:
+        - bearerAuth: []
       requestBody:
         content:
           application/json:
@@ -381,7 +323,7 @@ paths:
         '200':
           description: OK
           content:
-            '*/*':
+            application/json:
               schema:
                 type: object
                 additionalProperties:
@@ -391,6 +333,8 @@ paths:
       tags:
       - essp-controller (biller-service)
       operationId: purchase
+      security:
+        - bearerAuth: []
       requestBody:
         content:
           application/json:
@@ -415,6 +359,8 @@ paths:
       tags:
       - onboarding-controller (onboarding-service)
       operationId: verifyMyKad
+      security:
+        - bearerAuth: []
       requestBody:
         content:
           application/json:
@@ -439,6 +385,8 @@ paths:
       tags:
       - onboarding-controller (onboarding-service)
       operationId: submitApplication
+      security:
+        - bearerAuth: []
       requestBody:
         content:
           application/json:
@@ -463,6 +411,8 @@ paths:
       tags:
       - reconciliation-controller (ledger-service)
       operationId: makerPropose
+      security:
+        - bearerAuth: []
       parameters:
       - name: caseId
         in: path
@@ -494,6 +444,8 @@ paths:
       tags:
       - reconciliation-controller (ledger-service)
       operationId: checkerReject
+      security:
+        - bearerAuth: []
       parameters:
       - name: caseId
         in: path
@@ -525,6 +477,8 @@ paths:
       tags:
       - reconciliation-controller (ledger-service)
       operationId: checkerApprove
+      security:
+        - bearerAuth: []
       parameters:
       - name: caseId
         in: path
@@ -556,6 +510,8 @@ paths:
       tags:
       - merchant-controller (ledger-service)
       operationId: processRetailSale
+      security:
+        - bearerAuth: []
       requestBody:
         content:
           application/json:
@@ -566,14 +522,28 @@ paths:
         '200':
           description: OK
           content:
-            '*/*':
+            application/json:
               schema:
                 $ref: '#/components/schemas/RetailSaleResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /api/v1/retail/pin-purchase:
     post:
       tags:
       - merchant-controller (ledger-service)
       operationId: processPinPurchase
+      security:
+        - bearerAuth: []
       requestBody:
         content:
           application/json:
@@ -584,14 +554,28 @@ paths:
         '200':
           description: OK
           content:
-            '*/*':
+            application/json:
               schema:
                 $ref: '#/components/schemas/PinPurchaseResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /api/v1/retail/cashback:
     post:
       tags:
       - merchant-controller (ledger-service)
       operationId: processCashBack
+      security:
+        - bearerAuth: []
       requestBody:
         content:
           application/json:
@@ -602,14 +586,28 @@ paths:
         '200':
           description: OK
           content:
-            '*/*':
+            application/json:
               schema:
                 $ref: '#/components/schemas/CashBackResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /api/v1/withdrawal:
     post:
       tags:
       - ledger-controller (ledger-service)
       operationId: debit
+      security:
+        - bearerAuth: []
       requestBody:
         content:
           application/json:
@@ -640,6 +638,8 @@ paths:
       tags:
       - ledger-controller (ledger-service)
       operationId: credit
+      security:
+        - bearerAuth: []
       requestBody:
         content:
           application/json:
@@ -670,6 +670,8 @@ paths:
       tags:
       - ledger-controller (ledger-service)
       operationId: getBalance
+      security:
+        - bearerAuth: []
       parameters:
       - name: agentId
         in: query
@@ -695,6 +697,8 @@ paths:
       tags:
       - ledger-controller (ledger-service)
       operationId: getTransactions
+      security:
+        - bearerAuth: []
       parameters:
       - name: page
         in: query
@@ -717,11 +721,19 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/TransactionListResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /api/v1/backoffice/settlement:
     get:
       tags:
       - ledger-controller (ledger-service)
       operationId: getSettlement
+      security:
+        - bearerAuth: []
       parameters:
       - name: date
         in: query
@@ -736,11 +748,19 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SettlementResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /api/v1/backoffice/dashboard:
     get:
       tags:
       - ledger-controller (ledger-service)
       operationId: getDashboard
+      security:
+        - bearerAuth: []
       responses:
         '200':
           description: OK
@@ -748,11 +768,19 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/DashboardResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /api/v1/backoffice/agents/{id}:
     get:
       tags:
       - agent-controller (onboarding-service)
       operationId: getAgent
+      security:
+        - bearerAuth: []
       parameters:
       - name: id
         in: path
@@ -764,13 +792,21 @@ paths:
         '200':
           description: OK
           content:
-            '*/*':
+            application/json:
               schema:
                 $ref: '#/components/schemas/AgentResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
     put:
       tags:
       - agent-controller (onboarding-service)
       operationId: updateAgent
+      security:
+        - bearerAuth: []
       parameters:
       - name: id
         in: path
@@ -788,13 +824,21 @@ paths:
         '200':
           description: OK
           content:
-            '*/*':
+            application/json:
               schema:
                 $ref: '#/components/schemas/AgentResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
     delete:
       tags:
       - agent-controller (onboarding-service)
       operationId: deactivateAgent
+      security:
+        - bearerAuth: []
       parameters:
       - name: id
         in: path
@@ -805,11 +849,19 @@ paths:
       responses:
         '200':
           description: OK
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /api/v1/kyc/verify:
     post:
       tags:
       - onboarding-controller (onboarding-service)
       operationId: verifyMyKadKyc
+      security:
+        - bearerAuth: []
       requestBody:
         content:
           application/json:
@@ -822,7 +874,7 @@ paths:
         '200':
           description: OK
           content:
-            '*/*':
+            application/json:
               schema:
                 type: object
                 additionalProperties:
@@ -832,6 +884,8 @@ paths:
       tags:
       - onboarding-controller (onboarding-service)
       operationId: biometricMatch
+      security:
+        - bearerAuth: []
       requestBody:
         content:
           application/json:
@@ -844,7 +898,7 @@ paths:
         '200':
           description: OK
           content:
-            '*/*':
+            application/json:
               schema:
                 type: object
                 additionalProperties:
@@ -854,6 +908,8 @@ paths:
       tags:
       - agent-controller (onboarding-service)
       operationId: listAgents
+      security:
+        - bearerAuth: []
       parameters:
       - name: page
         in: query
@@ -873,15 +929,23 @@ paths:
         '200':
           description: OK
           content:
-            '*/*':
+            application/json:
               schema:
                 type: array
                 items:
                   $ref: '#/components/schemas/AgentResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
     post:
       tags:
       - agent-controller (onboarding-service)
       operationId: createAgent
+      security:
+        - bearerAuth: []
       requestBody:
         content:
           application/json:
@@ -901,11 +965,19 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /api/v1/backoffice/kyc/review-queue:
     get:
       tags:
       - onboarding-controller (onboarding-service)
       operationId: getKycReviewQueue
+      security:
+        - bearerAuth: []
       parameters:
       - name: page
         in: query
@@ -925,16 +997,24 @@ paths:
         '200':
           description: OK
           content:
-            '*/*':
+            application/json:
               schema:
                 type: object
                 additionalProperties:
                   type: object
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /api/v1/auth/token:
     post:
       tags:
       - auth-controller (auth-iam-service)
       operationId: authenticateUser
+      security:
+        - bearerAuth: []
       requestBody:
         content:
           application/json:
@@ -959,6 +1039,8 @@ paths:
       tags:
       - auth-controller (auth-iam-service)
       operationId: refreshToken
+      security:
+        - bearerAuth: []
       requestBody:
         content:
           application/json:
@@ -972,6 +1054,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/TokenResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '401':
           description: Unauthorized
           content:
@@ -983,6 +1071,8 @@ paths:
       tags:
       - auth-controller (auth-iam-service)
       operationId: revokeToken
+      security:
+        - bearerAuth: []
       requestBody:
         content:
           application/json:
@@ -992,6 +1082,12 @@ paths:
       responses:
         '204':
           description: No Content
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '401':
           description: Unauthorized
           content:
@@ -1003,6 +1099,8 @@ paths:
       tags:
       - user-management-controller (auth-iam-service)
       operationId: forgotPassword
+      security:
+        - bearerAuth: []
       requestBody:
         content:
           application/json:
@@ -1027,6 +1125,8 @@ paths:
       tags:
       - user-management-controller (auth-iam-service)
       operationId: resetPassword
+      security:
+        - bearerAuth: []
       requestBody:
         content:
           application/json:
@@ -1051,6 +1151,8 @@ paths:
       tags:
       - user-management-controller (auth-iam-service)
       operationId: changePassword
+      security:
+        - bearerAuth: []
       requestBody:
         content:
           application/json:
@@ -1075,6 +1177,8 @@ paths:
       tags:
       - user-management-controller (auth-iam-service)
       operationId: getAgentUserStatus
+      security:
+        - bearerAuth: []
       parameters:
       - name: agentId
         in: path
@@ -1089,6 +1193,18 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/AgentUserStatusResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '404':
           description: Not Found
           content:
@@ -1100,6 +1216,8 @@ paths:
       tags:
       - user-management-controller (auth-iam-service)
       operationId: createAgentUser
+      security:
+        - bearerAuth: []
       parameters:
       - name: agentId
         in: path
@@ -1107,6 +1225,19 @@ paths:
         schema:
           type: string
           format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username:
+                  type: string
+                email:
+                  type: string
+                fullName:
+                  type: string
+        required: true
       responses:
         '201':
           description: Created
@@ -1120,11 +1251,19 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /api/v1/backoffice/audit-logs:
     get:
       tags:
       - audit-log-controller (onboarding-service)
       operationId: getAuditLogs
+      security:
+        - bearerAuth: []
       parameters:
       - name: entityType
         in: query
@@ -1161,13 +1300,65 @@ paths:
         '200':
           description: OK
           content:
-            '*/*':
+            application/json:
               schema:
                 type: object
                 additionalProperties:
                   type: object
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
   schemas:
+    TransactionQuoteRequest:
+      required:
+      - amount
+      - serviceCode
+      - fundingSource
+      - agentId
+      type: object
+      properties:
+        serviceCode:
+          type: string
+        amount:
+          type: string
+        agentId:
+          type: string
+        fundingSource:
+          type: string
+          enum: [CARD_EMV, CASH, DUITNOW_MOBILE, DUITNOW_MYKAD, DUITNOW_BRN, MYKAD_BIOMETRIC, DUITNOW_QR]
+        billerRouting:
+          type: string
+          enum: [ON_US, OFF_US]
+
+    TransactionQuoteResponse:
+      required:
+      - amount
+      - fee
+      - commission
+      - total
+      - quoteId
+      type: object
+      properties:
+        quoteId:
+          type: string
+        amount:
+          type: string
+        fee:
+          type: string
+        total:
+          type: string
+        commission:
+          type: string
+
     ReversalRequest:
       required:
       - amount
@@ -1181,7 +1372,7 @@ components:
         originalReference:
           type: string
         amount:
-          type: number
+          type: string
     DuitNowRequest:
       required:
       - amount
@@ -1198,7 +1389,7 @@ components:
         proxyValue:
           type: string
         amount:
-          type: number
+          type: string
     BalanceInquiryRequest:
       required:
       - encryptedCardData
@@ -1222,7 +1413,7 @@ components:
         pan:
           type: string
         amount:
-          type: number
+          type: string
     RetailSaleCommand:
       type: object
       properties:
@@ -1230,7 +1421,7 @@ components:
           type: string
           format: uuid
         amount:
-          type: number
+          type: string
         cardData:
           type: string
         pinBlock:
@@ -1245,11 +1436,11 @@ components:
         transactionId:
           type: string
         amount:
-          type: number
+          type: string
         mdrAmount:
-          type: number
+          type: string
         netToMerchant:
-          type: number
+          type: string
     PinPurchaseCommand:
       type: object
       properties:
@@ -1259,7 +1450,7 @@ components:
         productCode:
           type: string
         amount:
-          type: number
+          type: string
         idempotencyKey:
           type: string
     PinPurchaseResponse:
@@ -1272,7 +1463,7 @@ components:
         pinCode:
           type: string
         commission:
-          type: number
+          type: string
         timestamp:
           type: string
     CashBackCommand:
@@ -1282,7 +1473,7 @@ components:
           type: string
           format: uuid
         cashBackAmount:
-          type: number
+          type: string
         cardData:
           type: string
         pinBlock:
@@ -1297,9 +1488,9 @@ components:
         transactionId:
           type: string
         cashBackAmount:
-          type: number
+          type: string
         commission:
-          type: number
+          type: string
     # ============================================================
     # EXTERNAL API REQUEST SCHEMAS
     # These are what external consumers should send
@@ -1316,7 +1507,7 @@ components:
       type: object
       properties:
         amount:
-          type: number
+          type: string
           description: Transaction amount in MYR
           minimum: 0.01
         currency:
@@ -1348,7 +1539,7 @@ components:
       type: object
       properties:
         amount:
-          type: number
+          type: string
           description: Transaction amount in MYR
           minimum: 0.01
         currency:
@@ -1390,7 +1581,7 @@ components:
           description: Mobile number (MSISDN format)
           pattern: '^60[0-9]{8,9}$'
         amount:
-          type: number
+          type: string
           description: Top-up amount in MYR
           minimum: 1
           maximum: 500
@@ -1426,7 +1617,7 @@ components:
           description: Reference 2 (optional)
           maxLength: 20
         amount:
-          type: number
+          type: string
           description: Payment amount in MYR
           minimum: 0.01
         currency:
@@ -1439,7 +1630,7 @@ components:
         customerMobile:
           type: string
           description: Customer mobile number
-    
+
     # JomPay - External API Contract
     JomPayExternalRequest:
       required:
@@ -1464,7 +1655,7 @@ components:
           description: JomPay reference 2 (optional)
           maxLength: 12
         amount:
-          type: number
+          type: string
           description: Payment amount in MYR
           minimum: 0.01
         currency:
@@ -1476,7 +1667,7 @@ components:
           format: uuid
         customerMobile:
           type: string
-    
+
     # E-wallet Withdraw - External API Contract
     EWalletWithdrawExternalRequest:
       required:
@@ -1497,7 +1688,7 @@ components:
           minLength: 5
           maxLength: 20
         amount:
-          type: number
+          type: string
           description: Withdrawal amount in MYR
           minimum: 1
         currency:
@@ -1529,14 +1720,14 @@ components:
         walletAccountId:
           type: string
         amount:
-          type: number
+          type: string
         currency:
           type: string
           enum: [MYR]
         idempotencyKey:
           type: string
           format: uuid
-    
+
     # DuitNow Transfer - External API Contract
     DuitNowExternalRequest:
       required:
@@ -1548,7 +1739,7 @@ components:
       type: object
       properties:
         amount:
-          type: number
+          type: string
         currency:
           type: string
           enum: [MYR]
@@ -1575,7 +1766,7 @@ components:
         productCode:
           type: string
         amount:
-          type: number
+          type: string
         currency:
           type: string
           enum: [MYR]
@@ -1597,7 +1788,7 @@ components:
           type: string
           format: uuid
         amount:
-          type: number
+          type: string
         cardData:
           type: string
         pinBlock:
@@ -1617,7 +1808,7 @@ components:
         productCode:
           type: string
         amount:
-          type: number
+          type: string
         idempotencyKey:
           type: string
           format: uuid
@@ -1634,7 +1825,7 @@ components:
           type: string
           format: uuid
         cashBackAmount:
-          type: number
+          type: string
         cardData:
           type: string
         pinBlock:
@@ -1836,13 +2027,13 @@ components:
           type: string
           enum: [FIXED, PERCENTAGE]
         feeAmount:
-          type: number
+          type: string
         percentage:
-          type: number
+          type: string
         minFee:
-          type: number
+          type: string
         maxFee:
-          type: number
+          type: string
         currency:
           type: string
           enum: [MYR]
@@ -1866,8 +2057,8 @@ components:
         notes:
           type: string
         adjustmentAmount:
-          type: number
-    
+          type: string
+
     # Discrepancy Checker Action Request
     DiscrepancyCheckerActionRequest:
       required:
@@ -1912,7 +2103,7 @@ components:
           type: string
           format: uuid
         amount:
-          type: number
+          type: string
         currency:
           type: string
         transactionType:
@@ -1939,9 +2130,9 @@ components:
         feeType:
           type: string
         feeAmount:
-          type: number
+          type: string
         percentage:
-          type: number
+          type: string
         status:
           type: string
           enum: [CREATED, ACTIVE, INACTIVE]
@@ -2013,11 +2204,11 @@ components:
           type: string
           format: uuid
         availableBalance:
-          type: number
+          type: string
         ledgerBalance:
-          type: number
+          type: string
         pendingBalance:
-          type: number
+          type: string
         currency:
           type: string
         lastTransactionId:
@@ -2038,7 +2229,7 @@ components:
         totalTransactions:
           type: integer
         totalVolume:
-          type: number
+          type: string
         successRate:
           type: number
         dailyStats:
@@ -2051,7 +2242,7 @@ components:
               transactionCount:
                 type: integer
               volume:
-                type: number
+                type: string
     
     # Transaction List Response
     TransactionListResponse:
@@ -2085,188 +2276,12 @@ components:
         totalTransactions:
           type: integer
         totalAmount:
-          type: number
+          type: string
         commission:
-          type: number
-        status:
-          type: string
-
-    # ============================================================
-    # AUTH & IAM SERVICE SCHEMAS
-    # ============================================================
-
-    # Auth Request
-    AuthRequest:
-      required:
-      - username
-      - password
-      type: object
-      properties:
-        username:
-          type: string
-          description: Username (3-50 characters)
-          minLength: 3
-          maxLength: 50
-        password:
-          type: string
-          description: Password (min 8 characters)
-          format: password
-          minLength: 8
-
-    # Auth Response
-    AuthResponse:
-      type: object
-      properties:
-        accessToken:
-          type: string
-          description: JWT access token
-        refreshToken:
-          type: string
-          description: JWT refresh token
-        expiresIn:
-          type: integer
-          format: int64
-          description: Token expiration time in seconds
-        tokenType:
-          type: string
-          default: Bearer
-
-    # Refresh Token Request
-    RefreshTokenRequest:
-      required:
-      - refreshToken
-      type: object
-      properties:
-        refreshToken:
-          type: string
-          description: Refresh token
-
-    # Forgot Password Request
-    ForgotPasswordRequest:
-      required:
-      - username
-      type: object
-      properties:
-        username:
-          type: string
-          description: Username to reset password for
-          minLength: 3
-          maxLength: 50
-
-    # Forgot Password Response
-    ForgotPasswordResponse:
-      type: object
-      properties:
-        message:
-          type: string
-          description: Generic response message
-
-    # Reset Password Request
-    ResetPasswordRequest:
-      required:
-      - username
-      - otp
-      - newPassword
-      type: object
-      properties:
-        username:
-          type: string
-          minLength: 3
-          maxLength: 50
-        otp:
-          type: string
-          description: 6-digit OTP
-          pattern: '^\d{6}$'
-        newPassword:
-          type: string
-          description: New password (min 8 chars, uppercase+lowercase+digit)
-          format: password
-          minLength: 8
-
-    # Reset Password Response
-    ResetPasswordResponse:
-      type: object
-      properties:
-        message:
-          type: string
-
-    # Change Password Request
-    ChangePasswordRequest:
-      required:
-      - currentPassword
-      - newPassword
-      type: object
-      properties:
-        currentPassword:
-          type: string
-          format: password
-        newPassword:
-          type: string
-          description: New password (min 8 chars, uppercase+lowercase+digit)
-          format: password
-          minLength: 8
-
-    # Change Password Response
-    ChangePasswordResponse:
-      type: object
-      properties:
-        message:
-          type: string
-
-    # Create Agent User Request
-    CreateAgentUserRequest:
-      required:
-      - agentId
-      - agentCode
-      - email
-      - businessName
-      type: object
-      properties:
-        agentId:
-          type: string
-          format: uuid
-        agentCode:
-          type: string
-        phone:
-          type: string
-        email:
-          type: string
-          format: email
-        businessName:
-          type: string
-
-    # Agent User Response
-    AgentUserResponse:
-      type: object
-      properties:
-        userId:
-          type: string
-          format: uuid
-        agentId:
-          type: string
-          format: uuid
-        username:
           type: string
         status:
           type: string
-        message:
-          type: string
-
-    # Agent User Status Response
-    AgentUserStatusResponse:
-      type: object
-      properties:
-        agentId:
-          type: string
-          format: uuid
-        status:
-          type: string
-        userId:
-          type: string
-          format: uuid
-        error:
-          type: string
-
+    
     # Error Response
     ErrorResponse:
       required:
@@ -2304,6 +2319,10 @@ components:
           type: string
         password:
           type: string
+        grantType:
+          type: string
+          enum: [password, refresh_token]
+          default: password
           minLength: 8
           maxLength: 64
     TokenResponse:
