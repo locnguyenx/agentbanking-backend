@@ -36,6 +36,14 @@ spring:
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+  temporal:
+    connection:
+      target: ${TEMPORAL_ADDRESS:localhost:7233}
+    namespace: default
+    workers-auto-discovery:
+      packages:
+        - com.agentbanking.orchestrator.infrastructure.temporal.ActivityImpl
+        - com.agentbanking.orchestrator.infrastructure.temporal.WorkflowImpl
 
 rules-service:
   url: ${RULES_SERVICE_URL:http://localhost:8081}
@@ -64,20 +72,9 @@ logging:
   level:
     com.agentbanking.orchestrator: INFO
 
-# Temporal configuration
 temporal:
-  namespace: default
-  address: ${TEMPORAL_ADDRESS:localhost:7233}
   task-queue: agent-banking-tasks
-  worker:
-    max-concurrent-workflow-task-executors: 10
-    max-concurrent-activity-task-executors: 20
-  workflow:
-    execution-timeout: 5m
-    run-timeout: 2m
-    task-timeout: 30s
 
-# Additional Feign URLs
 biller-service:
   url: ${BILLER_SERVICE_URL:http://localhost:8084}
 
