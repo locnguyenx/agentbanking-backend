@@ -1,20 +1,40 @@
 package com.agentbanking.orchestrator.infrastructure.external;
 
+import com.agentbanking.orchestrator.domain.port.out.LedgerServicePort;
+import com.agentbanking.orchestrator.domain.port.out.LedgerServicePort.FloatBlockInput;
+import com.agentbanking.orchestrator.domain.port.out.LedgerServicePort.FloatBlockResult;
+import com.agentbanking.orchestrator.domain.port.out.LedgerServicePort.FloatCommitInput;
+import com.agentbanking.orchestrator.domain.port.out.LedgerServicePort.FloatCommitResult;
+import com.agentbanking.orchestrator.domain.port.out.LedgerServicePort.FloatReleaseInput;
+import com.agentbanking.orchestrator.domain.port.out.LedgerServicePort.FloatReleaseResult;
+import com.agentbanking.orchestrator.domain.port.out.LedgerServicePort.FloatCreditInput;
+import com.agentbanking.orchestrator.domain.port.out.LedgerServicePort.FloatCreditResult;
+import com.agentbanking.orchestrator.domain.port.out.LedgerServicePort.FloatReverseInput;
+import com.agentbanking.orchestrator.domain.port.out.LedgerServicePort.FloatReverseResult;
+import com.agentbanking.orchestrator.domain.port.out.LedgerServicePort.AccountValidationInput;
+import com.agentbanking.orchestrator.domain.port.out.LedgerServicePort.AccountValidationResult;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-
-import java.util.Map;
 
 @FeignClient(name = "ledger-service", url = "${ledger-service.url}", path = "/internal")
 public interface LedgerServiceClient {
 
     @PostMapping("/debit")
-    Map<String, Object> blockFloat(@RequestBody Map<String, Object> request);
+    FloatBlockResult blockFloat(@RequestBody FloatBlockInput input);
 
     @PostMapping("/credit")
-    Map<String, Object> commitFloat(@RequestBody Map<String, Object> request);
+    FloatCommitResult commitFloat(@RequestBody FloatCommitInput input);
+
+    @PostMapping("/release")
+    FloatReleaseResult releaseFloat(@RequestBody FloatReleaseInput input);
+
+    @PostMapping("/credit-agent")
+    FloatCreditResult creditAgentFloat(@RequestBody FloatCreditInput input);
 
     @PostMapping("/reverse")
-    Map<String, Object> rollbackFloat(@RequestBody Map<String, Object> request);
+    FloatReverseResult reverseCreditFloat(@RequestBody FloatReverseInput input);
+
+    @PostMapping("/validate-account")
+    AccountValidationResult validateAccount(@RequestBody AccountValidationInput input);
 }

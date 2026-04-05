@@ -1,12 +1,12 @@
 package com.agentbanking.orchestrator.infrastructure.messaging;
 
 import com.agentbanking.orchestrator.domain.port.out.EventPublisherPort;
+import com.agentbanking.orchestrator.domain.port.out.EventPublisherPort.TransactionCompletedEvent;
+import com.agentbanking.orchestrator.domain.port.out.EventPublisherPort.TransactionFailedEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
-
-import java.util.Map;
 
 @Component
 public class KafkaEventPublisher implements EventPublisherPort {
@@ -21,14 +21,14 @@ public class KafkaEventPublisher implements EventPublisherPort {
     }
 
     @Override
-    public void publishTransactionCompleted(Map<String, Object> event) {
-        log.info("Publishing transaction completed event: {}", event.get("transactionId"));
+    public void publishTransactionCompleted(TransactionCompletedEvent event) {
+        log.info("Publishing transaction completed event: {}", event.transactionId());
         kafkaTemplate.send(TRANSACTION_TOPIC, event);
     }
 
     @Override
-    public void publishTransactionFailed(Map<String, Object> event) {
-        log.info("Publishing transaction failed event: {}", event.get("transactionId"));
+    public void publishTransactionFailed(TransactionFailedEvent event) {
+        log.info("Publishing transaction failed event: {}", event.transactionId());
         kafkaTemplate.send(TRANSACTION_TOPIC, event);
     }
 }

@@ -6,8 +6,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
-import java.util.Map;
-
 @Component
 public class SwitchAdapterAdapter implements SwitchAdapterPort {
 
@@ -21,18 +19,31 @@ public class SwitchAdapterAdapter implements SwitchAdapterPort {
 
     @Override
     @CircuitBreaker(name = "switchAdapter", fallbackMethod = "authorizeTransactionFallback")
-    public Map<String, Object> authorizeTransaction(Map<String, Object> request) {
-        log.info("Authorizing transaction for internal ID: {}", request.get("internalTransactionId"));
-        var response = switchAdapterClient.authorizeTransaction(request);
-        return response != null && response.getBody() != null ? response.getBody() : Map.of();
+    public SwitchAuthorizationResult authorizeTransaction(SwitchAuthorizationInput input) {
+        log.info("Authorizing transaction for internal ID: {}", input.internalTransactionId());
+        return switchAdapterClient.authorizeTransaction(input);
     }
 
-    public Map<String, Object> authorizeTransactionFallback(Map<String, Object> request, Exception e) {
-        log.error("Switch adapter fallback triggered for transaction: {}", request.get("internalTransactionId"), e);
-        return Map.of(
-            "status", "FAILED",
-            "responseCode", "SWITCH_TIMEOUT",
-            "message", "Switch adapter unavailable, reversal will be triggered"
-        );
+    public SwitchAuthorizationResult authorizeTransactionFallback(SwitchAuthorizationInput input, Exception e) {
+        log.error("Switch adapter fallback triggered for transaction: {}", input.internalTransactionId(), e);
+        return new SwitchAuthorizationResult(false, null, "SWITCH_TIMEOUT", "Switch adapter unavailable, reversal will be triggered");
+    }
+
+    @Override
+    public SwitchReversalResult sendReversal(SwitchReversalInput input) {
+        log.info("Sending reversal for transaction: {}", input.internalTransactionId());
+        return switchAdapterClient.sendReversal(input);
+    }
+
+    @Override
+    public ProxyEnquiryResult proxyEnquiry(ProxyEnquiryInput input) {
+        log.info("Proxy enquiry for type: {}, value: {}", input.proxyType(), input.proxyValue());
+        return switchAdapterClient.proxyEnquiry(input);
+    }
+
+    @Override
+    public DuitNowTransferResult sendDuitNowTransfer(DuitNowTransferInput input) {
+        log.info("DuitNow transfer for transaction: {}", input.internalTransactionId());
+        return switchAdapterClient.sendDuitNowTransfer(input);
     }
 }

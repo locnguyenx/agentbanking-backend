@@ -5,8 +5,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
-import java.util.Map;
-
 @Component
 public class RulesServiceAdapter implements RulesServicePort {
 
@@ -19,14 +17,14 @@ public class RulesServiceAdapter implements RulesServicePort {
     }
 
     @Override
-    public Map<String, Object> checkVelocity(Map<String, Object> request) {
-        log.info("Checking velocity for agent: {}", request.get("agentId"));
-        return rulesServiceClient.checkVelocity(request);
+    public VelocityCheckResult checkVelocity(VelocityCheckInput input) {
+        log.info("Checking velocity for agent: {}", input.agentId());
+        return rulesServiceClient.checkVelocity(input);
     }
 
     @Override
-    public Map<String, Object> calculateFees(Map<String, Object> request) {
-        log.info("Calculating fees for agent: {}", request.get("agentId"));
-        return rulesServiceClient.calculateFees(request);
+    public FeeCalculationResult calculateFees(FeeCalculationInput input) {
+        log.info("Calculating fees for type: {}, tier: {}", input.transactionType(), input.agentTier());
+        return rulesServiceClient.calculateFees(input);
     }
 }

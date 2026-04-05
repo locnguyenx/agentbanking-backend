@@ -5,7 +5,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
-import java.util.Map;
 import java.util.UUID;
 
 @Component
@@ -20,20 +19,38 @@ public class LedgerServiceAdapter implements LedgerServicePort {
     }
 
     @Override
-    public Map<String, Object> blockFloat(Map<String, Object> request) {
-        log.info("Blocking float for agent: {}", request.get("agentId"));
-        return ledgerServiceClient.blockFloat(request);
+    public FloatBlockResult blockFloat(FloatBlockInput input) {
+        log.info("Blocking float for agent: {}", input.agentId());
+        return ledgerServiceClient.blockFloat(input);
     }
 
     @Override
-    public void commitFloat(UUID transactionId) {
-        log.info("Committing float for transaction: {}", transactionId);
-        ledgerServiceClient.commitFloat(Map.of("transactionId", transactionId.toString()));
+    public FloatCommitResult commitFloat(FloatCommitInput input) {
+        log.info("Committing float for transaction: {}", input.transactionId());
+        return ledgerServiceClient.commitFloat(input);
     }
 
     @Override
-    public void rollbackFloat(UUID transactionId) {
-        log.info("Rolling back float for transaction: {}", transactionId);
-        ledgerServiceClient.rollbackFloat(Map.of("transactionId", transactionId.toString()));
+    public FloatReleaseResult releaseFloat(FloatReleaseInput input) {
+        log.info("Releasing float for transaction: {}", input.transactionId());
+        return ledgerServiceClient.releaseFloat(input);
+    }
+
+    @Override
+    public FloatCreditResult creditAgentFloat(FloatCreditInput input) {
+        log.info("Crediting float for agent: {}", input.agentId());
+        return ledgerServiceClient.creditAgentFloat(input);
+    }
+
+    @Override
+    public FloatReverseResult reverseCreditFloat(FloatReverseInput input) {
+        log.info("Reversing credit for agent: {}", input.agentId());
+        return ledgerServiceClient.reverseCreditFloat(input);
+    }
+
+    @Override
+    public AccountValidationResult validateAccount(AccountValidationInput input) {
+        log.info("Validating account: {}", input.destinationAccount());
+        return ledgerServiceClient.validateAccount(input);
     }
 }
