@@ -1,5 +1,6 @@
 package com.agentbanking.rules.config;
 
+import com.agentbanking.rules.application.usecase.ComplianceStatusUseCaseImpl;
 import com.agentbanking.rules.domain.service.FeeCalculationService;
 import com.agentbanking.rules.domain.service.LimitEnforcementService;
 import com.agentbanking.rules.domain.service.StpDecisionService;
@@ -29,7 +30,12 @@ public class DomainServiceConfig {
 
     @Bean
     public StpDecisionService stpDecisionService(VelocityCheckService velocityCheckService,
-                                                   LimitEnforcementService limitEnforcementService) {
+                                                    LimitEnforcementService limitEnforcementService) {
         return new StpDecisionService(velocityCheckService, limitEnforcementService);
+    }
+
+    @Bean
+    public ComplianceStatusUseCaseImpl complianceStatusUseCase() {
+        return new ComplianceStatusUseCaseImpl();
     }
 }
