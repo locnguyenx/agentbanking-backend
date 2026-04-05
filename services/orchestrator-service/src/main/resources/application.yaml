@@ -54,6 +54,12 @@ ledger-service:
 switch-adapter-service:
   url: ${SWITCH_ADAPTER_SERVICE_URL:http://localhost:8083}
 
+biller-service:
+  url: ${BILLER_SERVICE_URL:http://localhost:8084}
+
+cbs-connector:
+  url: ${CBS_CONNECTOR_URL:http://localhost:8085}
+
 resilience4j:
   circuitbreaker:
     instances:
@@ -74,9 +80,3 @@ logging:
 
 temporal:
   task-queue: agent-banking-tasks
-
-biller-service:
-  url: ${BILLER_SERVICE_URL:http://localhost:8084}
-
-cbs-connector:
-  url: ${CBS_CONNECTOR_URL:http://localhost:8085}
