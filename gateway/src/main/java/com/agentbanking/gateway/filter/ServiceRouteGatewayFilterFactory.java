@@ -13,6 +13,7 @@ import reactor.core.publisher.Mono;
 
 import java.net.URI;
 import java.time.Instant;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
@@ -23,21 +24,21 @@ public class ServiceRouteGatewayFilterFactory
     private static final Logger log = LoggerFactory.getLogger(ServiceRouteGatewayFilterFactory.class);
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
-    private static final Map<String, String> SERVICE_URLS = Map.of(
-        "gateway", "http://gateway:8080",
-        "rules", "http://rules-service:8081",
-        "ledger", "http://ledger-service:8082",
-        "onboarding", "http://onboarding-service:8083",
-        "switch", "http://switch-adapter-service:8084",
-        "biller", "http://biller-service:8085",
-        "orchestrator", "http://orchestrator-service:8086",
-        "auth", "http://auth-iam-service:8087",
-        "audit", "http://audit-service:8088",
-        "mock", "http://mock-server:8089",
-        "postgresql", "direct",
-        "redis", "direct",
-        "kafka", "direct"
-    );
+    private static final Map<String, String> SERVICE_URLS = new HashMap<>() {{
+        put("gateway", "http://gateway:8080");
+        put("rules", "http://rules-service:8081");
+        put("ledger", "http://ledger-service:8082");
+        put("onboarding", "http://onboarding-service:8083");
+        put("switch", "http://switch-adapter-service:8084");
+        put("biller", "http://biller-service:8085");
+        put("orchestrator", "http://orchestrator-service:8086");
+        put("auth", "http://auth-iam-service:8087");
+        put("audit", "http://audit-service:8088");
+        put("mock", "http://mock-server:8089");
+        put("postgresql", "direct");
+        put("redis", "direct");
+        put("kafka", "direct");
+    }};
 
     public ServiceRouteGatewayFilterFactory() { super(Config.class); }
 

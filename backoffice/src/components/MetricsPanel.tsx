@@ -78,7 +78,7 @@ export const MetricsPanel: React.FC<MetricsPanelProps> = ({
 
       {service && !isLoading && metrics && 'error' in metrics && (
         <div style={{ textAlign: 'center', padding: '40px', color: '#ef4444' }}>
-          {metrics.error || 'Metrics unavailable'}
+          {String(metrics.error) || 'Metrics unavailable'}
         </div>
       )}
 
