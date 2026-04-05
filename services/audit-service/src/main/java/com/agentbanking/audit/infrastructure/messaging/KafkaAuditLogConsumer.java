@@ -55,7 +55,7 @@ public class KafkaAuditLogConsumer {
                 log.debug("Stored audit event: {} for {} {}", record.action(), record.entityType(), record.entityId());
             } catch (Exception e) {
                 log.error("Failed to process audit event: {}", e.getMessage(), e);
-                throw e;
+                throw new RuntimeException("Failed to process audit event: " + e.getMessage(), e);
             }
         };
     }
