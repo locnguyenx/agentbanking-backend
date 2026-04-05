@@ -17,6 +17,7 @@ import com.agentbanking.orchestrator.application.activity.SendReversalToSwitchAc
 import com.agentbanking.orchestrator.application.activity.ValidateAccountActivity;
 import com.agentbanking.orchestrator.application.activity.ValidateBillActivity;
 import com.agentbanking.orchestrator.application.activity.VerifyBiometricActivity;
+import com.agentbanking.orchestrator.infrastructure.temporal.WorkflowImpl.*;
 import io.temporal.client.WorkflowClient;
 import io.temporal.worker.Worker;
 import io.temporal.worker.WorkerFactory;
@@ -55,6 +56,15 @@ public class TemporalWorkerConfig {
                                   SendDuitNowTransferActivity sendDuitNowTransferActivity,
                                   VerifyBiometricActivity verifyBiometricActivity) {
         Worker worker = factory.newWorker(taskQueue);
+
+        // Register workflow implementations
+        worker.registerWorkflowImplementationTypes(
+                WithdrawalWorkflowImpl.class,
+                WithdrawalOnUsWorkflowImpl.class,
+                DepositWorkflowImpl.class,
+                BillPaymentWorkflowImpl.class,
+                DuitNowTransferWorkflowImpl.class
+        );
 
         worker.registerActivitiesImplementations(
                 (io.temporal.activity.Activity) checkVelocityActivity,
