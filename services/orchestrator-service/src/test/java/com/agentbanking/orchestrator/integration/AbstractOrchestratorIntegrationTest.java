@@ -2,44 +2,54 @@ package com.agentbanking.orchestrator.integration;
 
 import com.agentbanking.common.test.AbstractIntegrationTest;
 import com.agentbanking.orchestrator.infrastructure.external.*;
+import io.temporal.client.WorkflowClient;
+import io.temporal.testing.TestWorkflowEnvironment;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Primary;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
-import org.testcontainers.containers.GenericContainer;
-import org.testcontainers.containers.wait.strategy.Wait;
 
 /**
  * Base class for orchestrator integration tests.
  * 
  * Extends AbstractIntegrationTest (PostgreSQL, Redis, Kafka) and adds:
- * - Temporal server container for real workflow testing
+ * - In-memory Temporal test server for workflow testing
  * - Mocked Feign clients for all external services
  * 
- * The orchestrator has a unique dependency on Temporal that other services don't have,
- * so we isolate this test infrastructure here rather than polluting the shared base.
+ * Uses TestWorkflowEnvironment (in-memory) instead of Docker container because:
+ * - Starts in <1 second vs 60+ seconds for Docker
+ * - No Docker daemon dependency
+ * - Tests the same workflow lifecycle logic
+ * - Standard Temporal testing pattern for integration tests
+ * 
+ * The integration test focuses on: controller → use case → workflow router → Temporal workflow start → status polling
+ * External service calls are mocked; the Temporal workflow lifecycle is real.
  */
 public abstract class AbstractOrchestratorIntegrationTest extends AbstractIntegrationTest {
 
-    // Temporal test container
-    static final GenericContainer<?> temporal = new GenericContainer<>("temporalio/auto-setup:1.25.1")
-            .withExposedPorts(7233)
-            .withEnv("DB", "postgresql")
-            .withEnv("DB_PORT", "5432")
-            .withEnv("POSTGRES_USER", "postgres")
-            .withEnv("POSTGRES_PWD", "postgres")
-            .withEnv("POSTGRES_SEEDS", postgres.getHost())
-            .withEnv("DYNAMIC_CONFIG_FILE_PATH", "/etc/temporal/dynamicconfig/development-sql.yaml")
-            .dependsOn(postgres)
-            .waitingFor(Wait.forLogMessage(".*Started workflow dispatcher.*", 1));
+    // In-memory Temporal test server
+    protected static TestWorkflowEnvironment testEnv;
+    protected static WorkflowClient testWorkflowClient;
 
-    static {
-        temporal.start();
+    @BeforeAll
+    static void setUpTemporal() {
+        testEnv = TestWorkflowEnvironment.newInstance();
+        testWorkflowClient = testEnv.getWorkflowClient();
+    }
+
+    @AfterAll
+    static void tearDownTemporal() {
+        if (testEnv != null) {
+            testEnv.close();
+        }
     }
 
     @DynamicPropertySource
     static void registerTemporalProperties(DynamicPropertyRegistry registry) {
-        registry.add("spring.temporal.connection.target", 
-                () -> temporal.getHost() + ":" + temporal.getMappedPort(7233));
         registry.add("temporal.task-queue", () -> "test-agent-banking-tasks");
     }
 
@@ -81,4 +91,18 @@ public abstract class AbstractOrchestratorIntegrationTest extends AbstractIntegr
 
     @MockBean
     protected MerchantTransactionClient merchantTransactionClient;
+
+    /**
+     * Test configuration that overrides the autoconfigured WorkflowClient
+     * with the one from the in-memory test server.
+     */
+    @TestConfiguration
+    static class TemporalTestConfig {
+
+        @Bean
+        @Primary
+        public WorkflowClient testWorkflowClient() {
+            return testWorkflowClient;
+        }
+    }
 }
