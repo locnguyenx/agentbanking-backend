@@ -11,6 +11,7 @@ import { UserManagement } from './pages/UserManagement'
 import { Transactions } from './pages/Transactions'
 import { Settlement } from './pages/Settlement'
 import { KycReview } from './pages/KycReview'
+import { TransactionResolution } from './pages/TransactionResolution'
 import { Profile } from './pages/Profile'
 import { SystemAdmin } from './pages/SystemAdmin'
 import './styles/global.css'
@@ -72,6 +73,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
             <Route path="transactions" element={<Transactions />} />
             <Route path="settlement" element={<Settlement />} />
             <Route path="kyc-review" element={<KycReview />} />
+            <Route path="transaction-resolution" element={<TransactionResolution />} />
             <Route path="profile" element={<Profile />} />
             <Route path="system-admin" element={<SystemAdmin />} />
           </Route>

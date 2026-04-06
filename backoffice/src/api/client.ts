@@ -64,6 +64,16 @@ export const api = {
   approveKyc: (id: string) => client.post(`/backoffice/kyc/review-queue/${id}/approve`, {}).then((r) => r.data),
   rejectKyc: (id: string, reason: string) => client.post(`/backoffice/kyc/review-queue/${id}/reject`, { reason }).then((r) => r.data),
 
+  // Transaction Resolution
+  proposeResolution: (workflowId: string, data: { action: 'COMMIT' | 'REVERSE'; reasonCode: string; reason: string; evidenceUrl?: string }) => 
+    client.post(`/backoffice/transactions/${workflowId}/maker-propose`, data).then((r) => r.data),
+  approveResolution: (workflowId: string, data: { reason: string }) =>
+    client.post(`/backoffice/transactions/${workflowId}/checker-approve`, data).then((r) => r.data),
+  rejectResolution: (workflowId: string, data: { reason: string }) =>
+    client.post(`/backoffice/transactions/${workflowId}/checker-reject`, data).then((r) => r.data),
+  getResolutions: (params?: { status?: string }) =>
+    client.get('/backoffice/transactions', { params }).then((r) => r.data),
+
   // Auth
   login: (username: string, password: string) => 
     client.post('/auth/token', { username, password }).then((r) => r.data),
