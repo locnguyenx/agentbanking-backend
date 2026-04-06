@@ -23,6 +23,8 @@ springdoc:
         name: Switch Adapter Service
       - url: /docs/biller/v3/api-docs
         name: Biller Service
+      - url: /docs/orchestrator/v3/api-docs
+        name: Orchestrator Service
 
 spring:
   application:
@@ -411,6 +413,28 @@ spring:
             - RequestTransform=onboarding
             - RewritePath=/api/v1/onboarding/submit-application, /internal/onboarding/application
          
+        # External Transaction Orchestrator routes (Temporal SAGA) - MUST be before legacy routes
+        - id: external-transactions-start
+          uri: http://orchestrator-service:8086
+          predicates:
+            - Path=/api/v1/transactions
+          filters:
+            - RewritePath=/api/v1/transactions, /api/v1/transactions
+
+        - id: external-transactions-status
+          uri: http://orchestrator-service:8086
+          predicates:
+            - Path=/api/v1/transactions/*/status
+          filters:
+            - RewritePath=/api/v1/transactions/(?<workflowId>.*)/status, /api/v1/transactions/${workflowId}/status
+
+        - id: external-transactions-force-resolve
+          uri: http://orchestrator-service:8086
+          predicates:
+            - Path=/api/v1/transactions/*/force-resolve
+          filters:
+            - RewritePath=/api/v1/transactions/(?<workflowId>.*)/force-resolve, /api/v1/transactions/${workflowId}/force-resolve
+
         # External Transaction Quote route
         - id: external-transactions-quote
           uri: http://switch-adapter-service:8084
@@ -420,14 +444,15 @@ spring:
             - JwtAuth
             - RewritePath=/api/v1/transactions/quote, /internal/transactions/quote
 
-        # External Proxy Enquiry route
-        - id: external-proxy-enquiry
-          uri: http://switch-adapter-service:8084
+        # External Withdrawal (LEGACY - deprecated)
+        - id: external-withdrawal
+          uri: http://ledger-service:8082
           predicates:
-            - Path=/api/v1/transfer/proxy/enquiry
+            - Path=/api/v1/withdrawal
           filters:
             - JwtAuth
-            - RewritePath=/api/v1/transfer/proxy/enquiry, /internal/transfer/proxy/enquiry
+            - RequestTransform=withdrawal
+            - RewritePath=/api/v1/withdrawal, /internal/debit
 
         # External Compliance Status route
         - id: external-compliance-status
@@ -619,6 +644,13 @@ spring:
           filters:
             - RewritePath=/docs/biller/(?<segment>.*), /${segment}
 
+        - id: docs-orchestrator
+          uri: http://orchestrator-service:8086
+          predicates:
+            - Path=/docs/orchestrator/**
+          filters:
+            - RewritePath=/docs/orchestrator/(?<segment>.*), /${segment}
+
         # Admin - Health (aggregate all)
         - id: admin-health-all
           uri: http://audit-service:8088
@@ -676,6 +708,9 @@ management:
 logging:
   level:
     com.agentbanking.gateway: DEBUG
+    org.springframework.cloud.gateway: DEBUG
     org.springframework.security: DEBUG
     org.springframework.security.oauth2: DEBUG
     org.springframework.security.oauth2.jwt: DEBUG
+    reactor.netty: DEBUG
+    io.grpc: DEBUG

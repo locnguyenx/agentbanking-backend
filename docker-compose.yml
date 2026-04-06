@@ -4,7 +4,7 @@ services:
   # PostgreSQL for Rules Service
   postgres-rules:
     image: postgres:16-alpine
-    profiles: [infra, all]
+    profiles: [infra, backend, all]
     environment:
       POSTGRES_DB: rules_db
       POSTGRES_USER: postgres
@@ -23,7 +23,7 @@ services:
   # PostgreSQL for Ledger Service
   postgres-ledger:
     image: postgres:16-alpine
-    profiles: [infra, all]
+    profiles: [infra, backend, all]
     environment:
       POSTGRES_DB: ledger_db
       POSTGRES_USER: postgres
@@ -42,7 +42,7 @@ services:
   # PostgreSQL for Onboarding Service
   postgres-onboarding:
     image: postgres:16-alpine
-    profiles: [infra, all]
+    profiles: [infra, backend, all]
     environment:
       POSTGRES_DB: onboarding_db
       POSTGRES_USER: postgres
@@ -61,7 +61,7 @@ services:
   # PostgreSQL for Switch Adapter Service
   postgres-switch:
     image: postgres:16-alpine
-    profiles: [infra, all]
+    profiles: [infra, backend, all]
     environment:
       POSTGRES_DB: switch_db
       POSTGRES_USER: postgres
@@ -80,7 +80,7 @@ services:
   # PostgreSQL for Biller Service
   postgres-biller:
     image: postgres:16-alpine
-    profiles: [infra, all]
+    profiles: [infra, backend, all]
     environment:
       POSTGRES_DB: biller_db
       POSTGRES_USER: postgres
@@ -99,7 +99,7 @@ services:
   # PostgreSQL for Orchestrator Service
   postgres-orchestrator:
     image: postgres:16-alpine
-    profiles: [infra, all]
+    profiles: [infra, backend, all]
     environment:
       POSTGRES_DB: orchestrator_db
       POSTGRES_USER: postgres
@@ -118,7 +118,7 @@ services:
   # PostgreSQL for Auth/IAM Service
   postgres-auth:
     image: postgres:16-alpine
-    profiles: [infra, all]
+    profiles: [infra, backend, all]
     environment:
       POSTGRES_DB: authdb
       POSTGRES_USER: auth_user
@@ -137,7 +137,7 @@ services:
   # PostgreSQL for Audit Service
   postgres-audit:
     image: postgres:16-alpine
-    profiles: [infra, all]
+    profiles: [infra, backend, all]
     environment:
       POSTGRES_DB: auditdb
       POSTGRES_USER: audit_user
@@ -156,7 +156,7 @@ services:
   # Redis for caching and idempotency
   redis:
     image: redis:7-alpine
-    profiles: [infra, all]
+    profiles: [infra, backend, all]
     ports:
       - "6379:6379"
     mem_limit: 128m
@@ -169,7 +169,7 @@ services:
   # Kafka (using KRaft mode, no Zookeeper)
   kafka:
     image: confluentinc/cp-kafka:7.5.0
-    profiles: [infra, all]
+    profiles: [infra, backend, all]
     ports:
       - "9092:9092"
     environment:
@@ -240,7 +240,7 @@ services:
       dockerfile: ./services/ledger-service/Dockerfile
     profiles: [backend, all]
     ports:
-      - "8082:8082"
+      - "18082:8082"
     mem_limit: 384m
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-ledger:5432/ledger_db
@@ -258,8 +258,6 @@ services:
       kafka:
         condition: service_healthy
       rules-service:
-        condition: service_healthy
-      switch-adapter-service:
         condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8082/ || true"]
@@ -306,6 +304,7 @@ services:
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: postgres
       MOCK_SERVER_URL: http://mock-server:8090
+      SPRING_MAIN_ALLOW_BEAN_DEFINITION_OVERRIDING: "true"
     depends_on:
       postgres-switch:
         condition: service_healthy
@@ -357,9 +356,12 @@ services:
       SPRING_DATASOURCE_PASSWORD: postgres
       SPRING_DATA_REDIS_HOST: redis
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      TEMPORAL_ADDRESS: temporal:7233
       LEDGER_SERVICE_URL: http://ledger-service:8082
       RULES_SERVICE_URL: http://rules-service:8081
       SWITCH_ADAPTER_SERVICE_URL: http://switch-adapter-service:8084
+      BILLER_SERVICE_URL: http://biller-service:8085
+      CBS_CONNECTOR_URL: http://mock-server:8090
     depends_on:
       postgres-orchestrator:
         condition: service_healthy
@@ -367,11 +369,13 @@ services:
         condition: service_healthy
       kafka:
         condition: service_healthy
+      temporal:
+        condition: service_healthy
+      biller-service:
+        condition: service_healthy
       ledger-service:
         condition: service_healthy
       rules-service:
-        condition: service_healthy
-      switch-adapter-service:
         condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8086/ || true"]
@@ -480,16 +484,25 @@ services:
         condition: service_healthy
 
   temporal:
-    image: temporalio/auto-setup:1.24
+    image: temporalio/auto-setup:latest
+    profiles: [backend, all]
     ports:
       - "7233:7233"
     environment:
       - DB=postgres12
+      - DB_PORT=5432
       - POSTGRES_SEEDS=temporal-postgres
       - POSTGRES_USER=temporal
       - POSTGRES_PWD=temporal
     depends_on:
-      - temporal-postgres
+      temporal-postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep temporal-server > /dev/null 2>&1 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
 
   temporal-postgres:
     image: postgres:16
@@ -499,9 +512,15 @@ services:
       - POSTGRES_DB=temporal
     volumes:
       - temporal-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U temporal"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   temporal-ui:
     image: temporalio/ui:latest
+    profiles: [backend, all]
     ports:
       - "8082:8080"
     environment:

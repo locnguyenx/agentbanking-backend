@@ -45,6 +45,130 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/transactions:
+    post:
+      tags:
+      - orchestrator-controller (orchestrator-service)
+      operationId: startTransaction
+      summary: Start a new transaction via Temporal SAGA orchestration
+      description: Initiates a transaction workflow (withdrawal, deposit, bill payment, or DuitNow transfer) using Temporal durable execution. Returns a workflow ID for polling status.
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TransactionStartRequest'
+        required: true
+      responses:
+        '200':
+          description: Transaction started successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransactionStartResponse'
+        '400':
+          description: Bad Request - Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/transactions/{workflowId}/status:
+    get:
+      tags:
+      - orchestrator-controller (orchestrator-service)
+      operationId: getTransactionStatus
+      summary: Get transaction workflow status
+      description: Poll the status of a previously started transaction workflow.
+      security:
+        - bearerAuth: []
+      parameters:
+      - name: workflowId
+        in: path
+        required: true
+        schema:
+          type: string
+        description: The workflow ID returned from the start transaction response
+      responses:
+        '200':
+          description: Transaction status retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransactionStatusResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Not Found - Workflow not found
+  /api/v1/transactions/{workflowId}/force-resolve:
+    post:
+      tags:
+      - orchestrator-controller (orchestrator-service)
+      operationId: forceResolveTransaction
+      summary: Force resolve a stuck transaction workflow
+      description: Admin operation to manually resolve a stuck or failed workflow. Requires admin credentials.
+      security:
+        - bearerAuth: []
+      parameters:
+      - name: workflowId
+        in: path
+        required: true
+        schema:
+          type: string
+        description: The workflow ID to force resolve
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ForceResolveRequest'
+        required: true
+      responses:
+        '200':
+          description: Force resolve signal sent successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: SUCCESS
+                  message:
+                    type: string
+        '400':
+          description: Bad Request - Invalid action or workflow not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden - Admin access required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /api/v1/transfer/proxy/enquiry:
     get:
       tags:
@@ -115,6 +239,10 @@ paths:
       tags:
       - switch-controller (switch-adapter-service)
       operationId: duitNowTransfer
+      deprecated: true
+      description: |
+        **DEPRECATED** - Use `POST /api/v1/transactions` with `transactionType: DUITNOW_TRANSFER` instead.
+        This endpoint will be removed in a future version. See [API Changelog](/docs/api/CHANGELOG-2026-04-05-transaction-orchestrator.md) for migration guide.
       security:
         - bearerAuth: []
       requestBody:
@@ -199,6 +327,10 @@ paths:
       tags:
       - biller-controller (biller-service)
       operationId: topup
+      deprecated: true
+      description: |
+        **DEPRECATED** - Use `POST /api/v1/transactions` with `transactionType: BILL_PAYMENT` instead.
+        This endpoint will be removed in a future version. See [API Changelog](/docs/api/CHANGELOG-2026-04-05-transaction-orchestrator.md) for migration guide.
       security:
         - bearerAuth: []
       requestBody:
@@ -225,6 +357,10 @@ paths:
       tags:
       - biller-controller (biller-service)
       operationId: payBill
+      deprecated: true
+      description: |
+        **DEPRECATED** - Use `POST /api/v1/transactions` with `transactionType: BILL_PAYMENT` instead.
+        This endpoint will be removed in a future version. See [API Changelog](/docs/api/CHANGELOG-2026-04-05-transaction-orchestrator.md) for migration guide.
       security:
         - bearerAuth: []
       requestBody:
@@ -251,6 +387,10 @@ paths:
       tags:
       - biller-controller (biller-service)
       operationId: jomPay
+      deprecated: true
+      description: |
+        **DEPRECATED** - Use `POST /api/v1/transactions` with `transactionType: BILL_PAYMENT` instead.
+        This endpoint will be removed in a future version. See [API Changelog](/docs/api/CHANGELOG-2026-04-05-transaction-orchestrator.md) for migration guide.
       security:
         - bearerAuth: []
       requestBody:
@@ -277,6 +417,10 @@ paths:
       tags:
       - e-wallet-controller (biller-service)
       operationId: withdrawal
+      deprecated: true
+      description: |
+        **DEPRECATED** - Use `POST /api/v1/transactions` with `transactionType: CASH_WITHDRAWAL` instead.
+        This endpoint will be removed in a future version. See [API Changelog](/docs/api/CHANGELOG-2026-04-05-transaction-orchestrator.md) for migration guide.
       security:
         - bearerAuth: []
       requestBody:
@@ -606,6 +750,10 @@ paths:
       tags:
       - ledger-controller (ledger-service)
       operationId: debit
+      deprecated: true
+      description: |
+        **DEPRECATED** - Use `POST /api/v1/transactions` with `transactionType: CASH_WITHDRAWAL` instead.
+        This endpoint will be removed in a future version. See [API Changelog](/docs/api/CHANGELOG-2026-04-05-transaction-orchestrator.md) for migration guide.
       security:
         - bearerAuth: []
       requestBody:
@@ -638,6 +786,10 @@ paths:
       tags:
       - ledger-controller (ledger-service)
       operationId: credit
+      deprecated: true
+      description: |
+        **DEPRECATED** - Use `POST /api/v1/transactions` with `transactionType: CASH_DEPOSIT` instead.
+        This endpoint will be removed in a future version. See [API Changelog](/docs/api/CHANGELOG-2026-04-05-transaction-orchestrator.md) for migration guide.
       security:
         - bearerAuth: []
       requestBody:
@@ -2307,6 +2459,163 @@ components:
             timestamp:
               type: string
               format: date-time
+
+    # ============================================================
+    # TRANSACTION ORCHESTRATOR SCHEMAS (NEW - 2026-04-05)
+    # ============================================================
+
+    # Transaction Type Enum
+    TransactionType:
+      type: string
+      enum: [CASH_WITHDRAWAL, CASH_DEPOSIT, BILL_PAYMENT, DUITNOW_TRANSFER]
+      description: Type of transaction to initiate
+
+    # Transaction Start Request
+    TransactionStartRequest:
+      required:
+      - transactionType
+      - agentId
+      - amount
+      type: object
+      properties:
+        transactionType:
+          $ref: '#/components/schemas/TransactionType'
+        agentId:
+          type: string
+          format: uuid
+          description: Unique identifier of the agent
+        amount:
+          type: number
+          format: double
+          minimum: 0.01
+          description: Transaction amount in MYR
+        idempotencyKey:
+          type: string
+          description: Optional unique key to prevent duplicate transactions. If not provided, server will generate one.
+        pan:
+          type: string
+          description: Card number (PAN) - required for CASH_WITHDRAWAL
+          pattern: '^[0-9]{13,19}$'
+        pinBlock:
+          type: string
+          description: Encrypted PIN block - required for CASH_WITHDRAWAL
+        customerCardMasked:
+          type: string
+          description: Masked card number for display (e.g., 411111******1111)
+        destinationAccount:
+          type: string
+          description: Destination account number - required for CASH_DEPOSIT
+        requiresBiometric:
+          type: boolean
+          default: false
+          description: Whether biometric verification is required
+        billerCode:
+          type: string
+          description: Biller code - required for BILL_PAYMENT
+        ref1:
+          type: string
+          description: Reference 1 (bill account number) - required for BILL_PAYMENT
+        ref2:
+          type: string
+          description: Reference 2 (optional) - for BILL_PAYMENT
+        proxyType:
+          type: string
+          enum: [IC, PHONE, EMAIL, TGAN]
+          description: DuitNow proxy type - required for DUITNOW_TRANSFER
+        proxyValue:
+          type: string
+          description: DuitNow proxy value - required for DUITNOW_TRANSFER
+        customerMykad:
+          type: string
+          description: Encrypted customer MyKad number
+        geofenceLat:
+          type: number
+          format: double
+          description: GPS latitude of transaction location
+        geofenceLng:
+          type: number
+          format: double
+          description: GPS longitude of transaction location
+        targetBIN:
+          type: string
+          description: Target bank BIN for routing
+        agentTier:
+          type: string
+          enum: [TIER_1, TIER_2, TIER_3]
+          description: Agent tier level
+
+    # Transaction Start Response
+    TransactionStartResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [PENDING]
+          description: Initial status of the transaction
+        workflowId:
+          type: string
+          description: Unique workflow identifier for polling status
+        pollUrl:
+          type: string
+          description: URL to poll for transaction status
+
+    # Transaction Status Response
+    TransactionStatusResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [PENDING, RUNNING, COMPLETED, FAILED, COMPENSATING, UNKNOWN]
+          description: Current workflow status
+        workflowId:
+          type: string
+          description: Workflow identifier
+        transactionType:
+          type: string
+          description: Type of transaction
+        amount:
+          type: number
+          format: double
+          description: Transaction amount
+        customerFee:
+          type: number
+          format: double
+          description: Fee charged to customer
+        referenceNumber:
+          type: string
+          description: External reference number from switch/biller
+        errorCode:
+          type: string
+          description: Error code if transaction failed
+        errorMessage:
+          type: string
+          description: Human-readable error message
+        actionCode:
+          type: string
+          enum: [DECLINE, RETRY, REVIEW]
+          description: Recommended action for failed transactions
+        completedAt:
+          type: string
+          format: date-time
+          description: Timestamp when transaction completed
+
+    # Force Resolve Request
+    ForceResolveRequest:
+      required:
+      - action
+      - adminId
+      type: object
+      properties:
+        action:
+          type: string
+          enum: [RETRY, ABORT]
+          description: Action to take - RETRY to retry, ABORT to cancel
+        reason:
+          type: string
+          description: Reason for force resolve
+        adminId:
+          type: string
+          description: ID of the admin performing the action
 
     # Token Management
     TokenRequest:
