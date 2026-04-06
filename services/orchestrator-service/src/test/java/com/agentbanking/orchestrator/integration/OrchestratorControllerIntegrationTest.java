@@ -542,6 +542,243 @@ class OrchestratorControllerIntegrationTest extends AbstractOrchestratorIntegrat
         }
     }
 
+    @Nested
+    @DisplayName("BDD-TO-NEW: New Transaction Types")
+    class NewTransactionTypeTests {
+
+        @Test
+        @DisplayName("BDD-TO-NEW-01: Router dispatches cashless payment to CashlessPaymentWorkflow")
+        void cashlessPayment_validData_shouldReturnPending() throws Exception {
+            String idempotencyKey = "test-cashless-" + UUID.randomUUID();
+            String requestBody = """
+                {
+                    "transactionType": "CASHLESS_PAYMENT",
+                    "agentId": "%s",
+                    "amount": 150.00,
+                    "idempotencyKey": "%s",
+                    "agentTier": "TIER_1",
+                    "customerMykad": "encrypted-mykad",
+                    "geofenceLat": 3.1390,
+                    "geofenceLng": 101.6869
+                }
+                """.formatted(AGENT_ID, idempotencyKey);
+
+            mockMvc.perform(post("/api/v1/transactions")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(requestBody))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.status").value("PENDING"))
+                    .andExpect(jsonPath("$.workflowId").value(idempotencyKey))
+                    .andExpect(jsonPath("$.pollUrl").exists());
+        }
+
+        @Test
+        @DisplayName("BDD-TO-NEW-02: Router dispatches pin-based purchase to PinBasedPurchaseWorkflow")
+        void pinBasedPurchase_validData_shouldReturnPending() throws Exception {
+            String idempotencyKey = "test-pin-purchase-" + UUID.randomUUID();
+            String requestBody = """
+                {
+                    "transactionType": "PIN_BASED_PURCHASE",
+                    "agentId": "%s",
+                    "amount": 250.00,
+                    "idempotencyKey": "%s",
+                    "agentTier": "TIER_1",
+                    "pan": "4111111111111111",
+                    "pinBlock": "encrypted-pin-block",
+                    "customerCardMasked": "411111******1111",
+                    "geofenceLat": 3.1390,
+                    "geofenceLng": 101.6869
+                }
+                """.formatted(AGENT_ID, idempotencyKey);
+
+            mockMvc.perform(post("/api/v1/transactions")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(requestBody))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.status").value("PENDING"))
+                    .andExpect(jsonPath("$.workflowId").value(idempotencyKey));
+        }
+
+        @Test
+        @DisplayName("BDD-TO-NEW-03: Router dispatches prepaid topup to PrepaidTopupWorkflow")
+        void prepaidTopup_validData_shouldReturnPending() throws Exception {
+            String idempotencyKey = "test-prepaid-topup-" + UUID.randomUUID();
+            String requestBody = """
+                {
+                    "transactionType": "PREPAID_TOPUP",
+                    "agentId": "%s",
+                    "amount": 30.00,
+                    "idempotencyKey": "%s",
+                    "agentTier": "TIER_1",
+                    "customerMykad": "encrypted-mykad",
+                    "destinationAccount": "0123456789",
+                    "geofenceLat": 3.1390,
+                    "geofenceLng": 101.6869
+                }
+                """.formatted(AGENT_ID, idempotencyKey);
+
+            mockMvc.perform(post("/api/v1/transactions")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(requestBody))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.status").value("PENDING"))
+                    .andExpect(jsonPath("$.workflowId").value(idempotencyKey));
+        }
+
+        @Test
+        @DisplayName("BDD-TO-NEW-04: Router dispatches ewallet withdrawal to EWalletWithdrawalWorkflow")
+        void ewalletWithdrawal_validData_shouldReturnPending() throws Exception {
+            String idempotencyKey = "test-ewallet-withdraw-" + UUID.randomUUID();
+            String requestBody = """
+                {
+                    "transactionType": "EWALLET_WITHDRAWAL",
+                    "agentId": "%s",
+                    "amount": 100.00,
+                    "idempotencyKey": "%s",
+                    "agentTier": "TIER_1",
+                    "customerMykad": "encrypted-mykad",
+                    "destinationAccount": "ewallet-account-123",
+                    "geofenceLat": 3.1390,
+                    "geofenceLng": 101.6869
+                }
+                """.formatted(AGENT_ID, idempotencyKey);
+
+            mockMvc.perform(post("/api/v1/transactions")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(requestBody))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.status").value("PENDING"))
+                    .andExpect(jsonPath("$.workflowId").value(idempotencyKey));
+        }
+
+        @Test
+        @DisplayName("BDD-TO-NEW-05: Router dispatches ewallet topup to EWalletTopupWorkflow")
+        void ewalletTopup_validData_shouldReturnPending() throws Exception {
+            String idempotencyKey = "test-ewallet-topup-" + UUID.randomUUID();
+            String requestBody = """
+                {
+                    "transactionType": "EWALLET_TOPUP",
+                    "agentId": "%s",
+                    "amount": 50.00,
+                    "idempotencyKey": "%s",
+                    "agentTier": "TIER_1",
+                    "customerMykad": "encrypted-mykad",
+                    "destinationAccount": "ewallet-account-456",
+                    "geofenceLat": 3.1390,
+                    "geofenceLng": 101.6869
+                }
+                """.formatted(AGENT_ID, idempotencyKey);
+
+            mockMvc.perform(post("/api/v1/transactions")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(requestBody))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.status").value("PENDING"))
+                    .andExpect(jsonPath("$.workflowId").value(idempotencyKey));
+        }
+
+        @Test
+        @DisplayName("BDD-TO-NEW-06: Router dispatches ESSP purchase to ESSPPurchaseWorkflow")
+        void esspPurchase_validData_shouldReturnPending() throws Exception {
+            String idempotencyKey = "test-essp-purchase-" + UUID.randomUUID();
+            String requestBody = """
+                {
+                    "transactionType": "ESSP_PURCHASE",
+                    "agentId": "%s",
+                    "amount": 20.00,
+                    "idempotencyKey": "%s",
+                    "agentTier": "TIER_1",
+                    "customerMykad": "encrypted-mykad",
+                    "geofenceLat": 3.1390,
+                    "geofenceLng": 101.6869
+                }
+                """.formatted(AGENT_ID, idempotencyKey);
+
+            mockMvc.perform(post("/api/v1/transactions")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(requestBody))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.status").value("PENDING"))
+                    .andExpect(jsonPath("$.workflowId").value(idempotencyKey));
+        }
+
+        @Test
+        @DisplayName("BDD-TO-NEW-07: Router dispatches PIN purchase to PINPurchaseWorkflow")
+        void pinPurchase_validData_shouldReturnPending() throws Exception {
+            String idempotencyKey = "test-pin-purchase-" + UUID.randomUUID();
+            String requestBody = """
+                {
+                    "transactionType": "PIN_PURCHASE",
+                    "agentId": "%s",
+                    "amount": 10.00,
+                    "idempotencyKey": "%s",
+                    "agentTier": "TIER_1",
+                    "customerMykad": "encrypted-mykad",
+                    "destinationAccount": "telco-number-789",
+                    "geofenceLat": 3.1390,
+                    "geofenceLng": 101.6869
+                }
+                """.formatted(AGENT_ID, idempotencyKey);
+
+            mockMvc.perform(post("/api/v1/transactions")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(requestBody))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.status").value("PENDING"))
+                    .andExpect(jsonPath("$.workflowId").value(idempotencyKey));
+        }
+
+        @Test
+        @DisplayName("BDD-TO-NEW-08: Router dispatches retail sale to RetailSaleWorkflow")
+        void retailSale_validData_shouldReturnPending() throws Exception {
+            String idempotencyKey = "test-retail-sale-" + UUID.randomUUID();
+            String requestBody = """
+                {
+                    "transactionType": "RETAIL_SALE",
+                    "agentId": "%s",
+                    "amount": 75.00,
+                    "idempotencyKey": "%s",
+                    "agentTier": "TIER_1",
+                    "customerMykad": "encrypted-mykad",
+                    "geofenceLat": 3.1390,
+                    "geofenceLng": 101.6869
+                }
+                """.formatted(AGENT_ID, idempotencyKey);
+
+            mockMvc.perform(post("/api/v1/transactions")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(requestBody))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.status").value("PENDING"))
+                    .andExpect(jsonPath("$.workflowId").value(idempotencyKey));
+        }
+
+        @Test
+        @DisplayName("BDD-TO-NEW-09: Router dispatches hybrid cashback to HybridCashbackWorkflow")
+        void hybridCashback_validData_shouldReturnPending() throws Exception {
+            String idempotencyKey = "test-hybrid-cashback-" + UUID.randomUUID();
+            String requestBody = """
+                {
+                    "transactionType": "HYBRID_CASHBACK",
+                    "agentId": "%s",
+                    "amount": 200.00,
+                    "idempotencyKey": "%s",
+                    "agentTier": "TIER_1",
+                    "pan": "4111111111111111",
+                    "customerCardMasked": "411111******1111",
+                    "geofenceLat": 3.1390,
+                    "geofenceLng": 101.6869
+                }
+                """.formatted(AGENT_ID, idempotencyKey);
+
+            mockMvc.perform(post("/api/v1/transactions")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(requestBody))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.status").value("PENDING"))
+                    .andExpect(jsonPath("$.workflowId").value(idempotencyKey));
+        }
+    }
     private String buildWithdrawalRequest(String idempotencyKey, String targetBIN) {
         return buildWithdrawalRequest(idempotencyKey, targetBIN, BigDecimal.valueOf(500));
     }
