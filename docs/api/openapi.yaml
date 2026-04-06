@@ -1463,6 +1463,141 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/backoffice/transactions/{workflowId}/maker-propose:
+    post:
+      tags:
+      - resolution-controller (orchestrator-service)
+      operationId: makerPropose
+      summary: Maker proposes resolution for a transaction
+      description: First step in four-eyes approval - maker proposes an action (COMMIT, ROLLBACK, ESCALATE)
+      security:
+        - bearerAuth: []
+      parameters:
+      - name: workflowId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MakerProposalRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResolutionResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/backoffice/transactions/{workflowId}/checker-approve:
+    post:
+      tags:
+      - resolution-controller (orchestrator-service)
+      operationId: checkerApprove
+      summary: Checker approves proposed resolution
+      description: Second step in four-eyes approval - checker approves the maker's proposal
+      security:
+        - bearerAuth: []
+      parameters:
+      - name: workflowId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CheckerActionRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResolutionResponse'
+        '400':
+          description: Bad Request - Four-eyes violation or validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden - Self approval not allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/backoffice/transactions/{workflowId}/checker-reject:
+    post:
+      tags:
+      - resolution-controller (orchestrator-service)
+      operationId: checkerReject
+      summary: Checker rejects proposed resolution
+      description: Second step in four-eyes approval - checker rejects the maker's proposal, returning to maker
+      security:
+        - bearerAuth: []
+      parameters:
+      - name: workflowId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CheckerActionRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResolutionResponse'
+        '400':
+          description: Bad Request - Four-eyes violation or validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden - Self approval not allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 components:
   securitySchemes:
     bearerAuth:
@@ -2616,6 +2751,82 @@ components:
         adminId:
           type: string
           description: ID of the admin performing the action
+
+    # Maker Proposal Request
+    MakerProposalRequest:
+      required:
+      - action
+      type: object
+      properties:
+        action:
+          type: string
+          enum: [COMMIT, ROLLBACK, ESCALATE]
+          description: Proposed action for the transaction
+        reasonCode:
+          type: string
+          description: Reason code for the proposal
+        reason:
+          type: string
+          description: Detailed reason for the proposal
+        evidenceUrl:
+          type: string
+          description: URL to supporting evidence
+
+    # Checker Action Request
+    CheckerActionRequest:
+      required:
+      - reason
+      type: object
+      properties:
+        reason:
+          type: string
+          description: Reason for approve/reject action
+
+    # Resolution Response
+    ResolutionResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        workflowId:
+          type: string
+          format: uuid
+        transactionId:
+          type: string
+          format: uuid
+        proposedAction:
+          type: string
+          enum: [COMMIT, ROLLBACK, ESCALATE]
+        reasonCode:
+          type: string
+        reason:
+          type: string
+        evidenceUrl:
+          type: string
+        status:
+          type: string
+          enum: [PENDING_MAKER, PENDING_CHECKER, APPROVED, REJECTED]
+        makerUserId:
+          type: string
+        makerCreatedAt:
+          type: string
+          format: date-time
+        checkerUserId:
+          type: string
+        checkerAction:
+          type: string
+        checkerReason:
+          type: string
+        checkerCompletedAt:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
 
     # Token Management
     TokenRequest:

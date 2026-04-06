@@ -444,6 +444,15 @@ spring:
             - JwtAuth
             - RewritePath=/api/v1/transactions/quote, /internal/transactions/quote
 
+        # Orchestrator Backoffice Resolution routes
+        - id: orchestrator-backoffice-resolution
+          uri: http://orchestrator-service:8086
+          predicates:
+            - Path=/api/v1/backoffice/transactions/**
+          filters:
+            - JwtAuth
+            - RewritePath=/api/v1/backoffice/transactions/(?<segment>.*), /api/v1/backoffice/transactions/${segment}
+
         # External Withdrawal (LEGACY - deprecated)
         - id: external-withdrawal
           uri: http://ledger-service:8082
