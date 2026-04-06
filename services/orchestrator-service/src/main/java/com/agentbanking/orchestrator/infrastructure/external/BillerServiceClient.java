@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 @FeignClient(name = "biller-service", url = "${biller-service.url}")
 public interface BillerServiceClient {
 
-    @PostMapping("/internal/validate-bill")
+    @PostMapping("/internal/validate-ref")
     BillValidationResult validateBill(@RequestBody BillValidationInput input);
 
     @PostMapping("/internal/pay-bill")

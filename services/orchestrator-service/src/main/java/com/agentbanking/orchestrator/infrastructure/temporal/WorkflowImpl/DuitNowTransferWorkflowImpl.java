@@ -24,6 +24,7 @@ public class DuitNowTransferWorkflowImpl implements DuitNowTransferWorkflow {
     private static final Logger log = Workflow.getLogger(DuitNowTransferWorkflowImpl.class);
 
     private final CheckVelocityActivity checkVelocityActivity;
+    private final EvaluateStpActivity evaluateStpActivity;
     private final CalculateFeesActivity calculateFeesActivity;
     private final BlockFloatActivity blockFloatActivity;
     private final CommitFloatActivity commitFloatActivity;
@@ -70,6 +71,7 @@ public class DuitNowTransferWorkflowImpl implements DuitNowTransferWorkflow {
                 .build();
 
         this.checkVelocityActivity = Workflow.newActivityStub(CheckVelocityActivity.class, defaultOptions);
+        this.evaluateStpActivity = Workflow.newActivityStub(EvaluateStpActivity.class, defaultOptions);
         this.calculateFeesActivity = Workflow.newActivityStub(CalculateFeesActivity.class, defaultOptions);
         this.blockFloatActivity = Workflow.newActivityStub(BlockFloatActivity.class, noRetryOptions);
         this.commitFloatActivity = Workflow.newActivityStub(CommitFloatActivity.class, defaultOptions);
@@ -94,13 +96,24 @@ public class DuitNowTransferWorkflowImpl implements DuitNowTransferWorkflow {
                 return WorkflowResult.failed(velocityResult.errorCode(), "Velocity check failed", "DECLINE");
             }
 
-            // Step 2: Calculate fees
+            // Step 2: Evaluate STP
+            var stpDecision = evaluateStpActivity.evaluateStp(
+                    "DUITNOW_TRANSFER",
+                    input.agentId().toString(),
+                    input.amount().toString(),
+                    input.customerMykad());
+            if (!stpDecision.approved()) {
+                currentStatus = WorkflowStatus.PENDING_REVIEW;
+                return WorkflowResult.failed("ERR_STP_REVIEW", stpDecision.reason(), "REVIEW");
+            }
+
+            // Step 3: Calculate fees
             FeeCalculationResult fees = calculateFeesActivity.calculateFees(
                     new FeeCalculationInput("DUITNOW_TRANSFER", input.agentTier(), input.amount()));
 
             BigDecimal totalAmount = input.amount().add(fees.customerFee());
 
-            // Step 3: Block float
+            // Step 4: Block float
             FloatBlockResult blockResult = blockFloatActivity.blockFloat(
                     new FloatBlockInput(input.agentId(), totalAmount, input.idempotencyKey()));
             if (!blockResult.success()) {

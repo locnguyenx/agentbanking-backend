@@ -24,6 +24,7 @@ public class DepositWorkflowImpl implements DepositWorkflow {
     private static final Logger log = Workflow.getLogger(DepositWorkflowImpl.class);
 
     private final CheckVelocityActivity checkVelocityActivity;
+    private final EvaluateStpActivity evaluateStpActivity;
     private final CalculateFeesActivity calculateFeesActivity;
     private final ValidateAccountActivity validateAccountActivity;
     private final CreditAgentFloatActivity creditAgentFloatActivity;
@@ -51,6 +52,7 @@ public class DepositWorkflowImpl implements DepositWorkflow {
                 .build();
 
         this.checkVelocityActivity = Workflow.newActivityStub(CheckVelocityActivity.class, defaultOptions);
+        this.evaluateStpActivity = Workflow.newActivityStub(EvaluateStpActivity.class, defaultOptions);
         this.calculateFeesActivity = Workflow.newActivityStub(CalculateFeesActivity.class, defaultOptions);
         this.validateAccountActivity = Workflow.newActivityStub(ValidateAccountActivity.class, defaultOptions);
         this.creditAgentFloatActivity = Workflow.newActivityStub(CreditAgentFloatActivity.class, defaultOptions);
@@ -73,11 +75,22 @@ public class DepositWorkflowImpl implements DepositWorkflow {
                 return WorkflowResult.failed(velocityResult.errorCode(), "Velocity check failed", "DECLINE");
             }
 
-            // Step 2: Calculate fees
+            // Step 2: Evaluate STP
+            var stpDecision = evaluateStpActivity.evaluateStp(
+                    "CASH_DEPOSIT",
+                    input.agentId().toString(),
+                    input.amount().toString(),
+                    input.customerMykad());
+            if (!stpDecision.approved()) {
+                currentStatus = WorkflowStatus.PENDING_REVIEW;
+                return WorkflowResult.failed("ERR_STP_REVIEW", stpDecision.reason(), "REVIEW");
+            }
+
+            // Step 3: Calculate fees
             FeeCalculationResult fees = calculateFeesActivity.calculateFees(
                     new FeeCalculationInput("CASH_DEPOSIT", input.agentTier(), input.amount()));
 
-            // Step 3: Validate account
+            // Step 4: Validate account
             AccountValidationResult accountResult = validateAccountActivity.validateAccount(
                     new AccountValidationInput(input.destinationAccount()));
             if (!accountResult.valid()) {

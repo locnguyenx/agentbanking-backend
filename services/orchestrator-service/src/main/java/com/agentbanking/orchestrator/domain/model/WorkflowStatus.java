@@ -5,5 +5,6 @@ public enum WorkflowStatus {
     RUNNING,
     COMPLETED,
     FAILED,
-    COMPENSATING
+    COMPENSATING,
+    PENDING_REVIEW
 }

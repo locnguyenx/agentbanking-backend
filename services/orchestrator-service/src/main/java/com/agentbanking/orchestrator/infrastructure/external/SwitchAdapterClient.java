@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.RequestBody;
              fallbackFactory = SwitchAdapterClientFallbackFactory.class)
 public interface SwitchAdapterClient {
 
-    @PostMapping("/internal/authorize")
+    @PostMapping("/internal/auth")
     SwitchAuthorizationResult authorizeTransaction(@RequestBody SwitchAuthorizationInput input);
 
     @PostMapping("/internal/reversal")

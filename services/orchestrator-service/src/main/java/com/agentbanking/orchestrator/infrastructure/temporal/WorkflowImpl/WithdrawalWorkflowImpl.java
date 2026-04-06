@@ -24,6 +24,7 @@ public class WithdrawalWorkflowImpl implements WithdrawalWorkflow {
     private static final Logger log = Workflow.getLogger(WithdrawalWorkflowImpl.class);
 
     private final CheckVelocityActivity checkVelocityActivity;
+    private final EvaluateStpActivity evaluateStpActivity;
     private final CalculateFeesActivity calculateFeesActivity;
     private final BlockFloatActivity blockFloatActivity;
     private final CommitFloatActivity commitFloatActivity;
@@ -69,6 +70,7 @@ public class WithdrawalWorkflowImpl implements WithdrawalWorkflow {
                 .build();
 
         this.checkVelocityActivity = Workflow.newActivityStub(CheckVelocityActivity.class, defaultOptions);
+        this.evaluateStpActivity = Workflow.newActivityStub(EvaluateStpActivity.class, defaultOptions);
         this.calculateFeesActivity = Workflow.newActivityStub(CalculateFeesActivity.class, defaultOptions);
         this.blockFloatActivity = Workflow.newActivityStub(BlockFloatActivity.class, noRetryOptions);
         this.commitFloatActivity = Workflow.newActivityStub(CommitFloatActivity.class, defaultOptions);
@@ -89,6 +91,16 @@ public class WithdrawalWorkflowImpl implements WithdrawalWorkflow {
             if (!velocityResult.passed()) {
                 currentStatus = WorkflowStatus.FAILED;
                 return WorkflowResult.failed(velocityResult.errorCode(), "Velocity check failed", "DECLINE");
+            }
+
+            StpDecision stpDecision = evaluateStpActivity.evaluateStp(
+                    "CASH_WITHDRAWAL",
+                    input.agentId().toString(),
+                    input.amount().toString(),
+                    input.customerMykad());
+            if (!stpDecision.approved()) {
+                currentStatus = WorkflowStatus.PENDING_REVIEW;
+                return WorkflowResult.failed("ERR_STP_REVIEW", stpDecision.reason(), "REVIEW");
             }
 
             FeeCalculationResult fees = calculateFeesActivity.calculateFees(

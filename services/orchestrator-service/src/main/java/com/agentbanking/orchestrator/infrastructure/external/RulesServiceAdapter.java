@@ -5,6 +5,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
+import java.math.BigDecimal;
+import java.util.UUID;
+
 @Component
 public class RulesServiceAdapter implements RulesServicePort {
 
@@ -26,5 +29,11 @@ public class RulesServiceAdapter implements RulesServicePort {
     public FeeCalculationResult calculateFees(FeeCalculationInput input) {
         log.info("Calculating fees for type: {}, tier: {}", input.transactionType(), input.agentTier());
         return rulesServiceClient.calculateFees(input);
+    }
+
+    @Override
+    public StpDecision evaluateStp(String transactionType, UUID agentId, BigDecimal amount, String customerProfile) {
+        log.info("Evaluating STP for type: {}, agent: {}, amount: {}", transactionType, agentId, amount);
+        return rulesServiceClient.evaluateStp(transactionType, agentId, amount, customerProfile);
     }
 }
