@@ -13,15 +13,15 @@ import org.testcontainers.utility.DockerImageName;
 @ActiveProfiles("tc")
 public abstract class AbstractIntegrationTest {
 
-    static final PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16-alpine")
+    public static final PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16-alpine")
             .withDatabaseName("testdb")
             .withUsername("postgres")
             .withPassword("postgres");
 
-    static final GenericContainer<?> redis = new GenericContainer<>("redis:7-alpine")
+    public static final GenericContainer<?> redis = new GenericContainer<>("redis:7-alpine")
             .withExposedPorts(6379);
 
-    static final KafkaContainer kafka = new KafkaContainer(
+    public static final KafkaContainer kafka = new KafkaContainer(
             DockerImageName.parse("confluentinc/cp-kafka:7.5.0"));
 
     static {
