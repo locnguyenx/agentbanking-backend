@@ -1,7 +1,7 @@
 # Technical Design Specification — Transaction Orchestrator (Temporal)
 ## Agent Banking Platform (Malaysia)
 
-**Version:** 2.0
+**Version:** 2.1
 **Date:** 2026-04-05
 **Status:** Draft — Pending Review
 **BRD Reference:** `2026-04-05-transaction-brd-addendum.md`
@@ -945,11 +945,407 @@ public WorkflowResult execute(WithdrawalWorkflowInput input) {
 3. **Backoffice polling interval** — What should the recommended polling interval be for POS terminals? (Recommended: 500ms)
 4. **Force-resolve SLA** — What is the maximum time a transaction can remain in COMPENSATING state before requiring admin intervention? (Recommended: 4 hours)
 
-## 18. Review Notes from Human Partner (not discussed)
+---
 
-1. Need Backoffice UI for required actions. Consider put it as a function of `FR-17: Reconciliation & Discrepancy Resolution`, `FR-18: Reversals & Disputes` in old brd `docs/superpowers/specs/agent-banking-platform/2026-03-25-agent-banking-platform-brd.md`
-2. Many transaction types in the old brd are not covered yet, i.e Prepaid Top-up, eWallet & eSSP, Merchant Services...
-3. Update openapi.yaml and the API Gateway for new apis
-4. Please deeply analyse to find if we need additional processing / configuration from other existing services / external apis so that new orchestrator's workflows work properly. E.g: a parameter in rules service that define the biometric threshold of deposit transaction in scenario BDD-WF-HP-D01, how to invoke VerifyBiometricActivity in scenario BDD-WF-EC-D02...
-5. Do new orchestrator's workflows handle Conditional STP cases in section `18. STP Processing` of old bdd `docs/superpowers/specs/agent-banking-platform/2026-03-25-agent-banking-platform-bdd.md`?
-6. Tests for other services/components changes, e2e integration tests for gateway
+## 18. Backoffice UI — Transaction Resolution Dashboard
+
+### 18.1 Purpose
+
+Provide backoffice admins (Maker + Checker roles) with a UI to view and resolve stuck transactions (COMPENSATING, FAILED, or PENDING_REVIEW states) through a Four-Eyes Principle workflow, fulfilling FR-17.4–FR-17.7 and FR-18.3.
+
+### 18.2 Architecture
+
+**Location:** `backoffice/src/pages/TransactionResolution.tsx` (new page in existing React + Vite backoffice app)
+
+**Pattern:** Reuses existing Maker-Checker pattern from ledger discrepancy resolution:
+- Backend: `PENDING_CHECKER` → `APPROVED` / `REJECTED` state machine
+- Frontend: `KycReview.tsx` pattern (list view, detail modal, approve/reject mutations)
+- Auth: Separate maker/checker JWT tokens with role enforcement
+
+### 18.3 Backend API (orchestrator-service)
+
+Three endpoints following the discrepancy resolution pattern:
+
+```
+POST /api/v1/backoffice/transactions/{workflowId}/maker-propose
+Authorization: Bearer <maker-JWT>
+{
+  "action": "COMMIT",           // or "REVERSE"
+  "reasonCode": "PAYNET_CONFIRMED",
+  "reason": "PayNet confirmed approval after timeout",
+  "evidenceUrl": "https://..."  // optional
+}
+
+POST /api/v1/backoffice/transactions/{workflowId}/checker-approve
+Authorization: Bearer <checker-JWT>
+{
+  "reason": "Verified with PayNet support ticket #12345"
+}
+
+POST /api/v1/backoffice/transactions/{workflowId}/checker-reject
+Authorization: Bearer <checker-JWT>
+{
+  "reason": "Insufficient evidence, please provide PayNet confirmation"
+}
+```
+
+**Four-Eyes Enforcement:** API rejects `checker-approve` and `checker-reject` if the checker's user ID matches the maker's user ID (FR-17.6). Returns `ERR_SELF_APPROVAL_PROHIBITED`.
+
+### 18.4 Database Schema
+
+```sql
+-- V2__transaction_resolution_case.sql
+CREATE TABLE transaction_resolution_case (
+    id UUID PRIMARY KEY,
+    workflow_id VARCHAR(128) NOT NULL,
+    transaction_id UUID NOT NULL,
+    proposed_action VARCHAR(20) NOT NULL,    -- COMMIT or REVERSE
+    reason_code VARCHAR(50) NOT NULL,
+    reason TEXT NOT NULL,
+    evidence_url TEXT,
+    status VARCHAR(20) NOT NULL DEFAULT 'PENDING_CHECKER',  -- PENDING_MAKER, PENDING_CHECKER, APPROVED, REJECTED
+    maker_user_id VARCHAR(128) NOT NULL,
+    maker_created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    checker_user_id VARCHAR(128),
+    checker_action VARCHAR(20),              -- APPROVED or REJECTED
+    checker_reason TEXT,
+    checker_completed_at TIMESTAMP,
+    temporal_signal_sent BOOLEAN NOT NULL DEFAULT FALSE
+);
+
+CREATE INDEX idx_resolution_case_status ON transaction_resolution_case(status);
+CREATE INDEX idx_resolution_case_workflow ON transaction_resolution_case(workflow_id);
+```
+
+### 18.5 Frontend Components
+
+**Page:** `TransactionResolution.tsx`
+
+| Component | Description |
+|-----------|-------------|
+| `ResolutionList` | Table of stuck transactions with status, type, amount, time stuck, SLA badge |
+| `ResolutionDetail` | Modal showing Temporal event history, workflow state, compensation chain |
+| `MakerProposalForm` | Form: action selector (COMMIT/REVERSE), reason code dropdown, reason text, evidence upload |
+| `CheckerReviewPanel` | Review maker's proposal, approve/reject buttons with reason text |
+| `StatsPanel` | Counters: Pending Maker, Pending Checker, Resolved Today, Overdue SLA |
+
+**Navigation:** Add "Transaction Resolution" to sidebar Layout, between "KYC Review" and "Settlement"
+
+**API client:** Add to `backoffice/src/api/client.ts`:
+```typescript
+proposeResolution: (workflowId: string, data: MakerProposal) => api.post(...)
+approveResolution: (workflowId: string, data: CheckerAction) => api.post(...)
+rejectResolution: (workflowId: string, data: CheckerAction) => api.post(...)
+getStuckTransactions: (params: QueryParams) => api.get(...)
+```
+
+### 18.6 Flow
+
+```
+1. Maker views stuck transaction in ResolutionList
+2. Maker clicks "Propose Resolution" → opens MakerProposalForm
+3. Maker selects COMMIT/REVERSE, enters reason, submits
+4. Status → PENDING_CHECKER, transaction_resolution_case created
+5. Checker sees item in list with "Pending Review" badge
+6. Checker opens ResolutionDetail, reviews maker's proposal
+7. Checker clicks "Approve" → checker-approve endpoint called
+   a. API verifies checker ≠ maker (Four-Eyes)
+   b. Status → APPROVED, temporal_signal_sent = true
+   c. Orchestrator sends Temporal ForceResolveSignal to workflow
+8. OR Checker clicks "Reject" → checker-reject endpoint called
+   a. Status → PENDING_MAKER (case returns to maker for re-proposal)
+   b. Back to step 2
+```
+
+### 18.7 Reason Codes
+
+| Code | Description | Applicable Actions |
+|------|-------------|-------------------|
+| `PAYNET_CONFIRMED` | PayNet confirmed approval after timeout | COMMIT |
+| `PAYNET_DECLINED` | PayNet confirmed decline after timeout | REVERSE |
+| `CBS_CONFIRMED` | CBS confirmed transaction after timeout | COMMIT |
+| `CUSTOMER_DISPUTE` | Customer reported double deduction | REVERSE |
+| `SYSTEM_ERROR` | Internal error detected, manual correction needed | COMMIT or REVERSE |
+| `FRAUD_SUSPECTED` | Fraud indicators detected, freeze and investigate | REVERSE |
+
+---
+
+## 19. Missing Transaction Types (Phase 3+)
+
+The current design covers 4 MVP+Phase2 transaction types. The BRD defines 10 additional types:
+
+### 19.1 Transaction Type Inventory
+
+| Transaction Type | FR Reference | Phase | Workflow Complexity |
+|-----------------|-------------|-------|-------------------|
+| **BALANCE_INQUIRY** | FR-5 | MVP | Low — no float operations, read-only |
+| **PREPAID_TOPUP** (CELCOM, M1) | FR-8 | Phase 2 | Medium — BlockFloat → Telco API → CommitFloat |
+| **EWALLET_WITHDRAWAL** (Sarawak Pay) | FR-10.1 | Phase 2 | Medium — BlockFloat → eWallet API → CommitFloat |
+| **EWALLET_TOPUP** (Sarawak Pay) | FR-10.2 | Phase 2 | Medium — CreditAgentFloat → eWallet API |
+| **ESSP_PURCHASE** (BSN eSSP) | FR-10.3 | Phase 2 | Medium — BlockFloat → eSSP API → CommitFloat |
+| **CASHLESS_PAYMENT** | FR-11.1 | Phase 2 | Medium — similar to withdrawal flow |
+| **PIN_BASED_PURCHASE** | FR-11.2 | Phase 2 | Medium — similar to withdrawal with PIN |
+| **RETAIL_SALE** (Merchant) | FR-15.1 | Phase 2 | Medium — float increases via MDR |
+| **PIN_PURCHASE** (Merchant) | FR-15.2 | Phase 2 | Medium — float decreases via commission |
+| **HYBRID_CASHBACK** | FR-15.5 | Phase 2 | High — combines sale + withdrawal |
+
+### 19.2 Extension Pattern
+
+Each new transaction type follows the same pattern:
+
+1. Add to `TransactionType` enum
+2. Create workflow interface + implementation in `application/workflow/`
+3. Create workflow-specific activities (reuse shared activities where possible)
+4. Add routing rule to `WorkflowRouter`
+5. Add BDD scenarios
+6. Update OpenAPI spec
+
+### 19.3 Detailed Design Process
+
+When a new transaction type enters the implementation queue:
+
+1. Create a design addendum at `docs/superpowers/specs/agent-banking-platform/YYYY-MM-DD-<txn-type>-design.md`
+2. The addendum references this master design and specifies only what's unique:
+   - Workflow execution flow (like Section 4)
+   - New activities required (with input/output/exceptions)
+   - Compensation chain
+   - Cross-service dependencies and endpoint analysis
+   - BDD scenarios
+3. Follow the brainstorming → writing-plans → implementation workflow
+
+**Do NOT create these addendums now.** Each type needs its own cross-service dependency analysis (e.g., telco API for prepaid, eWallet provider integration) that should be done when requirements are confirmed and the type is actively being implemented.
+
+### 19.4 Out of Scope
+
+These types are explicitly **out of scope** for the current implementation phase. They should be added in subsequent phases using the extension pattern above.
+
+---
+
+## 20. Cross-Service Dependency Analysis
+
+### 20.1 Endpoint Mismatches
+
+The orchestrator's Feign client interfaces reference endpoints that do not match actual service implementations:
+
+| Orchestrator Feign Client | Expected Endpoint | Actual Service Endpoint | Resolution |
+|---------------------------|------------------|------------------------|------------|
+| `SwitchAdapterClient` | `POST /internal/authorize` | `POST /internal/auth` | **Rename Feign URL** |
+| `SwitchAdapterClient` | `POST /internal/proxy-enquiry` | `GET /internal/transfer/proxy/enquiry` | **Rename Feign URL + method** |
+| `SwitchAdapterClient` | `POST /internal/duitnow-transfer` | `POST /internal/duitnow` | **Rename Feign URL** |
+| `BillerServiceClient` | `POST /internal/validate-bill` | `POST /internal/validate-ref` | **Rename Feign URL** |
+| `BillerServiceClient` | `POST /internal/notify-biller` | Does NOT exist | **New endpoint in biller-service** |
+| `BillerServiceClient` | `POST /internal/notify-biller-reversal` | Does NOT exist | **New endpoint in biller-service** |
+| `LedgerServiceClient` | `POST /internal/credit-agent` | Does NOT exist | **New endpoint in ledger-service** |
+| `LedgerServiceClient` | `POST /internal/reverse` | `POST /internal/reverse/{transactionId}` | **Align path parameter** |
+| `LedgerServiceClient` | `POST /internal/validate-account` | Does NOT exist | **New endpoint in ledger-service** |
+
+### 20.2 New Endpoints Required
+
+#### biller-service
+```
+POST /internal/notify-biller
+Request: { billerCode, ref1, internalTxnId, amount }
+Response: { success: boolean }
+
+POST /internal/notify-biller-reversal
+Request: { billerCode, ref1, internalTxnId, amount, reason }
+Response: { success: boolean }
+```
+
+#### ledger-service
+```
+POST /internal/credit-agent
+Request: { agentId, amount, idempotencyKey }
+Response: { success: boolean, newBalance: BigDecimal }
+
+POST /internal/validate-account
+Request: { accountNumber: String }
+Response: { valid: boolean, accountName: String }
+```
+
+### 20.3 Missing Configuration Parameters
+
+| Parameter | Current Location | Required By | Action |
+|-----------|-----------------|-------------|--------|
+| Biometric threshold (RM 5,000) | Not defined | DepositWorkflow (VerifyBiometricActivity) | Add to rules-service fee config or as dedicated config endpoint |
+| STP evaluation endpoint | `/internal/stp/evaluate` exists | All workflows (pre-financial step) | Add `EvaluateStpActivity` to workflows |
+| Geofence validation | Onboarding service has geofence adapter | All workflows (geofence validation) | Add `GeofenceValidationActivity` or integrate into existing velocity check |
+
+### 20.4 Biometric Verification Flow
+
+For deposits above RM 5,000 (BDD-WF-EC-D02):
+
+1. `DepositWorkflow` checks amount against threshold
+2. If above threshold, invokes `VerifyBiometricActivity`
+3. Activity calls onboarding service's `/internal/biometric` endpoint
+4. On success → continue to `CreditAgentFloat`
+5. On failure → return `FAILED` with `ERR_BIOMETRIC_MISMATCH`
+
+The onboarding service already has this endpoint. The orchestrator needs a Feign client to call it.
+
+---
+
+## 21. STP Processing Integration
+
+### 21.1 Current Gap
+
+The existing workflows do NOT evaluate STP (Straight-Through Processing) classification. Per BDD-S01, BDD-S02, and BDD-S03:
+
+- **100% STP:** Auto-process with zero human intervention
+- **Conditional STP:** Evaluate rules matrix; auto-approve if all criteria pass, else route to manual review
+- **Non-STP:** Route to Maker-Checker workflow (PENDING_REVIEW status)
+
+### 21.2 Solution: Add STP Evaluation Step
+
+Add `EvaluateStpActivity` as step 1.5 in every workflow (after velocity check, before financial operations):
+
+```
+1. Activity: CheckVelocity(...)
+2. Activity: EvaluateStp(transactionType, agentId, amount, customerProfile)
+   → StartToClose: 5s | Retry: 3x (1s→2s→4s)
+   → Returns: StpDecision { category, approved, reason }
+   → On FULL_STP: continue to next step
+   → On CONDITIONAL_STP + approved: continue to next step
+   → On CONDITIONAL_STP + NOT approved: create review case, return PENDING_REVIEW
+   → On NON_STP: create review case, return PENDING_REVIEW
+3. Activity: CalculateFees(...)
+...
+```
+
+### 21.3 New Workflow Status
+
+Add `PENDING_REVIEW` to `WorkflowStatus` enum:
+```java
+public enum WorkflowStatus {
+    PENDING,
+    RUNNING,
+    COMPLETED,
+    FAILED,
+    COMPENSATING,
+    PENDING_REVIEW    // NEW: awaiting manual backoffice review
+}
+```
+
+### 21.4 Review Case Creation
+
+When STP evaluation returns `NON_STP` or `CONDITIONAL_STP` (not approved):
+
+1. Create `TransactionResolutionCase` with status `PENDING_MAKER` (awaiting a maker to propose a resolution)
+2. Return `WorkflowResult` with status `PENDING_REVIEW`
+3. Backoffice UI shows transaction in Resolution List with "Needs Review" badge
+4. Maker reviews, proposes action → status → `PENDING_CHECKER` → Checker approves/rejects → Temporal signal sent
+
+**Note:** This differs from the Force Resolve flow (Section 18.6) where a maker initiates the proposal. In the STP fallback flow, the system auto-creates the case and a maker must first pick it up and propose an action.
+
+### 21.5 BDD Compliance
+
+| BDD Scenario | Coverage | How |
+|-------------|----------|-----|
+| BDD-S01 (100% STP) | Covered | `EvaluateStpActivity` returns FULL_STP → auto-process |
+| BDD-S01-EC-01 (velocity fail) | Covered | `CheckVelocity` fails before STP eval → auto-decline |
+| BDD-S02 (Conditional STP) | Covered | `EvaluateStpActivity` returns CONDITIONAL_STP + approved → continue |
+| BDD-S02-EC-01 (criteria fail) | Covered | `EvaluateStpActivity` returns CONDITIONAL_STP + not approved → PENDING_REVIEW |
+| BDD-S03 (Non-STP) | Covered | `EvaluateStpActivity` returns NON_STP → PENDING_REVIEW |
+
+---
+
+## 22. E2E Integration Test Plan
+
+### 22.1 Gateway E2E Tests
+
+**Location:** `gateway/src/test/java/com/agentbanking/gateway/integration/`
+
+| Test Class | Scenario | Auth Role |
+|-----------|----------|-----------|
+| `TransactionWithdrawalTest` | Full withdrawal flow: POS → Gateway → Orchestrator → Temporal → Switch → Response | Agent |
+| `TransactionDepositTest` | Full deposit flow with biometric check | Agent |
+| `TransactionBillPaymentTest` | Bill payment flow through biller-service | Agent |
+| `TransactionDuitNowTest` | DuitNow transfer with proxy enquiry | Agent |
+| `TransactionIdempotencyTest` | Duplicate request returns same workflowId | Agent |
+| `TransactionStatusPollTest` | Poll workflow status until COMPLETED | Agent |
+
+### 22.2 Cross-Service Integration Tests
+
+**Location:** `services/orchestrator-service/src/test/java/com/agentbanking/orchestrator/integration/`
+
+| Test | Services Involved | Verification |
+|------|------------------|--------------|
+| `WithdrawalEndToEndTest` | Orchestrator → Rules → Ledger → Switch | Float blocked, switch authorized, float committed |
+| `DepositEndToEndTest` | Orchestrator → Rules → Ledger → CBS | Float credited, CBS posted |
+| `BillPaymentEndToEndTest` | Orchestrator → Rules → Ledger → Biller | Float blocked, biller paid, float committed |
+| `CompensationEndToEndTest` | Orchestrator → Ledger (fail) | Float released on failure |
+| `StpEvaluationTest` | Orchestrator → Rules (STP) | Correct routing based on STP category |
+
+### 22.3 Backoffice Maker-Checker E2E Tests
+
+**Location:** `gateway/src/test/java/com/agentbanking/gateway/integration/backoffice/`
+
+| Test | Scenario | Auth Roles |
+|------|----------|-----------|
+| `TransactionResolutionMakerTest` | Maker proposes COMMIT for stuck transaction | Maker |
+| `TransactionResolutionCheckerApproveTest` | Checker approves → Temporal signal sent | Checker |
+| `TransactionResolutionCheckerRejectTest` | Checker rejects → back to PENDING_MAKER | Checker |
+| `TransactionResolutionFourEyesTest` | Same user as maker+checker → rejected | Maker (as checker) |
+
+### 22.4 Temporal Workflow Replay Tests
+
+**Location:** `services/orchestrator-service/src/test/java/com/agentbanking/orchestrator/application/workflow/`
+
+| Test | Purpose |
+|------|---------|
+| `WithdrawalWorkflowReplayTest` | Replay withdrawal event history, verify determinism |
+| `DepositWorkflowReplayTest` | Replay deposit event history |
+| `CompensationReplayTest` | Replay failed workflow with compensation chain |
+
+### 22.5 Test Infrastructure
+
+- **Temporal:** Use `TemporalTestEnvironment` (in-memory test server) for unit/integration tests
+- **Downstream mocks:** Use WireMock for PayNet, CBS, Biller endpoints
+- **Auth:** Reuse existing `AuthTokenProvider` with maker/checker/agent tokens
+- **Database:** TestContainers with PostgreSQL for each service
+
+---
+
+## 23. OpenAPI & Gateway Updates
+
+### 23.1 Already Completed
+
+From the previous implementation phase:
+- `docs/api/openapi.yaml` updated with `POST /api/v1/transactions` and `GET /api/v1/transactions/{workflowId}/status`
+- 7 legacy endpoints marked as `deprecated: true`
+- Gateway routes configured for orchestrator-service at `/api/v1/transactions`
+- API changelog at `docs/api/CHANGELOG-2026-04-05-transaction-orchestrator.md`
+
+### 23.2 Still Needed
+
+**New backoffice endpoints** (from Section 18):
+```yaml
+/api/v1/backoffice/transactions/{workflowId}/maker-propose
+/api/v1/backoffice/transactions/{workflowId}/checker-approve
+/api/v1/backoffice/transactions/{workflowId}/checker-reject
+```
+
+**Gateway route additions:**
+```yaml
+- id: orchestrator-backoffice
+  uri: lb://orchestrator-service
+  predicates:
+    - Path=/api/v1/backoffice/transactions/**
+  filters:
+    - RewritePath=/api/v1/backoffice/transactions/(?<segment>.*), /api/v1/backoffice/transactions/${segment}
+```
+
+---
+
+## 24. Review Notes from Human Partner (resolved)
+
+The following review notes from the human partner have been addressed in this revision:
+
+| # | Review Note | Resolution |
+|---|-------------|------------|
+| 1 | Backoffice UI for Force Resolve actions (FR-17/FR-18) | **Resolved** — Section 18: Full Transaction Resolution Dashboard with Maker-Checker flow, Four-Eyes enforcement, new `transaction_resolution_case` table, and React page spec |
+| 2 | Missing transaction types (Prepaid Top-up, eWallet, Merchant) | **Resolved** — Section 19: Complete inventory of 10 additional types with extension pattern; marked out of scope for current phase |
+| 3 | Update openapi.yaml and API Gateway | **Resolved** — Section 23: Documents what's done and what's still needed (backoffice endpoints) |
+| 4 | Cross-service dependency analysis | **Resolved** — Section 20: 9 endpoint mismatches identified, 4 new endpoints specified, missing config parameters documented |
+| 5 | Conditional STP handling | **Resolved** — Section 21: `EvaluateStpActivity` added to workflows, `PENDING_REVIEW` status, BDD compliance matrix |
+| 6 | E2E integration tests | **Resolved** — Section 22: Gateway E2E, cross-service, backoffice Maker-Checker, and Temporal replay test plans |
