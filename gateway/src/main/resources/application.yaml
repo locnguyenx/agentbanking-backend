@@ -453,16 +453,6 @@ spring:
             - JwtAuth
             - RewritePath=/api/v1/backoffice/transactions/(?<segment>.*), /api/v1/backoffice/transactions/${segment}
 
-        # External Withdrawal (LEGACY - deprecated)
-        - id: external-withdrawal
-          uri: http://ledger-service:8082
-          predicates:
-            - Path=/api/v1/withdrawal
-          filters:
-            - JwtAuth
-            - RequestTransform=withdrawal
-            - RewritePath=/api/v1/withdrawal, /internal/debit
-
         # External Compliance Status route
         - id: external-compliance-status
           uri: http://rules-service:8081

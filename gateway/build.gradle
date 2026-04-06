@@ -43,6 +43,13 @@ test {
     }
 }
 
+task cleanE2eTestData(type: JavaExec) {
+    description = 'Clean up E2E test data (users, agents, floats)'
+    group = 'cleanup'
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.agentbanking.gateway.e2e.CleanTestData'
+}
+
 task e2eTest(type: Test) {
     description = 'Run E2E integration tests (requires Docker services running)'
     group = 'verification'
@@ -58,12 +65,8 @@ task e2eTest(type: Test) {
     systemProperty 'junit.jupiter.execution.parallel.enabled', 'false'
 }
 
-task cleanE2eTestData(type: JavaExec) {
-    description = 'Clean up E2E test data (users, agents, floats)'
-    group = 'cleanup'
-    classpath = sourceSets.test.runtimeClasspath
-    mainClass = 'com.agentbanking.gateway.e2e.CleanTestData'
-}
+// Run cleanup before E2E tests
+e2eTest.dependsOn cleanE2eTestData
 
 tasks.named('bootJar') {
     archiveBaseName = 'gateway'

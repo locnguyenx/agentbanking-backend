@@ -17,7 +17,6 @@ public class TransactionResolutionCaseEntity {
     @Column(name = "transaction_id", nullable = false)
     private UUID transactionId;
 
-    @Enumerated(EnumType.STRING)
     @Column(name = "proposed_action")
     private String proposedAction;
 
@@ -30,7 +29,6 @@ public class TransactionResolutionCaseEntity {
     @Column(name = "evidence_url")
     private String evidenceUrl;
 
-    @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
     private String status;
 

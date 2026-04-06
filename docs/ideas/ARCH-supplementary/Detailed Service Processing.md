@@ -572,7 +572,7 @@ If the AI tries to add a field like `iso_field_48`, you can immediately flag it:
 
 This is **Retry & Reversal Policy** for the Tier 4 ISO Translation Engine. This document tells the Switch Adapter (Business Core Tier) exactly how long to wait for a Tier 4 response before it must automatically trigger a "Safety Reversal."
 
-This **Retry & Reversal Policy** is the "Seatbelt" of your banking platform. In a distributed 4-tier architecture, the most dangerous state is the "Unknown State"—where Business Core Tier has sent a request, but the network drops before Tier 4 can return the response. 
+This **Retry & Reversal Policy** is the "Seatbelt" of your banking platform. In a distributed 5-tier architecture, the most dangerous state is the "Unknown State"—where Business Core Tier has sent a request, but the network drops before Tier 4 can return the response. 
 
 Without this policy, you risk "Orphan Transactions" where a customer’s money is locked or deducted, but the agent never receives confirmation to hand over the cash.
 
@@ -694,13 +694,11 @@ When Tier 4 sends an error back to Business Core Tier, it should use a standardi
 
 ---
 
-### 4. Final 4-Tier Architecture Summary
+### 4. Final 5-Tier Architecture Summary
 * **Tier 1 (Access):** Displays "Insufficient Funds" to the user.
 * **Business Core Tier (Business Core):** Receives `INSUFFICIENT_FUNDS`, marks the txn as `FAILED`, and releases the float lock.
 * **Tier 4 (Translation):** Receives `ISO-51` from PayNet and translates it using the Mapping Table.
-* **Tier 4 (External):** Sends the raw binary `51` code.
-
-**Would you like me to generate the Java `enum` and a `MappingUtility` class for Tier 4 that implements this exact table?** It will make your "Saga Error Handling" much more robust.
+* **Tier 5 (External):** Sends the raw binary `51` code.
 
 # **TRANSACTION PROCESSING STEP-BY-STEP**
 
@@ -709,8 +707,6 @@ This section will deep-dive to the PROCESSING STEP-BY-STEP of specific transacti
 ## **DuitNow transaction**
 
 A DuitNow transaction at an Agent location is the perfect example of the "Cash-to-Digital" bridge. In this scenario, a customer provides physical cash to the Agent, and the Agent uses their digital "Float" to send that value across the national real-time payment rails (**PayNet**) to a recipient's bank account or e-wallet.
-
-Using our **4-Tier Architecture**, here is exactly how that RM 100 moves from a customer's pocket to a recipient's phone in under 15 seconds.
 
 ---
 

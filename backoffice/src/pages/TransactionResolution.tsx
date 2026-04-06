@@ -25,7 +25,7 @@ interface ResolutionItem {
   amount: number
   currency: string
   transactionType: string
-  status: 'PENDING_MAKER' | 'PENDING_CHECKER' | 'COMPLETED' | 'REJECTED'
+  status: 'PENDING_MAKER' | 'PENDING_CHECKER' | 'APPROVED' | 'REJECTED'
   createdAt: string
   makerProposedAt?: string
   makerAction?: 'COMMIT' | 'REVERSE'
@@ -113,7 +113,7 @@ export function TransactionResolution() {
 
   const pendingMaker = resolutionItems.filter(i => i.status === 'PENDING_MAKER').length
   const pendingChecker = resolutionItems.filter(i => i.status === 'PENDING_CHECKER').length
-  const completed = resolutionItems.filter(i => i.status === 'COMPLETED').length
+  const approved = resolutionItems.filter(i => i.status === 'APPROVED').length
   const rejected = resolutionItems.filter(i => i.status === 'REJECTED').length
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -171,7 +171,7 @@ export function TransactionResolution() {
     const styles: Record<string, { bg: string; color: string; label: string }> = {
       'PENDING_MAKER': { bg: '#fef3c7', color: '#d97706', label: 'Pending Maker' },
       'PENDING_CHECKER': { bg: '#dbeafe', color: '#2563eb', label: 'Pending Checker' },
-      'COMPLETED': { bg: '#d1fae5', color: '#059669', label: 'Completed' },
+      'APPROVED': { bg: '#d1fae5', color: '#059669', label: 'Approved' },
       'REJECTED': { bg: '#fee2e2', color: '#dc2626', label: 'Rejected' },
     }
     const s = styles[status] || styles['PENDING_MAKER']
@@ -211,7 +211,7 @@ export function TransactionResolution() {
         {[
           { label: 'Pending Maker', value: pendingMaker.toString(), icon: Clock, color: '#f59e0b' },
           { label: 'Pending Checker', value: pendingChecker.toString(), icon: AlertTriangle, color: '#2563eb' },
-          { label: 'Completed', value: completed.toString(), icon: CheckCircle, color: '#10b981' },
+          { label: 'Approved', value: approved.toString(), icon: CheckCircle, color: '#10b981' },
           { label: 'Rejected', value: rejected.toString(), icon: XCircle, color: '#ef4444' },
         ].map((stat, index) => {
           const Icon = stat.icon
@@ -265,7 +265,7 @@ export function TransactionResolution() {
             <option value="">All Status</option>
             <option value="PENDING_MAKER">Pending Maker</option>
             <option value="PENDING_CHECKER">Pending Checker</option>
-            <option value="COMPLETED">Completed</option>
+            <option value="APPROVED">Approved</option>
             <option value="REJECTED">Rejected</option>
           </select>
           <button className="btn btn-outline">
@@ -278,7 +278,7 @@ export function TransactionResolution() {
       {/* Resolution Cards */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         {paginatedItems.map((item) => {
-          const borderColor = item.status === 'PENDING_MAKER' ? '#f59e0b' : item.status === 'PENDING_CHECKER' ? '#2563eb' : item.status === 'COMPLETED' ? '#10b981' : '#ef4444'
+          const borderColor = item.status === 'PENDING_MAKER' ? '#f59e0b' : item.status === 'PENDING_CHECKER' ? '#2563eb' : item.status === 'APPROVED' ? '#10b981' : '#ef4444'
           return (
             <div key={item.workflowId} className="card" style={{ 
               padding: 24,

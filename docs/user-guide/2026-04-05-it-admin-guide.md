@@ -32,14 +32,58 @@ This guide covers system administration tasks for the Agent Banking Platform, in
 
 ## Service Management
 
+### Docker Compose Configuration
+
+The project uses multiple Docker Compose files for different environments:
+
+| File | Purpose |
+|------|---------|
+| `docker-compose.yml` | Base services (PostgreSQL, Redis, Kafka) |
+| `docker-compose.dev.yml` | Local development with all services |
+| `docker-compose.test.yml` | CI/CD testing environment |
+| `docker/temporal/docker-compose.yml` | Temporal workflow engine |
+
 ### Starting Services
 
 ```bash
-# Start all services via Docker Compose
+# Start base infrastructure (PostgreSQL, Redis, Kafka)
 docker-compose up -d
+
+# Start Temporal workflow engine (required for Orchestrator)
+cd docker/temporal && docker-compose up -d
+
+# Start all services for local development
+docker-compose -f docker-compose.yml -f docker-compose.dev.yml up -d
 
 # Start specific service
 docker-compose up -d rules-service
+```
+
+### Service Health Checks
+
+| Service | Health Endpoint |
+|---------|----------------|
+| Gateway | `GET /actuator/health` |
+| Rules | `GET /actuator/health` |
+| Ledger | `GET /actuator/health` |
+| Onboarding | `GET /actuator/health` |
+| Switch | `GET /actuator/health` |
+| Biller | `GET /actuator/health` |
+| Orchestrator | `GET /actuator/health` |
+| Auth/IAM | `GET /actuator/health` |
+| Audit | `GET /actuator/health` |
+
+### Stopping Services
+
+```bash
+# Stop all services
+docker-compose down
+
+# Stop with volumes (data loss)
+docker-compose down -v
+
+# Stop Temporal
+cd docker/temporal && docker-compose down
 ```
 
 ### Service Health Checks
@@ -62,6 +106,103 @@ docker-compose down
 # Stop with volumes (data loss)
 docker-compose down -v
 ```
+
+---
+
+## Docker for Integration Testing
+
+### Overview
+
+Integration tests use **TestContainers** which automatically manages Docker containers for test dependencies:
+- **PostgreSQL**: Started automatically per test class
+- **Redis**: Started automatically per test class  
+- **Kafka**: Started automatically per test class
+
+The only exception is **Temporal** (workflow engine) which requires manual Docker setup.
+
+### Required Docker Services
+
+| Service | Purpose | Port | Reason |
+|---------|---------|------|--------|
+| Temporal | Workflow engine | 7233 | Not available as TestContainers |
+
+### Starting Temporal for Testing
+
+```bash
+# Start Temporal (required for orchestrator-service tests)
+cd docker/temporal && docker-compose up -d
+
+# Verify Temporal is running
+docker ps | grep temporal
+```
+
+### TestContainers (Automatic)
+
+Most infrastructure is handled automatically:
+
+```java
+// common/src/testFixtures/java/com/agentbanking/common/test/AbstractIntegrationTest.java
+static final PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16-alpine");
+static final GenericContainer<?> redis = new GenericContainer<>("redis:7-alpine");
+static final KafkaContainer kafka = new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:7.5.0"));
+```
+
+**Note:** TestContainers requires Docker to be running. If tests fail with "Cannot connect to Docker daemon", ensure Docker Desktop is running.
+
+### Running Integration Tests
+
+```bash
+# Run all integration tests (TestContainers + Temporal must be running)
+./gradlew test
+
+# Run specific service tests
+./gradlew :services:orchestrator-service:test
+
+# Run orchestrator tests only (requires Temporal)
+./gradlew :services:orchestrator-service:test --tests "*Orchestrator*"
+
+# Run tests with coverage
+./gradlew test jacocoTestReport
+```
+
+### Test Profile Configuration
+
+Tests use the `tc` (TestContainers) profile:
+
+```yaml
+# services/*/src/test/resources/application-tc.yaml
+spring:
+  main:
+    allow-bean-definition-overriding: true
+  jpa:
+    hibernate:
+      ddl-auto: none
+  flyway:
+    enabled: true
+    locations: filesystem:src/main/resources/db/migration
+```
+
+### Troubleshooting Docker for Tests
+
+```bash
+# Check if Docker is running
+docker info
+
+# Verify Temporal is running
+docker ps | grep temporal
+
+# View Temporal logs
+docker logs agentbanking-backend-temporal-1
+
+# Check Temporal UI (for debugging workflows)
+open http://localhost:8082
+```
+
+### Clean Up
+
+```bash
+# Remove Temporal containers
+cd docker/temporal && docker-compose down -v
 
 ---
 
@@ -93,6 +234,189 @@ JWT_EXPIRATION_MS=3600000
 # External Systems
 HSM_URL=http://hsm-service:8443
 SWITCH_URL=http://switch-network:8080
+
+# Temporal (Workflow Engine)
+TEMPORAL_ADDRESS=localhost:7233
+```
+
+---
+
+## Local Development with Docker
+
+### Prerequisites
+
+| Tool | Version | Purpose |
+|------|---------|---------|
+| Docker Desktop | 4.0+ | Container runtime |
+| Docker Compose | 2.0+ | Multi-container orchestration |
+| Java | 21 | Runtime for services |
+| Gradle | 8.5+ | Build tool |
+
+### Quick Start for Local Development
+
+```bash
+# 1. Clone repository
+git clone <repository-url>
+cd agentbanking-backend
+
+# 2. Start infrastructure services
+docker-compose up -d
+
+# 3. Start Temporal (required for Orchestrator)
+cd docker/temporal && docker-compose up -d && cd ../..
+
+# 4. Verify services are running
+docker ps
+
+# 5. Run services via Gradle (not Docker)
+./gradlew :services:gateway:bootRun
+```
+
+### Running Services Locally vs Docker
+
+| Service | Local (Gradle) | Docker |
+|---------|---------------|--------|
+| Gateway | `./gradlew :gateway:bootRun` | `docker-compose up -d gateway` |
+| Rules | `./gradlew :services:rules-service:bootRun` | `docker-compose up -d rules-service` |
+| Ledger | `./gradlew :services:ledger-service:bootRun` | `docker-compose up -d ledger-service` |
+| Orchestrator | `./gradlew :services:orchestrator-service:bootRun` | `docker-compose up -d orchestrator` |
+| All | `./gradlew bootRun` | `docker-compose -f docker-compose.dev.yml up -d` |
+
+### Docker-Only Development
+
+For full Docker-based local development:
+
+```bash
+# Start all services in Docker
+docker-compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+
+# View logs
+docker-compose logs -f
+
+# Scale a service
+docker-compose up -d --scale rules-service=2
+
+# Access service shell
+docker-compose exec rules-service /bin/sh
+```
+
+### Database Management
+
+```bash
+# Connect to PostgreSQL
+docker-compose exec postgres psql -U postgres -d orchestrator_db
+
+# Connect to specific service database
+docker-compose exec postgres psql -U postgres -d ledger_db
+
+# Run migrations manually
+docker-compose exec orchestrator-service java -jar app.jar flyway:migrate
+
+# View database tables
+docker-compose exec postgres psql -U postgres -d orchestrator_db -c "\dt"
+```
+
+### Redis Management
+
+```bash
+# Connect to Redis CLI
+docker-compose exec redis redis-cli
+
+# Common Redis commands
+KEYS *                    # List all keys
+GET <key>                 # Get value
+FLUSHDB                   # Clear database (use carefully!)
+INFO                      # Server info
+```
+
+### Kafka Management
+
+```bash
+# List Kafka topics
+docker-compose exec kafka kafka-topics --list --bootstrap-server localhost:9092
+
+# Create a topic
+docker-compose exec kafka kafka-topics --create \
+  --topic transaction-events \
+  --bootstrap-server localhost:9092 \
+  --partitions 3 --replication-factor 1
+
+# Consume messages from a topic
+docker-compose exec kafka kafka-console-consumer \
+  --topic transaction-events \
+  --from-beginning \
+  --bootstrap-server localhost:9092
+
+# View consumer groups
+docker-compose exec kafka kafka-consumer-groups \
+  --list \
+  --bootstrap-server localhost:9092
+```
+
+### Temporal UI
+
+The Temporal Web UI is available at `http://localhost:8082`:
+
+- View running workflows
+- Check workflow history
+- Debug failed workflows
+- Manually trigger signals
+
+```bash
+# Start Temporal UI only
+docker-compose -f docker/temporal/docker-compose.yml up -d temporal-ui
+
+# Access Temporal CLI (tctl)
+docker-compose -f docker/temporal/docker-compose.yml exec temporal-admin tctl workflow list
+```
+
+### Common Local Development Issues
+
+#### Port Conflicts
+
+```bash
+# Check what's using a port
+lsof -i :8080
+lsof -i :5432
+lsof -i :6379
+lsof -i :7233
+
+# Kill process using port
+kill $(lsof -t -i :8080)
+```
+
+#### Container Health Issues
+
+```bash
+# Check container status
+docker inspect agentbanking-backend-postgres-1 | grep Health
+
+# View container resource usage
+docker stats
+
+# Restart unhealthy container
+docker-compose restart postgres
+```
+
+#### Volume Permissions
+
+```bash
+# Fix PostgreSQL volume permissions
+docker-compose down
+docker volume rm agentbanking-backend_postgres_data
+docker-compose up -d
+```
+
+#### Network Issues
+
+```bash
+# Recreate Docker network
+docker network rm agentbanking_backend
+docker-compose down
+docker-compose up -d
+
+# Check network connectivity
+docker-compose exec gateway ping postgres
 ```
 
 ### Service-Specific Config

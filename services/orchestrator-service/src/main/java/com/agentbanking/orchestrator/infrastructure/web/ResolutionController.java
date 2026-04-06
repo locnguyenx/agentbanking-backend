@@ -62,7 +62,7 @@ public class ResolutionController {
             return ResponseEntity.ok(mapToResolutionResponse(result));
         } catch (IllegalArgumentException | IllegalStateException e) {
             log.error("Failed to propose resolution: {}", e.getMessage());
-            return ResponseEntity.badRequest().body(buildErrorResponse("ERR_BIZ_RESOLUTION_FAILED", e.getMessage()));
+            return ResponseEntity.badRequest().body(buildErrorResponse("ERR_BIZ_RESOLUTION_FAILED", e.getMessage(), "RETRY"));
         }
     }
 
@@ -85,10 +85,10 @@ public class ResolutionController {
             return ResponseEntity.ok(mapToResolutionResponse(result));
         } catch (SecurityException e) {
             log.error("Four-eyes violation: {}", e.getMessage());
-            return ResponseEntity.badRequest().body(buildErrorResponse("ERR_AUTH_SELF_APPROVAL", e.getMessage()));
+            return ResponseEntity.badRequest().body(buildErrorResponse("ERR_AUTH_SELF_APPROVAL", e.getMessage(), "DECLINE"));
         } catch (IllegalArgumentException | IllegalStateException e) {
             log.error("Failed to approve resolution: {}", e.getMessage());
-            return ResponseEntity.badRequest().body(buildErrorResponse("ERR_BIZ_RESOLUTION_FAILED", e.getMessage()));
+            return ResponseEntity.badRequest().body(buildErrorResponse("ERR_BIZ_RESOLUTION_FAILED", e.getMessage(), "RETRY"));
         }
     }
 
@@ -111,10 +111,10 @@ public class ResolutionController {
             return ResponseEntity.ok(mapToResolutionResponse(result));
         } catch (SecurityException e) {
             log.error("Four-eyes violation: {}", e.getMessage());
-            return ResponseEntity.badRequest().body(buildErrorResponse("ERR_AUTH_SELF_APPROVAL", e.getMessage()));
+            return ResponseEntity.badRequest().body(buildErrorResponse("ERR_AUTH_SELF_APPROVAL", e.getMessage(), "DECLINE"));
         } catch (IllegalArgumentException | IllegalStateException e) {
             log.error("Failed to reject resolution: {}", e.getMessage());
-            return ResponseEntity.badRequest().body(buildErrorResponse("ERR_BIZ_RESOLUTION_FAILED", e.getMessage()));
+            return ResponseEntity.badRequest().body(buildErrorResponse("ERR_BIZ_RESOLUTION_FAILED", e.getMessage(), "RETRY"));
         }
     }
 
@@ -131,9 +131,14 @@ public class ResolutionController {
             results = resolutionService.findAll();
         }
         
-        return ResponseEntity.ok(results.stream()
+        var content = results.stream()
             .map(this::mapToResolutionResponse)
-            .toList());
+            .toList();
+        
+        Map<String, Object> response = new HashMap<>();
+        response.put("content", content);
+        response.put("total", content.size());
+        return ResponseEntity.ok(response);
     }
 
     private Map<String, Object> mapToResolutionResponse(TransactionResolutionCase case_) {
@@ -157,10 +162,13 @@ public class ResolutionController {
         return response;
     }
 
-    private Map<String, Object> buildErrorResponse(String code, String message) {
+    private Map<String, Object> buildErrorResponse(String code, String message, String actionCode) {
         Map<String, Object> error = new HashMap<>();
         error.put("code", code);
         error.put("message", message);
+        error.put("action_code", actionCode);
+        error.put("trace_id", java.util.UUID.randomUUID().toString());
+        error.put("timestamp", java.time.Instant.now().toString());
         
         Map<String, Object> response = new HashMap<>();
         response.put("status", "FAILED");

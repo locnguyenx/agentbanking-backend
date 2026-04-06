@@ -10,7 +10,6 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 @Repository
 public class ResolutionCaseRepositoryImpl implements ResolutionCaseRepository {
@@ -42,14 +41,14 @@ public class ResolutionCaseRepositoryImpl implements ResolutionCaseRepository {
     public List<TransactionResolutionCase> findByStatus(ResolutionStatus status) {
         return jpaRepo.findByStatus(status.name()).stream()
             .map(this::toDomain)
-            .collect(Collectors.toList());
+            .toList();
     }
 
     @Override
     public List<TransactionResolutionCase> findAll() {
         return jpaRepo.findAll().stream()
             .map(this::toDomain)
-            .collect(Collectors.toList());
+            .toList();
     }
 
     private TransactionResolutionCaseEntity toEntity(TransactionResolutionCase domain) {
