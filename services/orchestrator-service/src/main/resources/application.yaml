@@ -63,6 +63,18 @@ biller-service:
 cbs-connector:
   url: ${CBS_CONNECTOR_URL:http://localhost:8085}
 
+telco-aggregator:
+  url: ${TELCO_AGGREGATOR_URL:http://localhost:8091}
+
+ewallet-provider:
+  url: ${EWALLET_PROVIDER_URL:http://localhost:8092}
+
+essp-service:
+  url: ${ESSP_SERVICE_URL:http://localhost:8093}
+
+pin-inventory:
+  url: ${PIN_INVENTORY_URL:http://localhost:8094}
+
 resilience4j:
   circuitbreaker:
     instances:

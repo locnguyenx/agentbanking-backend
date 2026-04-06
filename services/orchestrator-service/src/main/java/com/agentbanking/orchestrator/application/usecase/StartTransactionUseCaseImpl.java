@@ -97,6 +97,89 @@ public class StartTransactionUseCaseImpl implements StartTransactionUseCase {
                     command.geofenceLat(),
                     command.geofenceLng(),
                     command.agentTier());
+            case CASHLESS_PAYMENT -> new CashlessPaymentWorkflow.CashlessPaymentInput(
+                    command.agentId(),
+                    "QR",
+                    command.amount(),
+                    command.idempotencyKey(),
+                    command.proxyValue(),
+                    command.geofenceLat(),
+                    command.geofenceLng(),
+                    command.agentTier());
+            case PIN_BASED_PURCHASE -> new PinBasedPurchaseWorkflow.PinBasedPurchaseInput(
+                    command.agentId(),
+                    "DEFAULT",
+                    command.amount(),
+                    1,
+                    command.customerMykad(),
+                    command.idempotencyKey(),
+                    command.geofenceLat(),
+                    command.geofenceLng(),
+                    command.agentTier());
+            case PREPAID_TOPUP -> new PrepaidTopupWorkflow.PrepaidTopupInput(
+                    command.agentId(),
+                    "DEFAULT",
+                    command.proxyValue(),
+                    command.amount(),
+                    command.idempotencyKey(),
+                    command.geofenceLat(),
+                    command.geofenceLng(),
+                    command.agentTier());
+            case EWALLET_WITHDRAWAL -> new EWalletWithdrawalWorkflow.EWalletWithdrawalInput(
+                    command.agentId(),
+                    "DEFAULT",
+                    command.proxyValue(),
+                    command.amount(),
+                    command.idempotencyKey(),
+                    command.geofenceLat(),
+                    command.geofenceLng(),
+                    command.agentTier());
+            case EWALLET_TOPUP -> new EWalletTopupWorkflow.EWalletTopupInput(
+                    command.agentId(),
+                    "DEFAULT",
+                    command.proxyValue(),
+                    command.amount(),
+                    command.idempotencyKey(),
+                    command.geofenceLat(),
+                    command.geofenceLng(),
+                    command.agentTier());
+            case ESSP_PURCHASE -> new ESSPPurchaseWorkflow.ESSPPurchaseInput(
+                    command.agentId(),
+                    command.amount(),
+                    command.customerMykad(),
+                    command.idempotencyKey(),
+                    command.geofenceLat(),
+                    command.geofenceLng(),
+                    command.agentTier());
+            case PIN_PURCHASE -> new PINPurchaseWorkflow.PINPurchaseInput(
+                    command.agentId(),
+                    "DEFAULT",
+                    command.amount(),
+                    1,
+                    command.idempotencyKey(),
+                    command.geofenceLat(),
+                    command.geofenceLng(),
+                    command.agentTier());
+            case RETAIL_SALE -> new RetailSaleWorkflow.RetailSaleInput(
+                    command.agentId(),
+                    "QR",
+                    command.amount(),
+                    "RETAIL",
+                    command.idempotencyKey(),
+                    command.proxyValue(),
+                    command.geofenceLat(),
+                    command.geofenceLng(),
+                    command.agentTier());
+            case HYBRID_CASHBACK -> new HybridCashbackWorkflow.HybridCashbackInput(
+                    command.agentId(),
+                    "QR",
+                    command.amount(),
+                    command.amount().multiply(new java.math.BigDecimal("0.1")),
+                    command.idempotencyKey(),
+                    command.proxyValue(),
+                    command.geofenceLat(),
+                    command.geofenceLng(),
+                    command.agentTier());
         };
     }
 }
