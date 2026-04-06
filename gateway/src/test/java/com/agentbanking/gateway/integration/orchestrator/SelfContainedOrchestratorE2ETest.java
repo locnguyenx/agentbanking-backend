@@ -288,6 +288,327 @@ class SelfContainedOrchestratorE2ETest {
     }
 
     @Nested
+    @DisplayName("BDD-TO-NEW: New Transaction Types E2E")
+    @Order(15)
+    class NewTransactionTypesE2E {
+
+        @Test
+        @DisplayName("BDD-TO-NEW-01: Router dispatches cashless payment to CashlessPaymentWorkflow")
+        void cashlessPayment_shouldReturnPending() {
+            assumeTrue(agentToken != null, "Agent token required");
+
+            String idempotencyKey = "e2e-cashless-" + UUID.randomUUID();
+            String requestBody = buildCashlessPaymentRequest(idempotencyKey);
+
+            var response = gatewayClient.post()
+                    .uri("/api/v1/transactions")
+                    .header("Authorization", "Bearer " + agentToken)
+                    .header("X-Idempotency-Key", idempotencyKey)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .bodyValue(requestBody)
+                    .exchange();
+
+            assertEquals(200, response.expectBody(String.class).returnResult().getStatus().value());
+        }
+
+        @Test
+        @DisplayName("BDD-TO-NEW-02: Router dispatches PIN-based purchase to PinBasedPurchaseWorkflow")
+        void pinBasedPurchase_shouldReturnPending() {
+            assumeTrue(agentToken != null, "Agent token required");
+
+            String idempotencyKey = "e2e-pin-purchase-" + UUID.randomUUID();
+            String requestBody = buildPinBasedPurchaseRequest(idempotencyKey);
+
+            var response = gatewayClient.post()
+                    .uri("/api/v1/transactions")
+                    .header("Authorization", "Bearer " + agentToken)
+                    .header("X-Idempotency-Key", idempotencyKey)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .bodyValue(requestBody)
+                    .exchange();
+
+            assertEquals(200, response.expectBody(String.class).returnResult().getStatus().value());
+        }
+
+        @Test
+        @DisplayName("BDD-TO-NEW-03: Router dispatches prepaid topup to PrepaidTopupWorkflow")
+        void prepaidTopup_shouldReturnPending() {
+            assumeTrue(agentToken != null, "Agent token required");
+
+            String idempotencyKey = "e2e-prepaid-topup-" + UUID.randomUUID();
+            String requestBody = buildPrepaidTopupRequest(idempotencyKey);
+
+            var response = gatewayClient.post()
+                    .uri("/api/v1/transactions")
+                    .header("Authorization", "Bearer " + agentToken)
+                    .header("X-Idempotency-Key", idempotencyKey)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .bodyValue(requestBody)
+                    .exchange();
+
+            assertEquals(200, response.expectBody(String.class).returnResult().getStatus().value());
+        }
+
+        @Test
+        @DisplayName("BDD-TO-NEW-04: Router dispatches ewallet withdrawal to EWalletWithdrawalWorkflow")
+        void ewalletWithdrawal_shouldReturnPending() {
+            assumeTrue(agentToken != null, "Agent token required");
+
+            String idempotencyKey = "e2e-ewallet-withdraw-" + UUID.randomUUID();
+            String requestBody = buildEWalletWithdrawalRequest(idempotencyKey);
+
+            var response = gatewayClient.post()
+                    .uri("/api/v1/transactions")
+                    .header("Authorization", "Bearer " + agentToken)
+                    .header("X-Idempotency-Key", idempotencyKey)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .bodyValue(requestBody)
+                    .exchange();
+
+            assertEquals(200, response.expectBody(String.class).returnResult().getStatus().value());
+        }
+
+        @Test
+        @DisplayName("BDD-TO-NEW-05: Router dispatches ewallet topup to EWalletTopupWorkflow")
+        void ewalletTopup_shouldReturnPending() {
+            assumeTrue(agentToken != null, "Agent token required");
+
+            String idempotencyKey = "e2e-ewallet-topup-" + UUID.randomUUID();
+            String requestBody = buildEWalletTopupRequest(idempotencyKey);
+
+            var response = gatewayClient.post()
+                    .uri("/api/v1/transactions")
+                    .header("Authorization", "Bearer " + agentToken)
+                    .header("X-Idempotency-Key", idempotencyKey)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .bodyValue(requestBody)
+                    .exchange();
+
+            assertEquals(200, response.expectBody(String.class).returnResult().getStatus().value());
+        }
+
+        @Test
+        @DisplayName("BDD-TO-NEW-06: Router dispatches ESSP purchase to ESSPPurchaseWorkflow")
+        void esspPurchase_shouldReturnPending() {
+            assumeTrue(agentToken != null, "Agent token required");
+
+            String idempotencyKey = "e2e-essp-purchase-" + UUID.randomUUID();
+            String requestBody = buildESSPPurchaseRequest(idempotencyKey);
+
+            var response = gatewayClient.post()
+                    .uri("/api/v1/transactions")
+                    .header("Authorization", "Bearer " + agentToken)
+                    .header("X-Idempotency-Key", idempotencyKey)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .bodyValue(requestBody)
+                    .exchange();
+
+            assertEquals(200, response.expectBody(String.class).returnResult().getStatus().value());
+        }
+
+        @Test
+        @DisplayName("BDD-TO-NEW-07: Router dispatches PIN purchase to PINPurchaseWorkflow")
+        void pinPurchase_shouldReturnPending() {
+            assumeTrue(agentToken != null, "Agent token required");
+
+            String idempotencyKey = "e2e-pin-purchase-" + UUID.randomUUID();
+            String requestBody = buildPINPurchaseRequest(idempotencyKey);
+
+            var response = gatewayClient.post()
+                    .uri("/api/v1/transactions")
+                    .header("Authorization", "Bearer " + agentToken)
+                    .header("X-Idempotency-Key", idempotencyKey)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .bodyValue(requestBody)
+                    .exchange();
+
+            assertEquals(200, response.expectBody(String.class).returnResult().getStatus().value());
+        }
+
+        @Test
+        @DisplayName("BDD-TO-NEW-08: Router dispatches retail sale to RetailSaleWorkflow")
+        void retailSale_shouldReturnPending() {
+            assumeTrue(agentToken != null, "Agent token required");
+
+            String idempotencyKey = "e2e-retail-sale-" + UUID.randomUUID();
+            String requestBody = buildRetailSaleRequest(idempotencyKey);
+
+            var response = gatewayClient.post()
+                    .uri("/api/v1/transactions")
+                    .header("Authorization", "Bearer " + agentToken)
+                    .header("X-Idempotency-Key", idempotencyKey)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .bodyValue(requestBody)
+                    .exchange();
+
+            assertEquals(200, response.expectBody(String.class).returnResult().getStatus().value());
+        }
+
+        @Test
+        @DisplayName("BDD-TO-NEW-09: Router dispatches hybrid cashback to HybridCashbackWorkflow")
+        void hybridCashback_shouldReturnPending() {
+            assumeTrue(agentToken != null, "Agent token required");
+
+            String idempotencyKey = "e2e-hybrid-cashback-" + UUID.randomUUID();
+            String requestBody = buildHybridCashbackRequest(idempotencyKey);
+
+            var response = gatewayClient.post()
+                    .uri("/api/v1/transactions")
+                    .header("Authorization", "Bearer " + agentToken)
+                    .header("X-Idempotency-Key", idempotencyKey)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .bodyValue(requestBody)
+                    .exchange();
+
+            assertEquals(200, response.expectBody(String.class).returnResult().getStatus().value());
+        }
+
+        // Request builders for new transaction types
+
+        private String buildCashlessPaymentRequest(String idempotencyKey) {
+            return """
+                {
+                    "transactionType": "CASHLESS_PAYMENT",
+                    "agentId": "%s",
+                    "amount": 150.00,
+                    "idempotencyKey": "%s",
+                    "agentTier": "TIER_1",
+                    "customerMykad": "encrypted-mykad",
+                    "geofenceLat": 3.1390,
+                    "geofenceLng": 101.6869
+                }
+                """.formatted(AGENT_UUID, idempotencyKey);
+        }
+
+        private String buildPinBasedPurchaseRequest(String idempotencyKey) {
+            return """
+                {
+                    "transactionType": "PIN_BASED_PURCHASE",
+                    "agentId": "%s",
+                    "amount": 250.00,
+                    "idempotencyKey": "%s",
+                    "agentTier": "TIER_1",
+                    "pan": "4111111111111111",
+                    "pinBlock": "encrypted-pin-block",
+                    "customerCardMasked": "411111******1111",
+                    "geofenceLat": 3.1390,
+                    "geofenceLng": 101.6869
+                }
+                """.formatted(AGENT_UUID, idempotencyKey);
+        }
+
+        private String buildPrepaidTopupRequest(String idempotencyKey) {
+            return """
+                {
+                    "transactionType": "PREPAID_TOPUP",
+                    "agentId": "%s",
+                    "amount": 30.00,
+                    "idempotencyKey": "%s",
+                    "agentTier": "TIER_1",
+                    "customerMykad": "encrypted-mykad",
+                    "destinationAccount": "0123456789",
+                    "geofenceLat": 3.1390,
+                    "geofenceLng": 101.6869
+                }
+                """.formatted(AGENT_UUID, idempotencyKey);
+        }
+
+        private String buildEWalletWithdrawalRequest(String idempotencyKey) {
+            return """
+                {
+                    "transactionType": "EWALLET_WITHDRAWAL",
+                    "agentId": "%s",
+                    "amount": 100.00,
+                    "idempotencyKey": "%s",
+                    "agentTier": "TIER_1",
+                    "customerMykad": "encrypted-mykad",
+                    "destinationAccount": "ewallet-account-123",
+                    "geofenceLat": 3.1390,
+                    "geofenceLng": 101.6869
+                }
+                """.formatted(AGENT_UUID, idempotencyKey);
+        }
+
+        private String buildEWalletTopupRequest(String idempotencyKey) {
+            return """
+                {
+                    "transactionType": "EWALLET_TOPUP",
+                    "agentId": "%s",
+                    "amount": 50.00,
+                    "idempotencyKey": "%s",
+                    "agentTier": "TIER_1",
+                    "customerMykad": "encrypted-mykad",
+                    "destinationAccount": "ewallet-account-456",
+                    "geofenceLat": 3.1390,
+                    "geofenceLng": 101.6869
+                }
+                """.formatted(AGENT_UUID, idempotencyKey);
+        }
+
+        private String buildESSPPurchaseRequest(String idempotencyKey) {
+            return """
+                {
+                    "transactionType": "ESSP_PURCHASE",
+                    "agentId": "%s",
+                    "amount": 20.00,
+                    "idempotencyKey": "%s",
+                    "agentTier": "TIER_1",
+                    "customerMykad": "encrypted-mykad",
+                    "geofenceLat": 3.1390,
+                    "geofenceLng": 101.6869
+                }
+                """.formatted(AGENT_UUID, idempotencyKey);
+        }
+
+        private String buildPINPurchaseRequest(String idempotencyKey) {
+            return """
+                {
+                    "transactionType": "PIN_PURCHASE",
+                    "agentId": "%s",
+                    "amount": 10.00,
+                    "idempotencyKey": "%s",
+                    "agentTier": "TIER_1",
+                    "customerMykad": "encrypted-mykad",
+                    "destinationAccount": "telco-number-789",
+                    "geofenceLat": 3.1390,
+                    "geofenceLng": 101.6869
+                }
+                """.formatted(AGENT_UUID, idempotencyKey);
+        }
+
+        private String buildRetailSaleRequest(String idempotencyKey) {
+            return """
+                {
+                    "transactionType": "RETAIL_SALE",
+                    "agentId": "%s",
+                    "amount": 75.00,
+                    "idempotencyKey": "%s",
+                    "agentTier": "TIER_1",
+                    "customerMykad": "encrypted-mykad",
+                    "geofenceLat": 3.1390,
+                    "geofenceLng": 101.6869
+                }
+                """.formatted(AGENT_UUID, idempotencyKey);
+        }
+
+        private String buildHybridCashbackRequest(String idempotencyKey) {
+            return """
+                {
+                    "transactionType": "HYBRID_CASHBACK",
+                    "agentId": "%s",
+                    "amount": 200.00,
+                    "idempotencyKey": "%s",
+                    "agentTier": "TIER_1",
+                    "pan": "4111111111111111",
+                    "customerCardMasked": "411111******1111",
+                    "geofenceLat": 3.1390,
+                    "geofenceLng": 101.6869
+                }
+                """.formatted(AGENT_UUID, idempotencyKey);
+        }
+    }
+
+    @Nested
     @DisplayName("BDD-POLL: Polling Endpoint")
     @Order(20)
     class PollingEndpoint {
