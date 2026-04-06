@@ -38,6 +38,13 @@ public record TransactionResolutionCase(
     public TransactionResolutionCase makerPropose(
             ResolutionAction action, String userId, String reasonCode,
             String reason, String evidenceUrl) {
+        if (status != ResolutionStatus.PENDING_MAKER) {
+            throw new IllegalStateException(
+                "Cannot propose when status is " + status + ". Expected PENDING_MAKER.");
+        }
+        if (action == null || userId == null || reason == null) {
+            throw new IllegalArgumentException("action, userId, and reason are required.");
+        }
         var now = Instant.now();
         return new TransactionResolutionCase(
             id, workflowId, transactionId,
@@ -50,6 +57,13 @@ public record TransactionResolutionCase(
     }
 
     public TransactionResolutionCase checkerApprove(String userId, String reason) {
+        if (status != ResolutionStatus.PENDING_CHECKER) {
+            throw new IllegalStateException(
+                "Cannot approve when status is " + status + ". Expected PENDING_CHECKER.");
+        }
+        if (userId == null || reason == null) {
+            throw new IllegalArgumentException("userId and reason are required.");
+        }
         var now = Instant.now();
         return new TransactionResolutionCase(
             id, workflowId, transactionId,
@@ -62,6 +76,13 @@ public record TransactionResolutionCase(
     }
 
     public TransactionResolutionCase checkerReject(String userId, String reason) {
+        if (status != ResolutionStatus.PENDING_CHECKER) {
+            throw new IllegalStateException(
+                "Cannot reject when status is " + status + ". Expected PENDING_CHECKER.");
+        }
+        if (userId == null || reason == null) {
+            throw new IllegalArgumentException("userId and reason are required.");
+        }
         var now = Instant.now();
         return new TransactionResolutionCase(
             id, workflowId, transactionId,
