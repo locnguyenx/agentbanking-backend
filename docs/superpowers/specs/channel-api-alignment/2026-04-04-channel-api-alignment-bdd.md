@@ -3,7 +3,7 @@
 **Version:** 1.0
 **Date:** 2026-04-04
 **Status:** Draft
-**Module:** switch-adapter-service, rules-service
+**Module:** rules-service, biller-service, onboarding-service
 **BRD Reference:** `docs/superpowers/specs/channel-api-alignment/2026-04-04-channel-api-alignment-brd.md`
 
 Each BDD scenario is tagged with exactly one `@US` (User Story) and one or more `@FR` (Functional Requirements) for atomic traceability.
