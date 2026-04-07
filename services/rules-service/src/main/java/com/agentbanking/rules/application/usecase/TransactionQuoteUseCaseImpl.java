@@ -2,8 +2,7 @@ package com.agentbanking.rules.application.usecase;
 
 import com.agentbanking.common.security.ErrorCodes;
 import com.agentbanking.rules.domain.port.in.TransactionQuoteUseCase;
-import com.agentbanking.rules.domain.port.out.FeeCalculationGateway;
-import com.agentbanking.rules.domain.port.out.FeeCalculationGateway.FeeCalculationResult;
+import com.agentbanking.rules.domain.service.FeeCalculationService;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -11,10 +10,10 @@ import java.util.UUID;
 
 public class TransactionQuoteUseCaseImpl implements TransactionQuoteUseCase {
 
-    private final FeeCalculationGateway feeCalculationGateway;
+    private final FeeCalculationService feeCalculationService;
 
-    public TransactionQuoteUseCaseImpl(FeeCalculationGateway feeCalculationGateway) {
-        this.feeCalculationGateway = feeCalculationGateway;
+    public TransactionQuoteUseCaseImpl(FeeCalculationService feeCalculationService) {
+        this.feeCalculationService = feeCalculationService;
     }
 
     @Override
@@ -33,8 +32,10 @@ public class TransactionQuoteUseCaseImpl implements TransactionQuoteUseCase {
         try {
             BigDecimal amountDecimal = new BigDecimal(amount);
 
-            FeeCalculationResult feeResult = feeCalculationGateway.calculateFee(
-                amountDecimal, serviceCode, agentTier
+            FeeCalculationService.FeeCalculationResult feeResult = feeCalculationService.calculate(
+                amountDecimal, 
+                com.agentbanking.rules.domain.model.TransactionType.valueOf(serviceCode),
+                com.agentbanking.rules.domain.model.AgentTier.valueOf(agentTier)
             );
 
             BigDecimal total = amountDecimal.add(feeResult.customerFee());

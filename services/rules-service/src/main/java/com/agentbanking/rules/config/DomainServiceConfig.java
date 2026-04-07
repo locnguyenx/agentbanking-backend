@@ -1,14 +1,13 @@
 package com.agentbanking.rules.config;
 
 import com.agentbanking.rules.application.usecase.TransactionQuoteUseCaseImpl;
+import com.agentbanking.rules.domain.port.in.TransactionQuoteUseCase;
 import com.agentbanking.rules.domain.service.FeeCalculationService;
 import com.agentbanking.rules.domain.service.LimitEnforcementService;
 import com.agentbanking.rules.domain.service.StpDecisionService;
 import com.agentbanking.rules.domain.service.VelocityCheckService;
-import com.agentbanking.rules.domain.port.out.FeeCalculationGateway;
 import com.agentbanking.rules.domain.port.out.FeeConfigRepository;
 import com.agentbanking.rules.domain.port.out.VelocityRuleRepository;
-import com.agentbanking.rules.infrastructure.external.FeeCalculationClient;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -37,12 +36,7 @@ public class DomainServiceConfig {
     }
 
     @Bean
-    public FeeCalculationGateway feeCalculationGateway(FeeCalculationClient feeCalculationClient) {
-        return feeCalculationClient;
-    }
-
-    @Bean
-    public TransactionQuoteUseCaseImpl transactionQuoteUseCase(FeeCalculationGateway feeCalculationGateway) {
-        return new TransactionQuoteUseCaseImpl(feeCalculationGateway);
+    public TransactionQuoteUseCase transactionQuoteUseCase(FeeCalculationService feeCalculationService) {
+        return new TransactionQuoteUseCaseImpl(feeCalculationService);
     }
 }
