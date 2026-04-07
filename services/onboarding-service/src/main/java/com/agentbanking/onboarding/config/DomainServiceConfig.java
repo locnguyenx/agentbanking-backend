@@ -1,5 +1,6 @@
 package com.agentbanking.onboarding.config;
 
+import com.agentbanking.onboarding.application.usecase.ComplianceStatusUseCaseImpl;
 import com.agentbanking.onboarding.domain.service.AgentService;
 import com.agentbanking.onboarding.domain.service.AgentOnboardingService;
 import com.agentbanking.onboarding.domain.service.KycDecisionService;
@@ -35,5 +36,10 @@ public class DomainServiceConfig {
             AmlScreeningPort amlService,
             GpfenceService gpfenceService) {
         return new AgentOnboardingService(onboardingRepository, agentRepository, ocrService, ssmService, amlService, gpfenceService);
+    }
+
+    @Bean
+    public ComplianceStatusUseCaseImpl complianceStatusUseCase() {
+        return new ComplianceStatusUseCaseImpl();
     }
 }

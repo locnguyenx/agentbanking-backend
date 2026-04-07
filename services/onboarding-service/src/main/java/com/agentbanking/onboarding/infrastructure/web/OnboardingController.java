@@ -3,6 +3,8 @@ package com.agentbanking.onboarding.infrastructure.web;
 import com.agentbanking.onboarding.domain.port.in.VerifyMyKadUseCase;
 import com.agentbanking.onboarding.domain.port.in.BiometricMatchUseCase;
 import com.agentbanking.onboarding.domain.port.in.GetReviewQueueUseCase;
+import com.agentbanking.onboarding.domain.port.in.ComplianceStatusUseCase;
+import com.agentbanking.common.exception.ErrorResponse;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -15,13 +17,16 @@ public class OnboardingController {
     private final VerifyMyKadUseCase verifyMyKadUseCase;
     private final BiometricMatchUseCase biometricMatchUseCase;
     private final GetReviewQueueUseCase getReviewQueueUseCase;
+    private final ComplianceStatusUseCase complianceStatusUseCase;
 
     public OnboardingController(VerifyMyKadUseCase verifyMyKadUseCase,
                                 BiometricMatchUseCase biometricMatchUseCase,
-                                GetReviewQueueUseCase getReviewQueueUseCase) {
+                                GetReviewQueueUseCase getReviewQueueUseCase,
+                                ComplianceStatusUseCase complianceStatusUseCase) {
         this.verifyMyKadUseCase = verifyMyKadUseCase;
         this.biometricMatchUseCase = biometricMatchUseCase;
         this.getReviewQueueUseCase = getReviewQueueUseCase;
+        this.complianceStatusUseCase = complianceStatusUseCase;
     }
 
     @PostMapping("/verify-mykad")
@@ -90,5 +95,26 @@ public class OnboardingController {
             "page", result.page(),
             "size", result.size()
         ));
+    }
+
+    @GetMapping("/compliance/status")
+    public ResponseEntity<?> getComplianceStatus(@RequestHeader(value = "X-Agent-Id", required = false) String agentId) {
+        try {
+            String effectiveAgentId = agentId != null ? agentId : "unknown";
+            ComplianceStatusUseCase.ComplianceStatusResult result =
+                complianceStatusUseCase.checkCompliance(effectiveAgentId);
+
+            return ResponseEntity.ok(Map.of(
+                "status", result.status(),
+                "reason", result.reason() != null ? result.reason() : "",
+                "checkedAt", result.checkedAt().toString()
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(ErrorResponse.of(
+                "ERR_BIZ_COMPLIANCE_CHECK_FAILED",
+                e.getMessage(),
+                "RETRY"
+            ));
+        }
     }
 }

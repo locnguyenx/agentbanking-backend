@@ -198,7 +198,7 @@ spring:
         - id: rules-service
           uri: http://rules-service:8081
           predicates:
-            - Path=/internal/fees/**, /internal/check-velocity, /internal/limits/**, /internal/compliance/status
+            - Path=/internal/fees/**, /internal/check-velocity, /internal/limits/**, /internal/transactions/quote
           filters:
             - RewritePath=/internal/(?<segment>.*), /internal/${segment}
         
@@ -214,7 +214,7 @@ spring:
         - id: onboarding-service
           uri: http://onboarding-service:8083
           predicates:
-            - Path=/internal/verify-mykad, /internal/biometric, /internal/kyc/review-queue
+            - Path=/internal/verify-mykad, /internal/biometric, /internal/kyc/review-queue, /internal/compliance/status
           filters:
             - RewritePath=/internal/(?<segment>.*), /internal/${segment}
         
@@ -222,7 +222,7 @@ spring:
         - id: switch-adapter-service
           uri: http://switch-adapter-service:8084
           predicates:
-            - Path=/internal/auth, /internal/reversal, /internal/duitnow, /internal/balance-inquiry, /internal/transactions/quote, /internal/transfer/proxy/enquiry
+            - Path=/internal/auth, /internal/reversal, /internal/duitnow, /internal/balance-inquiry
           filters:
             - RewritePath=/internal/(?<segment>.*), /internal/${segment}
         
@@ -230,7 +230,7 @@ spring:
         - id: biller-service
           uri: http://biller-service:8085
           predicates:
-            - Path=/internal/validate-ref, /internal/pay-bill, /internal/topup
+            - Path=/internal/validate-ref, /internal/pay-bill, /internal/topup, /internal/transfer/proxy/enquiry
           filters:
             - RewritePath=/internal/(?<segment>.*), /internal/${segment}
          
@@ -437,7 +437,7 @@ spring:
 
         # External Transaction Quote route
         - id: external-transactions-quote
-          uri: http://switch-adapter-service:8084
+          uri: http://rules-service:8081
           predicates:
             - Path=/api/v1/transactions/quote
           filters:
@@ -455,13 +455,22 @@ spring:
 
         # External Compliance Status route
         - id: external-compliance-status
-          uri: http://rules-service:8081
+          uri: http://onboarding-service:8083
           predicates:
             - Path=/api/v1/compliance/status
           filters:
             - JwtAuth
             - RewritePath=/api/v1/compliance/status, /internal/compliance/status
-         
+
+        # External Proxy Enquiry route
+        - id: external-proxy-enquiry
+          uri: http://biller-service:8085
+          predicates:
+            - Path=/api/v1/transfer/proxy/enquiry
+          filters:
+            - JwtAuth
+            - RewritePath=/api/v1/transfer/proxy/enquiry, /internal/transfer/proxy/enquiry
+          
         # Backoffice routes
         - id: backoffice-dashboard
           uri: http://ledger-service:8082

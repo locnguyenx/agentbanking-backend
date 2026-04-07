@@ -7,8 +7,11 @@ import com.agentbanking.rules.domain.port.in.CreateFeeConfigUseCase;
 import com.agentbanking.rules.domain.port.in.FeeQueryUseCase;
 import com.agentbanking.rules.domain.port.in.FeeQueryUseCase.FeeQueryResult;
 import com.agentbanking.rules.domain.port.in.VelocityCheckUseCase;
-import com.agentbanking.rules.domain.port.in.ComplianceStatusUseCase;
+import com.agentbanking.rules.domain.port.in.TransactionQuoteUseCase;
+import com.agentbanking.rules.infrastructure.web.dto.TransactionQuoteRequest;
+import com.agentbanking.rules.infrastructure.web.dto.TransactionQuoteResponse;
 import com.agentbanking.common.exception.ErrorResponse;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -23,16 +26,16 @@ public class RulesController {
     private final FeeQueryUseCase feeQueryUseCase;
     private final VelocityCheckUseCase velocityCheckUseCase;
     private final CreateFeeConfigUseCase createFeeConfigUseCase;
-    private final ComplianceStatusUseCase complianceStatusUseCase;
+    private final TransactionQuoteUseCase transactionQuoteUseCase;
 
     public RulesController(FeeQueryUseCase feeQueryUseCase,
                            VelocityCheckUseCase velocityCheckUseCase,
                            CreateFeeConfigUseCase createFeeConfigUseCase,
-                           ComplianceStatusUseCase complianceStatusUseCase) {
+                           TransactionQuoteUseCase transactionQuoteUseCase) {
         this.feeQueryUseCase = feeQueryUseCase;
         this.velocityCheckUseCase = velocityCheckUseCase;
         this.createFeeConfigUseCase = createFeeConfigUseCase;
-        this.complianceStatusUseCase = complianceStatusUseCase;
+        this.transactionQuoteUseCase = transactionQuoteUseCase;
     }
 
     @PostMapping("/fees/calculate")
@@ -134,21 +137,24 @@ public class RulesController {
         ));
     }
 
-    @GetMapping("/compliance/status")
-    public ResponseEntity<?> getComplianceStatus(@RequestHeader(value = "X-Agent-Id", required = false) String agentId) {
+    @PostMapping("/transactions/quote")
+    public ResponseEntity<?> getQuote(@Valid @RequestBody TransactionQuoteRequest request,
+                                       @RequestHeader(value = "X-Agent-Id", required = false) String agentId,
+                                       @RequestHeader(value = "X-Agent-Tier", required = false) String agentTier) {
         try {
-            String effectiveAgentId = agentId != null ? agentId : "unknown";
-            ComplianceStatusUseCase.ComplianceStatusResult result =
-                complianceStatusUseCase.checkCompliance(effectiveAgentId);
+            TransactionQuoteUseCase.QuoteResult result = transactionQuoteUseCase.calculateQuote(
+                agentId != null ? agentId : "unknown",
+                agentTier != null ? agentTier : "STANDARD",
+                request.amount(),
+                request.serviceCode(),
+                request.fundingSource(),
+                request.billerRouting()
+            );
 
-            return ResponseEntity.ok(Map.of(
-                "status", result.status(),
-                "reason", result.reason() != null ? result.reason() : "",
-                "checkedAt", result.checkedAt().toString()
-            ));
-        } catch (Exception e) {
+            return ResponseEntity.ok(TransactionQuoteResponse.from(result));
+        } catch (IllegalStateException e) {
             return ResponseEntity.badRequest().body(ErrorResponse.of(
-                "ERR_BIZ_COMPLIANCE_CHECK_FAILED",
+                "ERR_BIZ_QUOTE_CALCULATION_FAILED",
                 e.getMessage(),
                 "RETRY"
             ));

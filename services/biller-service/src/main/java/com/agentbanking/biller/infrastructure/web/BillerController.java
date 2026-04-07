@@ -4,6 +4,8 @@ import com.agentbanking.biller.domain.port.in.ValidateBillUseCase;
 import com.agentbanking.biller.domain.port.in.PayBillUseCase;
 import com.agentbanking.biller.domain.port.in.ProcessTopupUseCase;
 import com.agentbanking.biller.domain.port.in.JomPayUseCase;
+import com.agentbanking.biller.domain.port.in.ProxyEnquiryUseCase;
+import com.agentbanking.common.exception.ErrorResponse;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -19,15 +21,18 @@ public class BillerController {
     private final PayBillUseCase payBillUseCase;
     private final ProcessTopupUseCase processTopupUseCase;
     private final JomPayUseCase jomPayUseCase;
+    private final ProxyEnquiryUseCase proxyEnquiryUseCase;
 
     public BillerController(ValidateBillUseCase validateBillUseCase,
                             PayBillUseCase payBillUseCase,
                             ProcessTopupUseCase processTopupUseCase,
-                            JomPayUseCase jomPayUseCase) {
+                            JomPayUseCase jomPayUseCase,
+                            ProxyEnquiryUseCase proxyEnquiryUseCase) {
         this.validateBillUseCase = validateBillUseCase;
         this.payBillUseCase = payBillUseCase;
         this.processTopupUseCase = processTopupUseCase;
         this.jomPayUseCase = jomPayUseCase;
+        this.proxyEnquiryUseCase = proxyEnquiryUseCase;
     }
 
     @PostMapping("/validate-ref")
@@ -141,6 +146,30 @@ public class BillerController {
             return ResponseEntity.badRequest().body(Map.of(
                 "status", "FAILED",
                 "error", Map.of("code", "ERR_JOMPAY_FAILED", "message", e.getMessage())
+            ));
+        }
+    }
+
+    @GetMapping("/transfer/proxy/enquiry")
+    public ResponseEntity<?> proxyEnquiry(@RequestParam String proxyId,
+                                           @RequestParam String proxyType) {
+        try {
+            ProxyEnquiryUseCase.ProxyEnquiryResult result = proxyEnquiryUseCase.enquiryProxy(proxyId, proxyType);
+            return ResponseEntity.ok(Map.of(
+                "name", result.name(),
+                "proxyType", result.proxyType()
+            ));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(404).body(ErrorResponse.of(
+                "ERR_BIZ_PROXY_NOT_FOUND",
+                e.getMessage(),
+                "DECLINE"
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(ErrorResponse.of(
+                "ERR_EXT_PROXY_ENQUIRY_FAILED",
+                e.getMessage(),
+                "RETRY"
             ));
         }
     }

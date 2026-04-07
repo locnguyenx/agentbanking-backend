@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Address all 6 review notes from the Transaction Orchestrator Temporal design v2.1: backoffice UI, missing transaction types doc, cross-service dependency fixes, STP integration, E2E tests, and OpenAPI/Gateway updates.
+**Goal:** Address all 6 review notes (the last section) from the Transaction Orchestrator Temporal design v2.1: backoffice UI, missing transaction types doc, cross-service dependency fixes, STP integration, E2E tests, and OpenAPI/Gateway updates.
 
 **Architecture:** Multi-service changes across orchestrator-service (new endpoints, entities, activities), backoffice UI (new React page), gateway (new routes + E2E tests), and supporting services (biller-service, ledger-service new endpoints).
 

@@ -61,4 +61,4 @@ admin:
     orchestrator: http://orchestrator-service:8086
     auth: http://auth-iam-service:8087
     audit: http://audit-service:8088
-    mock: http://mock-server:8089
+# mock: http://mock-server:8090  # Not a real service - no actuator health endpoint

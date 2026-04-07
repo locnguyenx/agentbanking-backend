@@ -4,7 +4,7 @@
 
 **Goal:** Implement 3 missing API endpoints (transaction quote, proxy enquiry, compliance status) and fix all OpenAPI spec quality issues.
 
-**Architecture:** Hexagonal (Ports & Adapters) pattern in switch-adapter-service and rules-service. External `/api/v1/*` routes through Spring Cloud Gateway with JwtAuth filter, rewritten to internal `/internal/*` paths. Cross-service calls use Feign clients (not direct domain service imports).
+**Architecture:** Hexagonal (Ports & Adapters) pattern in rules-service, biller-service, and onboarding-service. External `/api/v1/*` routes through Spring Cloud Gateway with JwtAuth filter, rewritten to internal `/internal/*` paths. Cross-service calls use Feign clients (not direct domain service imports).
 
 **Tech Stack:** Java 21, Spring Boot 3.x, Spring Cloud Gateway, OpenFeign, JUnit 5, Mockito, ArchUnit
 
@@ -21,30 +21,30 @@
 
 | File | Purpose |
 |------|---------|
-| `services/switch-adapter-service/.../web/dto/TransactionQuoteRequest.java` | Request DTO for quote endpoint |
-| `services/switch-adapter-service/.../web/dto/TransactionQuoteResponse.java` | Response DTO for quote endpoint |
-| `services/switch-adapter-service/.../domain/port/in/TransactionQuoteUseCase.java` | Inbound port for quote |
-| `services/switch-adapter-service/.../domain/port/in/ProxyEnquiryUseCase.java` | Inbound port for proxy enquiry |
-| `services/switch-adapter-service/.../domain/port/out/FeeCalculationGateway.java` | Outbound port for fee calculation (cross-service) |
-| `services/switch-adapter-service/.../domain/port/out/DuitNowProxyGateway.java` | Outbound port for DuitNow proxy resolution |
-| `services/switch-adapter-service/.../infrastructure/external/FeeCalculationClient.java` | Feign client for rules-service fee calculation |
-| `services/switch-adapter-service/.../infrastructure/external/DuitNowProxyClient.java` | Feign client for DuitNow proxy (or stub) |
-| `services/switch-adapter-service/.../application/usecase/TransactionQuoteUseCaseImpl.java` | Quote use case implementation |
-| `services/switch-adapter-service/.../application/usecase/ProxyEnquiryUseCaseImpl.java` | Proxy enquiry use case implementation |
-| `services/rules-service/.../domain/port/in/ComplianceStatusUseCase.java` | Inbound port for compliance status |
-| `services/rules-service/.../application/usecase/ComplianceStatusUseCaseImpl.java` | Compliance status use case implementation |
-| `services/switch-adapter-service/.../usecase/TransactionQuoteUseCaseTest.java` | Unit test for quote use case |
-| `services/switch-adapter-service/.../usecase/ProxyEnquiryUseCaseTest.java` | Unit test for proxy enquiry use case |
-| `services/rules-service/.../usecase/ComplianceStatusUseCaseTest.java` | Unit test for compliance status use case |
+| `services/rules-service/.../web/dto/TransactionQuoteRequest.java` | Request DTO for quote endpoint |
+| `services/rules-service/.../web/dto/TransactionQuoteResponse.java` | Response DTO for quote endpoint |
+| `services/rules-service/.../domain/port/in/TransactionQuoteUseCase.java` | Inbound port for quote |
+| `services/biller-service/.../domain/port/in/ProxyEnquiryUseCase.java` | Inbound port for proxy enquiry |
+| `services/biller-service/.../domain/port/out/DuitNowProxyGateway.java` | Outbound port for DuitNow proxy resolution |
+| `services/biller-service/.../infrastructure/external/DuitNowProxyClient.java` | Feign client for DuitNow proxy (or stub) |
+| `services/rules-service/.../application/usecase/TransactionQuoteUseCaseImpl.java` | Quote use case implementation |
+| `services/biller-service/.../application/usecase/ProxyEnquiryUseCaseImpl.java` | Proxy enquiry use case implementation |
+| `services/onboarding-service/.../domain/port/in/ComplianceStatusUseCase.java` | Inbound port for compliance status |
+| `services/onboarding-service/.../application/usecase/ComplianceStatusUseCaseImpl.java` | Compliance status use case implementation |
+| `services/rules-service/.../usecase/TransactionQuoteUseCaseTest.java` | Unit test for quote use case |
+| `services/biller-service/.../usecase/ProxyEnquiryUseCaseTest.java` | Unit test for proxy enquiry use case |
+| `services/onboarding-service/.../usecase/ComplianceStatusUseCaseTest.java` | Unit test for compliance status use case |
 
 ### Modified Files
 
 | File | Change |
 |------|--------|
-| `services/switch-adapter-service/.../config/DomainServiceConfig.java` | Register new use case beans |
-| `services/switch-adapter-service/.../web/SwitchController.java` | Add quote and proxy enquiry endpoints |
-| `services/rules-service/.../config/DomainServiceConfig.java` | Register compliance use case bean |
-| `services/rules-service/.../web/RulesController.java` | Add compliance status endpoint |
+| `services/rules-service/.../config/DomainServiceConfig.java` | Register quote use case bean |
+| `services/rules-service/.../web/RulesController.java` | Add transaction quote endpoint |
+| `services/biller-service/.../config/DomainServiceConfig.java` | Register proxy enquiry use case bean |
+| `services/biller-service/.../web/BillerController.java` | Add proxy enquiry endpoint |
+| `services/onboarding-service/.../config/DomainServiceConfig.java` | Register compliance use case bean |
+| `services/onboarding-service/.../web/OnboardingController.java` | Add compliance status endpoint |
 | `common/.../security/ErrorCodes.java` | Add 4 new error codes |
 | `gateway/src/main/resources/application.yaml` | Add 3 external + update internal route predicates |
 | `docs/api/openapi.yaml` | Fix all quality issues (types, security, errors, content types) |
@@ -83,25 +83,25 @@ git commit -m "feat: add error codes for quote, proxy enquiry, and compliance st
 
 ---
 
-## Task 2: Transaction Quote — Domain Ports & Feign Client (switch-adapter-service) [DONE]
+## Task 2: Transaction Quote — Domain Ports & Feign Client (rules-service) [DONE]
 
 **BDD Scenarios:** S1.1 (Happy Path), S1.2 (Missing field), S1.3 (Invalid funding source), S1.4 (No auth)
 **BRD Requirements:** US-001, FR-001.1 through FR-001.8
 **User-Facing:** NO
 
-**Key Design Decision:** The switch-adapter-service calls rules-service for fee calculation via a Feign client, NOT by importing domain classes from rules-service. This respects database-per-service and service boundary constraints (AGENTS.md Law VIII).
+**Key Design Decision:** The rules-service calls rules-service for fee calculation via a Feign client, NOT by importing domain classes from rules-service. This respects database-per-service and service boundary constraints (AGENTS.md Law VIII).
 
 **Files:**
-- Create: `services/switch-adapter-service/src/main/java/com/agentbanking/switchadapter/domain/port/in/TransactionQuoteUseCase.java`
-- Create: `services/switch-adapter-service/src/main/java/com/agentbanking/switchadapter/domain/port/out/FeeCalculationGateway.java`
-- Create: `services/switch-adapter-service/src/main/java/com/agentbanking/switchadapter/infrastructure/external/FeeCalculationClient.java`
+- Create: `services/rules-service/src/main/java/com/agentbanking/rules/domain/port/in/TransactionQuoteUseCase.java`
+- Create: `services/rules-service/src/main/java/com/agentbanking/rules/domain/port/out/FeeCalculationGateway.java`
+- Create: `services/rules-service/src/main/java/com/agentbanking/rules/infrastructure/external/FeeCalculationClient.java`
 
 - [ ] **Step 1: Create the inbound port interface**
 
 Create `TransactionQuoteUseCase.java`:
 
 ```java
-package com.agentbanking.switchadapter.domain.port.in;
+package com.agentbanking.rules.domain.port.in;
 
 public interface TransactionQuoteUseCase {
 
@@ -125,7 +125,7 @@ Note: All monetary values are `String` to match the OpenAPI spec requirement (FR
 Create `FeeCalculationGateway.java`:
 
 ```java
-package com.agentbanking.switchadapter.domain.port.out;
+package com.agentbanking.rules.domain.port.out;
 
 import java.math.BigDecimal;
 
@@ -146,9 +146,9 @@ public interface FeeCalculationGateway {
 Create `FeeCalculationClient.java`:
 
 ```java
-package com.agentbanking.switchadapter.infrastructure.external;
+package com.agentbanking.rules.infrastructure.external;
 
-import com.agentbanking.switchadapter.domain.port.out.FeeCalculationGateway;
+import com.agentbanking.rules.domain.port.out.FeeCalculationGateway;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -178,7 +178,7 @@ public interface FeeCalculationClient extends FeeCalculationGateway {
 
 ```java
 // Also create in infrastructure/external/
-package com.agentbanking.switchadapter.infrastructure.external;
+package com.agentbanking.rules.infrastructure.external;
 
 import java.math.BigDecimal;
 
@@ -207,34 +207,34 @@ public interface FeeCalculationClient {
 - [ ] **Step 4: Commit**
 
 ```bash
-git add services/switch-adapter-service/src/main/java/com/agentbanking/switchadapter/domain/port/in/TransactionQuoteUseCase.java
-git add services/switch-adapter-service/src/main/java/com/agentbanking/switchadapter/domain/port/out/FeeCalculationGateway.java
-git add services/switch-adapter-service/src/main/java/com/agentbanking/switchadapter/infrastructure/external/FeeCalculationClient.java
-git add services/switch-adapter-service/src/main/java/com/agentbanking/switchadapter/infrastructure/external/FeeCalculationResponse.java
+git add services/rules-service/src/main/java/com/agentbanking/rules/domain/port/in/TransactionQuoteUseCase.java
+git add services/rules-service/src/main/java/com/agentbanking/rules/domain/port/out/FeeCalculationGateway.java
+git add services/rules-service/src/main/java/com/agentbanking/rules/infrastructure/external/FeeCalculationClient.java
+git add services/rules-service/src/main/java/com/agentbanking/rules/infrastructure/external/FeeCalculationResponse.java
 git commit -m "feat: add transaction quote domain ports and fee calculation Feign client (FR-001)"
 ```
 
 ---
 
-## Task 3: Transaction Quote — Use Case Implementation & Test (switch-adapter-service) [DONE]
+## Task 3: Transaction Quote — Use Case Implementation & Test (rules-service) [DONE]
 
 **BDD Scenarios:** S1.1, S1.2, S1.3, S1.4
 **BRD Requirements:** US-001, FR-001.1 through FR-001.8
 **User-Facing:** NO
 
 **Files:**
-- Create: `services/switch-adapter-service/src/main/java/com/agentbanking/switchadapter/application/usecase/TransactionQuoteUseCaseImpl.java`
-- Create: `services/switch-adapter-service/src/test/java/com/agentbanking/switchadapter/application/usecase/TransactionQuoteUseCaseTest.java`
+- Create: `services/rules-service/src/main/java/com/agentbanking/rules/application/usecase/TransactionQuoteUseCaseImpl.java`
+- Create: `services/rules-service/src/test/java/com/agentbanking/rules/application/usecase/TransactionQuoteUseCaseTest.java`
 
 - [ ] **Step 1: Write the failing test**
 
 Create `TransactionQuoteUseCaseTest.java`:
 
 ```java
-package com.agentbanking.switchadapter.application.usecase;
+package com.agentbanking.rules.application.usecase;
 
-import com.agentbanking.switchadapter.domain.port.out.FeeCalculationGateway;
-import com.agentbanking.switchadapter.domain.port.out.FeeCalculationGateway.FeeCalculationResult;
+import com.agentbanking.rules.domain.port.out.FeeCalculationGateway;
+import com.agentbanking.rules.domain.port.out.FeeCalculationGateway.FeeCalculationResult;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -307,7 +307,7 @@ class TransactionQuoteUseCaseTest {
 - [ ] **Step 2: Run test to verify it fails**
 
 ```bash
-cd services/switch-adapter-service && ./gradlew test --tests TransactionQuoteUseCaseTest 2>&1 | tail -20
+cd services/rules-service && ./gradlew test --tests TransactionQuoteUseCaseTest 2>&1 | tail -20
 ```
 Expected: FAIL — classes don't exist yet.
 
@@ -316,12 +316,12 @@ Expected: FAIL — classes don't exist yet.
 Create `TransactionQuoteUseCaseImpl.java`:
 
 ```java
-package com.agentbanking.switchadapter.application.usecase;
+package com.agentbanking.rules.application.usecase;
 
 import com.agentbanking.common.security.ErrorCodes;
-import com.agentbanking.switchadapter.domain.port.in.TransactionQuoteUseCase;
-import com.agentbanking.switchadapter.domain.port.out.FeeCalculationGateway;
-import com.agentbanking.switchadapter.domain.port.out.FeeCalculationGateway.FeeCalculationResult;
+import com.agentbanking.rules.domain.port.in.TransactionQuoteUseCase;
+import com.agentbanking.rules.domain.port.out.FeeCalculationGateway;
+import com.agentbanking.rules.domain.port.out.FeeCalculationGateway.FeeCalculationResult;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -366,37 +366,37 @@ Note: NO `@Service` annotation — registered as bean in `DomainServiceConfig.ja
 - [ ] **Step 4: Run test to verify it passes**
 
 ```bash
-cd services/switch-adapter-service && ./gradlew test --tests TransactionQuoteUseCaseTest 2>&1 | tail -20
+cd services/rules-service && ./gradlew test --tests TransactionQuoteUseCaseTest 2>&1 | tail -20
 ```
 Expected: PASS
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add services/switch-adapter-service/src/main/java/com/agentbanking/switchadapter/application/usecase/TransactionQuoteUseCaseImpl.java
-git add services/switch-adapter-service/src/test/java/com/agentbanking/switchadapter/application/usecase/TransactionQuoteUseCaseTest.java
+git add services/rules-service/src/main/java/com/agentbanking/rules/application/usecase/TransactionQuoteUseCaseImpl.java
+git add services/rules-service/src/test/java/com/agentbanking/rules/application/usecase/TransactionQuoteUseCaseTest.java
 git commit -m "test+feat: implement transaction quote use case with TDD (FR-001)"
 ```
 
 ---
 
-## Task 4: Transaction Quote — DTOs & Controller Endpoint (switch-adapter-service) [DONE]
+## Task 4: Transaction Quote — DTOs & Controller Endpoint (rules-service) [DONE]
 
 **BDD Scenarios:** S1.1, S1.2, S1.3, S1.4
 **BRD Requirements:** FR-001.1 through FR-001.8
 **User-Facing:** NO
 
 **Files:**
-- Create: `services/switch-adapter-service/src/main/java/com/agentbanking/switchadapter/infrastructure/web/dto/TransactionQuoteRequest.java`
-- Create: `services/switch-adapter-service/src/main/java/com/agentbanking/switchadapter/infrastructure/web/dto/TransactionQuoteResponse.java`
-- Modify: `services/switch-adapter-service/src/main/java/com/agentbanking/switchadapter/infrastructure/web/SwitchController.java`
+- Create: `services/rules-service/src/main/java/com/agentbanking/rules/infrastructure/web/dto/TransactionQuoteRequest.java`
+- Create: `services/rules-service/src/main/java/com/agentbanking/rules/infrastructure/web/dto/TransactionQuoteResponse.java`
+- Modify: `services/rules-service/src/main/java/com/agentbanking/rules/infrastructure/web/RulesController.java`
 
 - [ ] **Step 1: Create request DTO**
 
 Create `TransactionQuoteRequest.java`:
 
 ```java
-package com.agentbanking.switchadapter.infrastructure.web.dto;
+package com.agentbanking.rules.infrastructure.web.dto;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -424,9 +424,9 @@ Note: `amount` is `String` (not `BigDecimal`) to match OpenAPI spec requirement.
 Create `TransactionQuoteResponse.java`:
 
 ```java
-package com.agentbanking.switchadapter.infrastructure.web.dto;
+package com.agentbanking.rules.infrastructure.web.dto;
 
-import com.agentbanking.switchadapter.domain.port.in.TransactionQuoteUseCase;
+import com.agentbanking.rules.domain.port.in.TransactionQuoteUseCase;
 
 public record TransactionQuoteResponse(
     String quoteId,
@@ -447,14 +447,14 @@ public record TransactionQuoteResponse(
 }
 ```
 
-- [ ] **Step 3: Add endpoint to SwitchController**
+- [ ] **Step 3: Add endpoint to RulesController**
 
-Add to `SwitchController.java`:
+Add to `RulesController.java`:
 1. Add imports:
 ```java
-import com.agentbanking.switchadapter.domain.port.in.TransactionQuoteUseCase;
-import com.agentbanking.switchadapter.infrastructure.web.dto.TransactionQuoteRequest;
-import com.agentbanking.switchadapter.infrastructure.web.dto.TransactionQuoteResponse;
+import com.agentbanking.rules.domain.port.in.TransactionQuoteUseCase;
+import com.agentbanking.rules.infrastructure.web.dto.TransactionQuoteRequest;
+import com.agentbanking.rules.infrastructure.web.dto.TransactionQuoteResponse;
 ```
 2. Add field and constructor parameter:
 ```java
@@ -493,31 +493,31 @@ public ResponseEntity<?> getQuote(@Valid @RequestBody TransactionQuoteRequest re
 - [ ] **Step 4: Commit**
 
 ```bash
-git add services/switch-adapter-service/src/main/java/com/agentbanking/switchadapter/infrastructure/web/dto/TransactionQuoteRequest.java
-git add services/switch-adapter-service/src/main/java/com/agentbanking/switchadapter/infrastructure/web/dto/TransactionQuoteResponse.java
-git add services/switch-adapter-service/src/main/java/com/agentbanking/switchadapter/infrastructure/web/SwitchController.java
-git commit -m "feat: add transaction quote endpoint and DTOs to SwitchController (FR-001)"
+git add services/rules-service/src/main/java/com/agentbanking/rules/infrastructure/web/dto/TransactionQuoteRequest.java
+git add services/rules-service/src/main/java/com/agentbanking/rules/infrastructure/web/dto/TransactionQuoteResponse.java
+git add services/rules-service/src/main/java/com/agentbanking/rules/infrastructure/web/RulesController.java
+git commit -m "feat: add transaction quote endpoint and DTOs to RulesController (FR-001)"
 ```
 
 ---
 
-## Task 5: Proxy Enquiry — Domain Ports & Feign Client (switch-adapter-service) [DONE]
+## Task 5: Proxy Enquiry — Domain Ports & Feign Client (biller-service) [DONE]
 
 **BDD Scenarios:** S2.1 (Happy Path), S2.2 (Missing proxyId), S2.3 (Missing proxyType), S2.4 (Not found), S2.5 (No auth)
 **BRD Requirements:** US-002, FR-002.1 through FR-002.7
 **User-Facing:** NO
 
 **Files:**
-- Create: `services/switch-adapter-service/src/main/java/com/agentbanking/switchadapter/domain/port/in/ProxyEnquiryUseCase.java`
-- Create: `services/switch-adapter-service/src/main/java/com/agentbanking/switchadapter/domain/port/out/DuitNowProxyGateway.java`
-- Create: `services/switch-adapter-service/src/main/java/com/agentbanking/switchadapter/infrastructure/external/DuitNowProxyClient.java`
+- Create: `services/biller-service/src/main/java/com/agentbanking/biller/domain/port/in/ProxyEnquiryUseCase.java`
+- Create: `services/biller-service/src/main/java/com/agentbanking/biller/domain/port/out/DuitNowProxyGateway.java`
+- Create: `services/biller-service/src/main/java/com/agentbanking/biller/infrastructure/external/DuitNowProxyClient.java`
 
 - [ ] **Step 1: Create the outbound port interface**
 
 Create `DuitNowProxyGateway.java`:
 
 ```java
-package com.agentbanking.switchadapter.domain.port.out;
+package com.agentbanking.biller.domain.port.out;
 
 public interface DuitNowProxyGateway {
     /**
@@ -534,10 +534,10 @@ public interface DuitNowProxyGateway {
 Create `DuitNowProxyClient.java`:
 
 ```java
-package com.agentbanking.switchadapter.infrastructure.external;
+package com.agentbanking.biller.infrastructure.external;
 
 import com.agentbanking.common.security.ErrorCodes;
-import com.agentbanking.switchadapter.domain.port.out.DuitNowProxyGateway;
+import com.agentbanking.biller.domain.port.out.DuitNowProxyGateway;
 import org.springframework.stereotype.Component;
 
 /**
@@ -561,7 +561,7 @@ public class DuitNowProxyClient implements DuitNowProxyGateway {
 Create `ProxyEnquiryUseCase.java`:
 
 ```java
-package com.agentbanking.switchadapter.domain.port.in;
+package com.agentbanking.biller.domain.port.in;
 
 public interface ProxyEnquiryUseCase {
 
@@ -577,33 +577,33 @@ public interface ProxyEnquiryUseCase {
 - [ ] **Step 4: Commit**
 
 ```bash
-git add services/switch-adapter-service/src/main/java/com/agentbanking/switchadapter/domain/port/in/ProxyEnquiryUseCase.java
-git add services/switch-adapter-service/src/main/java/com/agentbanking/switchadapter/domain/port/out/DuitNowProxyGateway.java
-git add services/switch-adapter-service/src/main/java/com/agentbanking/switchadapter/infrastructure/external/DuitNowProxyClient.java
+git add services/biller-service/src/main/java/com/agentbanking/biller/domain/port/in/ProxyEnquiryUseCase.java
+git add services/biller-service/src/main/java/com/agentbanking/biller/domain/port/out/DuitNowProxyGateway.java
+git add services/biller-service/src/main/java/com/agentbanking/biller/infrastructure/external/DuitNowProxyClient.java
 git commit -m "feat: add proxy enquiry domain ports and DuitNow proxy gateway stub (FR-002)"
 ```
 
 ---
 
-## Task 6: Proxy Enquiry — Use Case Implementation & Test (switch-adapter-service) [DONE]
+## Task 6: Proxy Enquiry — Use Case Implementation & Test (biller-service) [DONE]
 
 **BDD Scenarios:** S2.1, S2.2, S2.3, S2.4, S2.5
 **BRD Requirements:** FR-002.1 through FR-002.7
 **User-Facing:** NO
 
 **Files:**
-- Create: `services/switch-adapter-service/src/main/java/com/agentbanking/switchadapter/application/usecase/ProxyEnquiryUseCaseImpl.java`
-- Create: `services/switch-adapter-service/src/test/java/com/agentbanking/switchadapter/application/usecase/ProxyEnquiryUseCaseTest.java`
+- Create: `services/biller-service/src/main/java/com/agentbanking/biller/application/usecase/ProxyEnquiryUseCaseImpl.java`
+- Create: `services/biller-service/src/test/java/com/agentbanking/biller/application/usecase/ProxyEnquiryUseCaseTest.java`
 
 - [ ] **Step 1: Write the failing test**
 
 Create `ProxyEnquiryUseCaseTest.java`:
 
 ```java
-package com.agentbanking.switchadapter.application.usecase;
+package com.agentbanking.biller.application.usecase;
 
 import com.agentbanking.common.security.ErrorCodes;
-import com.agentbanking.switchadapter.domain.port.out.DuitNowProxyGateway;
+import com.agentbanking.biller.domain.port.out.DuitNowProxyGateway;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -635,7 +635,7 @@ class ProxyEnquiryUseCaseTest {
             .thenReturn("AHMAD BIN ABDULLAH");
 
         // When
-        com.agentbanking.switchadapter.domain.port.in.ProxyEnquiryUseCase.ProxyEnquiryResult result =
+        com.agentbanking.biller.domain.port.in.ProxyEnquiryUseCase.ProxyEnquiryResult result =
             useCase.enquiryProxy(proxyId, proxyType);
 
         // Then
@@ -672,7 +672,7 @@ class ProxyEnquiryUseCaseTest {
 - [ ] **Step 2: Run test to verify it fails**
 
 ```bash
-cd services/switch-adapter-service && ./gradlew test --tests ProxyEnquiryUseCaseTest 2>&1 | tail -20
+cd services/biller-service && ./gradlew test --tests ProxyEnquiryUseCaseTest 2>&1 | tail -20
 ```
 Expected: FAIL — classes don't exist yet.
 
@@ -681,11 +681,11 @@ Expected: FAIL — classes don't exist yet.
 Create `ProxyEnquiryUseCaseImpl.java`:
 
 ```java
-package com.agentbanking.switchadapter.application.usecase;
+package com.agentbanking.biller.application.usecase;
 
 import com.agentbanking.common.security.ErrorCodes;
-import com.agentbanking.switchadapter.domain.port.in.ProxyEnquiryUseCase;
-import com.agentbanking.switchadapter.domain.port.out.DuitNowProxyGateway;
+import com.agentbanking.biller.domain.port.in.ProxyEnquiryUseCase;
+import com.agentbanking.biller.domain.port.out.DuitNowProxyGateway;
 
 public class ProxyEnquiryUseCaseImpl implements ProxyEnquiryUseCase {
 
@@ -714,33 +714,33 @@ Note: NO `@Service` annotation — registered as bean in `DomainServiceConfig.ja
 - [ ] **Step 4: Run test to verify it passes**
 
 ```bash
-cd services/switch-adapter-service && ./gradlew test --tests ProxyEnquiryUseCaseTest 2>&1 | tail -20
+cd services/biller-service && ./gradlew test --tests ProxyEnquiryUseCaseTest 2>&1 | tail -20
 ```
 Expected: PASS
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add services/switch-adapter-service/src/main/java/com/agentbanking/switchadapter/application/usecase/ProxyEnquiryUseCaseImpl.java
-git add services/switch-adapter-service/src/test/java/com/agentbanking/switchadapter/application/usecase/ProxyEnquiryUseCaseTest.java
+git add services/biller-service/src/main/java/com/agentbanking/biller/application/usecase/ProxyEnquiryUseCaseImpl.java
+git add services/biller-service/src/test/java/com/agentbanking/biller/application/usecase/ProxyEnquiryUseCaseTest.java
 git commit -m "test+feat: implement proxy enquiry use case with TDD (FR-002)"
 ```
 
 ---
 
-## Task 7: Proxy Enquiry — Controller Endpoint (switch-adapter-service) [DONE]
+## Task 7: Proxy Enquiry — Controller Endpoint (biller-service) [DONE]
 
 **BDD Scenarios:** S2.1, S2.2, S2.3, S2.4, S2.5
 **BRD Requirements:** FR-002.1 through FR-002.7
 **User-Facing:** NO
 
 **Files:**
-- Modify: `services/switch-adapter-service/src/main/java/com/agentbanking/switchadapter/infrastructure/web/SwitchController.java`
+- Modify: `services/biller-service/src/main/java/com/agentbanking/biller/infrastructure/web/BillerController.java`
 
-- [ ] **Step 1: Add endpoint to SwitchController**
+- [ ] **Step 1: Add endpoint to BillerController**
 
-Add to `SwitchController.java`:
-1. Add import: `import com.agentbanking.switchadapter.domain.port.in.ProxyEnquiryUseCase;`
+Add to `BillerController.java`:
+1. Add import: `import com.agentbanking.biller.domain.port.in.ProxyEnquiryUseCase;`
 2. Add field and constructor parameter: `private final ProxyEnquiryUseCase proxyEnquiryUseCase;`
 3. Add endpoint method:
 
@@ -773,32 +773,32 @@ public ResponseEntity<?> proxyEnquiry(@RequestParam String proxyId,
 - [ ] **Step 2: Commit**
 
 ```bash
-git add services/switch-adapter-service/src/main/java/com/agentbanking/switchadapter/infrastructure/web/SwitchController.java
-git commit -m "feat: add proxy enquiry endpoint to SwitchController (FR-002)"
+git add services/biller-service/src/main/java/com/agentbanking/biller/infrastructure/web/BillerController.java
+git commit -m "feat: add proxy enquiry endpoint to BillerController (FR-002)"
 ```
 
 ---
 
-## Task 8: Compliance Status — Domain Port, Use Case & Test (rules-service) [DONE]
+## Task 8: Compliance Status — Domain Port, Use Case & Test (onboarding-service) [DONE]
 
 **BDD Scenarios:** S3.1 (Unlocked), S3.2 (Locked), S3.3 (No auth)
 **BRD Requirements:** US-003, FR-003.1 through FR-003.6
 **User-Facing:** NO
 
 **Files:**
-- Create: `services/rules-service/src/main/java/com/agentbanking/rules/domain/port/in/ComplianceStatusUseCase.java`
-- Create: `services/rules-service/src/main/java/com/agentbanking/rules/application/usecase/ComplianceStatusUseCaseImpl.java`
-- Create: `services/rules-service/src/test/java/com/agentbanking/rules/application/usecase/ComplianceStatusUseCaseTest.java`
+- Create: `services/onboarding-service/src/main/java/com/agentbanking/onboarding/domain/port/in/ComplianceStatusUseCase.java`
+- Create: `services/onboarding-service/src/main/java/com/agentbanking/onboarding/application/usecase/ComplianceStatusUseCaseImpl.java`
+- Create: `services/onboarding-service/src/test/java/com/agentbanking/onboarding/application/usecase/ComplianceStatusUseCaseTest.java`
 
 - [ ] **Step 1: Write the failing test**
 
 Create `ComplianceStatusUseCaseTest.java`:
 
 ```java
-package com.agentbanking.rules.application.usecase;
+package com.agentbanking.onboarding.application.usecase;
 
-import com.agentbanking.rules.domain.port.in.ComplianceStatusUseCase;
-import com.agentbanking.rules.domain.port.in.ComplianceStatusUseCase.ComplianceStatusResult;
+import com.agentbanking.onboarding.domain.port.in.ComplianceStatusUseCase;
+import com.agentbanking.onboarding.domain.port.in.ComplianceStatusUseCase.ComplianceStatusResult;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -846,7 +846,7 @@ class ComplianceStatusUseCaseTest {
 - [ ] **Step 2: Run test to verify it fails**
 
 ```bash
-cd services/rules-service && ./gradlew test --tests ComplianceStatusUseCaseTest 2>&1 | tail -20
+cd services/onboarding-service && ./gradlew test --tests ComplianceStatusUseCaseTest 2>&1 | tail -20
 ```
 Expected: FAIL — classes don't exist yet.
 
@@ -855,7 +855,7 @@ Expected: FAIL — classes don't exist yet.
 Create `ComplianceStatusUseCase.java`:
 
 ```java
-package com.agentbanking.rules.domain.port.in;
+package com.agentbanking.onboarding.domain.port.in;
 
 import java.time.Instant;
 
@@ -876,10 +876,10 @@ public interface ComplianceStatusUseCase {
 Create `ComplianceStatusUseCaseImpl.java`:
 
 ```java
-package com.agentbanking.rules.application.usecase;
+package com.agentbanking.onboarding.application.usecase;
 
 import com.agentbanking.common.security.ErrorCodes;
-import com.agentbanking.rules.domain.port.in.ComplianceStatusUseCase;
+import com.agentbanking.onboarding.domain.port.in.ComplianceStatusUseCase;
 
 import java.time.Instant;
 import java.util.Map;
@@ -922,34 +922,34 @@ Note: NO `@Service` annotation — registered as bean in `DomainServiceConfig.ja
 - [ ] **Step 5: Run test to verify it passes**
 
 ```bash
-cd services/rules-service && ./gradlew test --tests ComplianceStatusUseCaseTest 2>&1 | tail -20
+cd services/onboarding-service && ./gradlew test --tests ComplianceStatusUseCaseTest 2>&1 | tail -20
 ```
 Expected: PASS
 
 - [ ] **Step 6: Commit**
 
 ```bash
-git add services/rules-service/src/main/java/com/agentbanking/rules/domain/port/in/ComplianceStatusUseCase.java
-git add services/rules-service/src/main/java/com/agentbanking/rules/application/usecase/ComplianceStatusUseCaseImpl.java
-git add services/rules-service/src/test/java/com/agentbanking/rules/application/usecase/ComplianceStatusUseCaseTest.java
+git add services/onboarding-service/src/main/java/com/agentbanking/onboarding/domain/port/in/ComplianceStatusUseCase.java
+git add services/onboarding-service/src/main/java/com/agentbanking/onboarding/application/usecase/ComplianceStatusUseCaseImpl.java
+git add services/onboarding-service/src/test/java/com/agentbanking/onboarding/application/usecase/ComplianceStatusUseCaseTest.java
 git commit -m "test+feat: implement compliance status use case with TDD (FR-003)"
 ```
 
 ---
 
-## Task 9: Compliance Status — Controller Endpoint (rules-service) [DONE]
+## Task 9: Compliance Status — Controller Endpoint (onboarding-service) [DONE]
 
 **BDD Scenarios:** S3.1, S3.2, S3.3
 **BRD Requirements:** FR-003.1 through FR-003.6
 **User-Facing:** NO
 
 **Files:**
-- Modify: `services/rules-service/src/main/java/com/agentbanking/rules/infrastructure/web/RulesController.java`
+- Modify: `services/onboarding-service/src/main/java/com/agentbanking/onboarding/infrastructure/web/OnboardingController.java`
 
-- [ ] **Step 1: Add endpoint to RulesController**
+- [ ] **Step 1: Add endpoint to OnboardingController**
 
-Add to `RulesController.java`:
-1. Add import: `import com.agentbanking.rules.domain.port.in.ComplianceStatusUseCase;`
+Add to `OnboardingController.java`:
+1. Add import: `import com.agentbanking.onboarding.domain.port.in.ComplianceStatusUseCase;`
 2. Add field and constructor parameter: `private final ComplianceStatusUseCase complianceStatusUseCase;`
 3. Add endpoint method:
 
@@ -979,8 +979,8 @@ public ResponseEntity<?> getComplianceStatus(@RequestHeader(value = "X-Agent-Id"
 - [ ] **Step 2: Commit**
 
 ```bash
-git add services/rules-service/src/main/java/com/agentbanking/rules/infrastructure/web/RulesController.java
-git commit -m "feat: add compliance status endpoint to RulesController (FR-003)"
+git add services/onboarding-service/src/main/java/com/agentbanking/onboarding/infrastructure/web/OnboardingController.java
+git commit -m "feat: add compliance status endpoint to OnboardingController (FR-003)"
 ```
 
 ---

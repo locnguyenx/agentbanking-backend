@@ -5,14 +5,10 @@ import com.agentbanking.switchadapter.domain.port.in.AuthorizeTransactionUseCase
 import com.agentbanking.switchadapter.domain.port.in.BalanceInquiryUseCase;
 import com.agentbanking.switchadapter.domain.port.in.ProcessReversalUseCase;
 import com.agentbanking.switchadapter.domain.port.in.DuitNowTransferUseCase;
-import com.agentbanking.switchadapter.domain.port.in.TransactionQuoteUseCase;
-import com.agentbanking.switchadapter.domain.port.in.ProxyEnquiryUseCase;
 import com.agentbanking.switchadapter.infrastructure.web.dto.CardAuthRequest;
 import com.agentbanking.switchadapter.infrastructure.web.dto.BalanceInquiryRequest;
 import com.agentbanking.switchadapter.infrastructure.web.dto.DuitNowRequest;
 import com.agentbanking.switchadapter.infrastructure.web.dto.ReversalRequest;
-import com.agentbanking.switchadapter.infrastructure.web.dto.TransactionQuoteRequest;
-import com.agentbanking.switchadapter.infrastructure.web.dto.TransactionQuoteResponse;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -28,21 +24,15 @@ public class SwitchController {
     private final ProcessReversalUseCase processReversalUseCase;
     private final DuitNowTransferUseCase duitNowTransferUseCase;
     private final BalanceInquiryUseCase balanceInquiryUseCase;
-    private final TransactionQuoteUseCase transactionQuoteUseCase;
-    private final ProxyEnquiryUseCase proxyEnquiryUseCase;
 
     public SwitchController(AuthorizeTransactionUseCase authorizeTransactionUseCase,
                             ProcessReversalUseCase processReversalUseCase,
                             DuitNowTransferUseCase duitNowTransferUseCase,
-                            BalanceInquiryUseCase balanceInquiryUseCase,
-                            TransactionQuoteUseCase transactionQuoteUseCase,
-                            ProxyEnquiryUseCase proxyEnquiryUseCase) {
+                            BalanceInquiryUseCase balanceInquiryUseCase) {
         this.authorizeTransactionUseCase = authorizeTransactionUseCase;
         this.processReversalUseCase = processReversalUseCase;
         this.duitNowTransferUseCase = duitNowTransferUseCase;
         this.balanceInquiryUseCase = balanceInquiryUseCase;
-        this.transactionQuoteUseCase = transactionQuoteUseCase;
-        this.proxyEnquiryUseCase = proxyEnquiryUseCase;
     }
 
     @PostMapping("/auth")
@@ -139,54 +129,6 @@ public class SwitchController {
                 "ERR_SWITCH_AUTH_FAILED",
                 e.getMessage(),
                 "DECLINE"
-            ));
-        }
-    }
-
-    @PostMapping("/transactions/quote")
-    public ResponseEntity<?> getQuote(@Valid @RequestBody TransactionQuoteRequest request,
-                                       @RequestHeader(value = "X-Agent-Id", required = false) String agentId,
-                                       @RequestHeader(value = "X-Agent-Tier", required = false) String agentTier) {
-        try {
-            TransactionQuoteUseCase.QuoteResult result = transactionQuoteUseCase.calculateQuote(
-                agentId != null ? agentId : "unknown",
-                agentTier != null ? agentTier : "STANDARD",
-                request.amount(),
-                request.serviceCode(),
-                request.fundingSource(),
-                request.billerRouting()
-            );
-
-            return ResponseEntity.ok(TransactionQuoteResponse.from(result));
-        } catch (IllegalStateException e) {
-            return ResponseEntity.badRequest().body(ErrorResponse.of(
-                "ERR_BIZ_QUOTE_CALCULATION_FAILED",
-                e.getMessage(),
-                "RETRY"
-            ));
-        }
-    }
-
-    @GetMapping("/transfer/proxy/enquiry")
-    public ResponseEntity<?> proxyEnquiry(@RequestParam String proxyId,
-                                           @RequestParam String proxyType) {
-        try {
-            ProxyEnquiryUseCase.ProxyEnquiryResult result = proxyEnquiryUseCase.enquiryProxy(proxyId, proxyType);
-            return ResponseEntity.ok(Map.of(
-                "name", result.name(),
-                "proxyType", result.proxyType()
-            ));
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(404).body(ErrorResponse.of(
-                "ERR_BIZ_PROXY_NOT_FOUND",
-                e.getMessage(),
-                "DECLINE"
-            ));
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(ErrorResponse.of(
-                "ERR_EXT_PROXY_ENQUIRY_FAILED",
-                e.getMessage(),
-                "RETRY"
             ));
         }
     }
