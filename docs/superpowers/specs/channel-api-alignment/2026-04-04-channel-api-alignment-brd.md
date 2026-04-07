@@ -3,7 +3,7 @@
 **Version:** 1.0
 **Date:** 2026-04-04
 **Status:** Draft
-**Module:** switch-adapter-service, rules-service, docs/api/openapi.yaml
+**Module:** rules-service, biller-service, onboarding-service, docs/api/openapi.yaml
 
 ---
 
@@ -58,7 +58,7 @@
 ### FR-001: Transaction Quote Endpoint (US-001)
 
 - **FR-001.1** Endpoint: `POST /api/v1/transactions/quote`
-- **FR-001.2** Service: switch-adapter-service (internal path: `/internal/transactions/quote`)
+- **FR-001.2** Service: rules-service (internal path: `/internal/transactions/quote`)
 - **FR-001.3** Request body: `amount` (string/decimal), `serviceCode` (string), `fundingSource` (enum: CARD_EMV, CASH, DUITNOW_MOBILE, DUITNOW_MYKAD, DUITNOW_BRN, MYKAD_BIOMETRIC, DUITNOW_QR), optional `billerRouting` (ON_US, OFF_US). Agent identity extracted from JWT claims (not in request body).
 - **FR-001.4** Response: `quoteId` (string), `amount` (string), `fee` (string), `total` (string), `commission` (string)
 - **FR-001.5** Business logic: Fee calculated via rules-service fee engine. Commission rate sourced from `agent_tier` claim in JWT. If claim missing, fallback to database lookup by agent ID from token subject.
@@ -69,7 +69,7 @@
 ### FR-002: DuitNow Proxy Enquiry Endpoint (US-002)
 
 - **FR-002.1** Endpoint: `GET /api/v1/transfer/proxy/enquiry`
-- **FR-002.2** Service: switch-adapter-service (internal path: `/internal/transfer/proxy/enquiry`)
+- **FR-002.2** Service: biller-service (internal path: `/internal/transfer/proxy/enquiry`)
 - **FR-002.3** Query parameters: `proxyId` (string, required), `proxyType` (string, required, enum: MOBILE, NRIC, PASSPORT, BIZ_REG_NO)
 - **FR-002.4** Response: `{ "name": "string", "proxyType": "string" }`. Only name and proxyType exposed to channel app; downstream DuitNow fields (bank code, account type) are internal.
 - **FR-002.5** Business logic: Calls downstream DuitNow network via switch adapter
@@ -79,7 +79,7 @@
 ### FR-003: Compliance Status Endpoint (US-003)
 
 - **FR-003.1** Endpoint: `GET /api/v1/compliance/status`
-- **FR-003.2** Service: rules-service (internal path: `/internal/compliance/status`)
+- **FR-003.2** Service: onboarding-service (internal path: `/internal/compliance/status`)
 - **FR-003.3** Response: `{ "status": "LOCKED" | "UNLOCKED", "reason": "string (optional)", "checkedAt": "ISO 8601 timestamp" }`
 - **FR-003.4** Business logic: Checks agent compliance rules, AML flags, regulatory holds
 - **FR-003.5** Security: Bearer JWT required, agent identity extracted from token
