@@ -8,6 +8,7 @@ import com.agentbanking.ledger.domain.model.*;
 import com.agentbanking.ledger.domain.port.out.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -55,6 +56,7 @@ public class LedgerService {
       }
     
     @SuppressWarnings("unchecked")
+    @Transactional
     public Map<String, Object> processWithdrawal(UUID agentId, BigDecimal amount, 
                                                    BigDecimal customerFee, BigDecimal agentCommission,
                                                    BigDecimal bankShare, String idempotencyKey,
@@ -248,6 +250,7 @@ public class LedgerService {
     }
 
     @SuppressWarnings("unchecked")
+    @Transactional
     public Map<String, Object> processDeposit(UUID agentId, BigDecimal amount, 
                                                BigDecimal customerFee, BigDecimal agentCommission,
                                                BigDecimal bankShare, String idempotencyKey,
