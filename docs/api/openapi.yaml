@@ -453,6 +453,7 @@ paths:
       tags:
       - e-wallet-controller (biller-service)
       operationId: topup_1
+      deprecated: true
       security:
         - bearerAuth: []
       requestBody:
@@ -477,6 +478,7 @@ paths:
       tags:
       - essp-controller (biller-service)
       operationId: purchase
+      deprecated: true
       security:
         - bearerAuth: []
       requestBody:
@@ -654,6 +656,7 @@ paths:
       tags:
       - merchant-controller (ledger-service)
       operationId: processRetailSale
+      deprecated: true
       security:
         - bearerAuth: []
       requestBody:
@@ -686,6 +689,7 @@ paths:
       tags:
       - merchant-controller (ledger-service)
       operationId: processPinPurchase
+      deprecated: true
       security:
         - bearerAuth: []
       requestBody:
@@ -718,6 +722,7 @@ paths:
       tags:
       - merchant-controller (ledger-service)
       operationId: processCashBack
+      deprecated: true
       security:
         - bearerAuth: []
       requestBody:

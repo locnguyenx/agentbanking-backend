@@ -44,23 +44,23 @@ spring:
       routes:
         # Auth/IAM Service (public endpoints - no JWT required)
         - id: auth-bootstrap
-          uri: http://auth-iam-service:8087
+          uri: ${auth-service.url:http://auth-iam-service:8087}
           predicates:
             - Path=/auth/users/bootstrap
         - id: auth-token
-          uri: http://auth-iam-service:8087
+          uri: ${auth-service.url:http://auth-iam-service:8087}
           predicates:
             - Path=/auth/token
         - id: auth-refresh
-          uri: http://auth-iam-service:8087
+          uri: ${auth-service.url:http://auth-iam-service:8087}
           predicates:
             - Path=/auth/refresh
         - id: auth-wellknown
-          uri: http://auth-iam-service:8087
+          uri: ${auth-service.url:http://auth-iam-service:8087}
           predicates:
             - Path=/.well-known/jwks.json
         - id: auth-docs
-          uri: http://auth-iam-service:8087
+          uri: ${auth-service.url:http://auth-iam-service:8087}
           predicates:
             - Path=/docs/auth/**
 
@@ -68,21 +68,21 @@ spring:
         # External Auth Token endpoints (public - no JwtAuth required)
         # ============================================================
         - id: external-auth-token
-          uri: http://auth-iam-service:8087
+          uri: ${auth-service.url:http://auth-iam-service:8087}
           predicates:
             - Path=/api/v1/auth/token
           filters:
             - RewritePath=/api/v1/auth/token, /auth/token
 
         - id: external-auth-refresh
-          uri: http://auth-iam-service:8087
+          uri: ${auth-service.url:http://auth-iam-service:8087}
           predicates:
             - Path=/api/v1/auth/refresh
           filters:
             - RewritePath=/api/v1/auth/refresh, /auth/refresh
 
         - id: external-auth-revoke
-          uri: http://auth-iam-service:8087
+          uri: ${auth-service.url:http://auth-iam-service:8087}
           predicates:
             - Path=/api/v1/auth/revoke
           filters:
@@ -93,21 +93,21 @@ spring:
         # External Password endpoints (forgot/reset public, change protected)
         # ============================================================
         - id: external-auth-password-forgot
-          uri: http://auth-iam-service:8087
+          uri: ${auth-service.url:http://auth-iam-service:8087}
           predicates:
             - Path=/api/v1/auth/password/forgot
           filters:
             - RewritePath=/api/v1/auth/password/forgot, /auth/password/forgot
 
         - id: external-auth-password-reset
-          uri: http://auth-iam-service:8087
+          uri: ${auth-service.url:http://auth-iam-service:8087}
           predicates:
             - Path=/api/v1/auth/password/reset
           filters:
             - RewritePath=/api/v1/auth/password/reset, /auth/password/reset
 
         - id: external-auth-password-change
-          uri: http://auth-iam-service:8087
+          uri: ${auth-service.url:http://auth-iam-service:8087}
           predicates:
             - Path=/api/v1/auth/password/change
           filters:
@@ -116,7 +116,7 @@ spring:
 
         # Agent profile endpoint for external apps
         - id: external-auth-me
-          uri: http://auth-iam-service:8087
+          uri: ${auth-service.url:http://auth-iam-service:8087}
           predicates:
             - Path=/api/v1/auth/me
           filters:
@@ -127,7 +127,7 @@ spring:
         # External Agent User Management endpoints (protected)
         # ============================================================
         - id: external-backoffice-agent-user-status
-          uri: http://auth-iam-service:8087
+          uri: ${auth-service.url:http://auth-iam-service:8087}
           predicates:
             - Path=/api/v1/backoffice/agents/*/user-status
           filters:
@@ -135,7 +135,7 @@ spring:
             - RewritePath=/api/v1/backoffice/agents/(?<agentId>.*)/user-status, /internal/users/agent/${agentId}/status
 
         - id: external-backoffice-agent-create-user
-          uri: http://auth-iam-service:8087
+          uri: ${auth-service.url:http://auth-iam-service:8087}
           predicates:
             - Path=/api/v1/backoffice/agents/*/create-user
           filters:
@@ -144,21 +144,21 @@ spring:
 
         # Password endpoints (public)
         - id: auth-password-forgot
-          uri: http://auth-iam-service:8087
+          uri: ${auth-service.url:http://auth-iam-service:8087}
           predicates:
             - Path=/auth/password/forgot
         - id: auth-password-reset
-          uri: http://auth-iam-service:8087
+          uri: ${auth-service.url:http://auth-iam-service:8087}
           predicates:
             - Path=/auth/password/reset
         - id: auth-password-change
-          uri: http://auth-iam-service:8087
+          uri: ${auth-service.url:http://auth-iam-service:8087}
           predicates:
             - Path=/auth/password/change
           filters:
             - JwtAuth
         - id: internal-auth-agent-user
-          uri: http://auth-iam-service:8087
+          uri: ${auth-service.url:http://auth-iam-service:8087}
           predicates:
             - Path=/internal/users/agent
           filters:
@@ -166,42 +166,42 @@ spring:
         
         # Auth/IAM Service (protected endpoints - JWT required)
         - id: auth-users-me
-          uri: http://auth-iam-service:8087
+          uri: ${auth-service.url:http://auth-iam-service:8087}
           predicates:
             - Path=/api/v1/auth/users/me
           filters:
             - JwtAuth
             - RewritePath=/api/v1/auth/users/me, /auth/users/me
         - id: auth-users
-          uri: http://auth-iam-service:8087
+          uri: ${auth-service.url:http://auth-iam-service:8087}
           predicates:
             - Path=/api/v1/auth/users
           filters:
             - JwtAuth
             - RewritePath=/api/v1/auth/users, /auth/users
         - id: auth-roles
-          uri: http://auth-iam-service:8087
+          uri: ${auth-service.url:http://auth-iam-service:8087}
           predicates:
             - Path=/auth/roles, /auth/roles/*
           filters:
             - JwtAuth
             - RewritePath=/auth/roles/(?<segment>.*), /auth/roles/${segment}
         - id: auth-permissions
-          uri: http://auth-iam-service:8087
+          uri: ${auth-service.url:http://auth-iam-service:8087}
           predicates:
             - Path=/auth/permissions, /auth/permissions/*
           filters:
             - JwtAuth
             - RewritePath=/auth/permissions/(?<segment>.*), /auth/permissions/${segment}
         - id: auth-sessions
-          uri: http://auth-iam-service:8087
+          uri: ${auth-service.url:http://auth-iam-service:8087}
           predicates:
             - Path=/auth/sessions, /auth/sessions/*
           filters:
             - JwtAuth
             - RewritePath=/auth/sessions/(?<segment>.*), /auth/sessions/${segment}
         - id: auth-audit
-          uri: http://auth-iam-service:8087
+          uri: ${auth-service.url:http://auth-iam-service:8087}
           predicates:
             - Path=/auth/audit/**
           filters:
@@ -209,7 +209,7 @@ spring:
         
         # Rules Service
         - id: rules-service
-          uri: http://rules-service:8081
+          uri: ${rules-service.url:http://rules-service:8081}
           predicates:
             - Path=/internal/fees/**, /internal/check-velocity, /internal/limits/**, /internal/transactions/quote, /internal/audit-logs
           filters:
@@ -217,7 +217,7 @@ spring:
         
         # Ledger Service
         - id: ledger-service
-          uri: http://ledger-service:8082
+          uri: ${ledger-service.url:http://ledger-service:8082}
           predicates:
             - Path=/internal/debit, /internal/credit, /internal/balance/**, /internal/reverse/**, /internal/audit-logs
           filters:
@@ -225,7 +225,7 @@ spring:
         
         # Onboarding Service
         - id: onboarding-service
-          uri: http://onboarding-service:8083
+          uri: ${onboarding-service.url:http://onboarding-service:8083}
           predicates:
             - Path=/internal/verify-mykad, /internal/biometric, /internal/kyc/review-queue, /internal/compliance/status, /internal/audit-logs
           filters:
@@ -233,7 +233,7 @@ spring:
         
         # Switch Adapter Service
         - id: switch-adapter-service
-          uri: http://switch-adapter-service:8084
+          uri: ${switch-service.url:http://switch-adapter-service:8084}
           predicates:
             - Path=/internal/auth, /internal/reversal, /internal/duitnow, /internal/balance-inquiry, /internal/audit-logs
           filters:
@@ -241,7 +241,7 @@ spring:
         
         # Biller Service
         - id: biller-service
-          uri: http://biller-service:8085
+          uri: ${biller-service.url:http://biller-service:8085}
           predicates:
             - Path=/internal/validate-ref, /internal/pay-bill, /internal/topup, /internal/transfer/proxy/enquiry, /internal/audit-logs
           filters:
@@ -249,7 +249,7 @@ spring:
 
         # External Transaction Quote route - MUST be BEFORE /transactions route
         - id: external-transactions-quote
-          uri: http://rules-service:8081
+          uri: ${rules-service.url:http://rules-service:8081}
           predicates:
             - Path=/api/v1/transactions/quote
           filters:
@@ -258,7 +258,7 @@ spring:
           
         # External Transaction Orchestrator routes (Temporal SAGA) - MUST be after quote route
         - id: external-transactions-start
-          uri: http://orchestrator-service:8086
+          uri: ${orchestrator-service.url:http://orchestrator-service:8086}
           predicates:
             - Path=/api/v1/transactions
           filters:
@@ -266,7 +266,7 @@ spring:
             - RewritePath=/api/v1/transactions, /api/v1/transactions
 
         - id: external-transactions-status
-          uri: http://orchestrator-service:8086
+          uri: ${orchestrator-service.url:http://orchestrator-service:8086}
           predicates:
             - Path=/api/v1/transactions/*/status
           filters:
@@ -274,7 +274,7 @@ spring:
             - RewritePath=/api/v1/transactions/(?<workflowId>.*)/status, /api/v1/transactions/${workflowId}/status
 
         - id: external-transactions-force-resolve
-          uri: http://orchestrator-service:8086
+          uri: ${orchestrator-service.url:http://orchestrator-service:8086}
           predicates:
             - Path=/api/v1/transactions/*/force-resolve
           filters:
@@ -283,7 +283,7 @@ spring:
 
         # Backoffice transactions - MUST be BEFORE orchestrator-backoffice-resolution
         - id: backoffice-ledger-transactions
-          uri: http://ledger-service:8082
+          uri: ${ledger-service.url:http://ledger-service:8082}
           predicates:
             - Path=/api/v1/backoffice/ledger-transactions
           filters:
@@ -294,7 +294,7 @@ spring:
 
         # Orchestrator Backoffice Resolution routes
         - id: orchestrator-backoffice-resolution
-          uri: http://orchestrator-service:8086
+          uri: ${orchestrator-service.url:http://orchestrator-service:8086}
           predicates:
             - Path=/api/v1/backoffice/transactions/**
           filters:
@@ -305,7 +305,7 @@ spring:
 
         # Orchestrator internal endpoints (including audit-logs)
         - id: orchestrator-internal
-          uri: http://orchestrator-service:8086
+          uri: ${orchestrator-service.url:http://orchestrator-service:8086}
           predicates:
             - Path=/internal/audit-logs
           filters:
@@ -313,16 +313,75 @@ spring:
 
         # External Compliance Status route
         - id: external-compliance-status
-          uri: http://onboarding-service:8083
+          uri: ${onboarding-service.url:http://onboarding-service:8083}
           predicates:
             - Path=/api/v1/compliance/status
           filters:
             - JwtAuth
             - RewritePath=/api/v1/compliance/status, /internal/compliance/status
 
+        # ============================================================
+        # NEW: External Domain Endpoints (Aligned with OpenAPI)
+        # ============================================================
+        - id: external-biller-proxy-enquiry
+          uri: ${biller-service.url:http://biller-service:8085}
+          predicates:
+            - Path=/api/v1/transfer/proxy/enquiry
+          filters:
+            - JwtAuth
+            - RewritePath=/api/v1/transfer/proxy/enquiry, /internal/transfer/proxy/enquiry
+
+        - id: external-switch-balance-inquiry
+          uri: ${switch-service.url:http://switch-adapter-service:8084}
+          predicates:
+            - Path=/api/v1/balance-inquiry
+          filters:
+            - JwtAuth
+            - RewritePath=/api/v1/balance-inquiry, /internal/balance-inquiry
+
+        - id: external-rules-fees
+          uri: ${rules-service.url:http://rules-service:8081}
+          predicates:
+            - Path=/api/v1/rules/fees
+          filters:
+            - JwtAuth
+            - RewritePath=/api/v1/rules/fees, /internal/fees
+
+        - id: external-onboarding-verify-mykad
+          uri: ${onboarding-service.url:http://onboarding-service:8083}
+          predicates:
+            - Path=/api/v1/onboarding/verify-mykad
+          filters:
+            - JwtAuth
+            - RewritePath=/api/v1/onboarding/verify-mykad, /internal/verify-mykad
+
+        - id: external-onboarding-submit-application
+          uri: ${onboarding-service.url:http://onboarding-service:8083}
+          predicates:
+            - Path=/api/v1/onboarding/submit-application
+          filters:
+            - JwtAuth
+            - RewritePath=/api/v1/onboarding/submit-application, /internal/onboarding/application
+
+        - id: external-ledger-agent-balance
+          uri: ${ledger-service.url:http://ledger-service:8082}
+          predicates:
+            - Path=/api/v1/agent/balance
+          filters:
+            - JwtAuth
+            - RewritePath=/api/v1/agent/balance, /internal/balance
+
+        - id: external-onboarding-kyc-biometric
+          uri: ${onboarding-service.url:http://onboarding-service:8083}
+          predicates:
+            - Path=/api/v1/kyc/biometric
+          filters:
+            - JwtAuth
+            - RewritePath=/api/v1/kyc/biometric, /internal/biometric
+
         # Backoffice routes
         - id: backoffice-dashboard
-          uri: http://ledger-service:8082
+          uri: ${ledger-service.url:http://ledger-service:8082}
           predicates:
             - Path=/api/v1/backoffice/dashboard
           filters:
@@ -330,7 +389,7 @@ spring:
             - RewritePath=/api/v1/backoffice/dashboard, /internal/backoffice/dashboard
 
         - id: backoffice-agents-list
-          uri: http://onboarding-service:8083
+          uri: ${onboarding-service.url:http://onboarding-service:8083}
           predicates:
             - Path=/api/v1/backoffice/agents
           filters:
@@ -338,7 +397,7 @@ spring:
             - RewritePath=/api/v1/backoffice/agents, /backoffice/agents
 
         - id: backoffice-agents-detail
-          uri: http://onboarding-service:8083
+          uri: ${onboarding-service.url:http://onboarding-service:8083}
           predicates:
             - Path=/api/v1/backoffice/agents/{id}
           filters:
@@ -346,7 +405,7 @@ spring:
             - RewritePath=/api/v1/backoffice/agents/(?<segment>.*), /backoffice/agents/${segment}
 
         - id: backoffice-settlement-export
-          uri: http://ledger-service:8082
+          uri: ${ledger-service.url:http://ledger-service:8082}
           predicates:
             - Path=/api/v1/backoffice/settlement/export
           filters:
@@ -354,7 +413,7 @@ spring:
             - RewritePath=/api/v1/backoffice/settlement/export, /internal/backoffice/settlement/export
 
         - id: backoffice-settlement
-          uri: http://ledger-service:8082
+          uri: ${ledger-service.url:http://ledger-service:8082}
           predicates:
             - Path=/api/v1/backoffice/settlement
           filters:
@@ -362,7 +421,7 @@ spring:
             - RewritePath=/api/v1/backoffice/settlement, /internal/backoffice/settlement
 
         - id: backoffice-kyc-review
-          uri: http://onboarding-service:8083
+          uri: ${onboarding-service.url:http://onboarding-service:8083}
           predicates:
             - Path=/api/v1/backoffice/kyc/review-queue
           filters:
@@ -370,7 +429,7 @@ spring:
             - RewritePath=/api/v1/backoffice/kyc/review-queue, /internal/kyc/review-queue
 
         - id: backoffice-discrepancy-maker
-          uri: http://ledger-service:8082
+          uri: ${ledger-service.url:http://ledger-service:8082}
           predicates:
             - Path=/api/v1/backoffice/discrepancy/*/maker-action
           filters:
@@ -378,7 +437,7 @@ spring:
             - RewritePath=/api/v1/backoffice/discrepancy/(?<caseId>.*)/maker-action, /internal/reconciliation/discrepancy/maker-propose
 
         - id: backoffice-discrepancy-checker-approve
-          uri: http://ledger-service:8082
+          uri: ${ledger-service.url:http://ledger-service:8082}
           predicates:
             - Path=/api/v1/backoffice/discrepancy/*/checker-approve
           filters:
@@ -386,7 +445,7 @@ spring:
             - RewritePath=/api/v1/backoffice/discrepancy/(?<caseId>.*)/checker-approve, /internal/reconciliation/discrepancy/checker-approve
 
         - id: backoffice-discrepancy-checker-reject
-          uri: http://ledger-service:8082
+          uri: ${ledger-service.url:http://ledger-service:8082}
           predicates:
             - Path=/api/v1/backoffice/discrepancy/*/checker-reject
           filters:
@@ -394,7 +453,7 @@ spring:
             - RewritePath=/api/v1/backoffice/discrepancy/(?<caseId>.*)/checker-reject, /internal/reconciliation/discrepancy/checker-reject
 
         - id: backoffice-audit-logs
-          uri: http://auth-iam-service:8087
+          uri: ${auth-service.url:http://auth-iam-service:8087}
           predicates:
             - Path=/api/v1/backoffice/audit-logs
           filters:
@@ -403,7 +462,7 @@ spring:
         
         # Admin routes (User Management, Roles) - now pointing to auth-iam-service
         - id: admin-users-list
-          uri: http://auth-iam-service:8087
+          uri: ${auth-service.url:http://auth-iam-service:8087}
           predicates:
             - Path=/api/v1/backoffice/admin/users
           filters:
@@ -411,7 +470,7 @@ spring:
             - RewritePath=/api/v1/backoffice/admin/users, /auth/users
         
         - id: admin-users-detail
-          uri: http://auth-iam-service:8087
+          uri: ${auth-service.url:http://auth-iam-service:8087}
           predicates:
             - Path=/api/v1/backoffice/admin/users/*
           filters:
@@ -419,7 +478,7 @@ spring:
             - RewritePath=/api/v1/backoffice/admin/users/(?<segment>.*), /auth/users/${segment}
         
         - id: admin-users-lock
-          uri: http://auth-iam-service:8087
+          uri: ${auth-service.url:http://auth-iam-service:8087}
           predicates:
             - Path=/api/v1/backoffice/admin/users/*/lock
           filters:
@@ -427,7 +486,7 @@ spring:
             - RewritePath=/api/v1/backoffice/admin/users/(?<segment>.*)/lock, /auth/users/${segment}/lock
         
         - id: admin-users-unlock
-          uri: http://auth-iam-service:8087
+          uri: ${auth-service.url:http://auth-iam-service:8087}
           predicates:
             - Path=/api/v1/backoffice/admin/users/*/unlock
           filters:
@@ -435,7 +494,7 @@ spring:
             - RewritePath=/api/v1/backoffice/admin/users/(?<segment>.*)/unlock, /auth/users/${segment}/unlock
         
         - id: admin-users-reset-password
-          uri: http://auth-iam-service:8087
+          uri: ${auth-service.url:http://auth-iam-service:8087}
           predicates:
             - Path=/api/v1/backoffice/admin/users/*/reset-password
           filters:
@@ -443,7 +502,7 @@ spring:
             - RewritePath=/api/v1/backoffice/admin/users/(?<segment>.*)/reset-password, /auth/users/${segment}/reset-password
         
         - id: admin-roles
-          uri: http://auth-iam-service:8087
+          uri: ${auth-service.url:http://auth-iam-service:8087}
           predicates:
             - Path=/api/v1/backoffice/admin/roles
           filters:
@@ -452,49 +511,49 @@ spring:
         
         # API Docs proxy routes
         - id: docs-auth
-          uri: http://auth-iam-service:8087
+          uri: ${auth-service.url:http://auth-iam-service:8087}
           predicates:
             - Path=/docs/auth/**
           filters:
             - RewritePath=/docs/auth/(?<segment>.*), /${segment}
         
         - id: docs-rules
-          uri: http://rules-service:8081
+          uri: ${rules-service.url:http://rules-service:8081}
           predicates:
             - Path=/docs/rules/**
           filters:
             - RewritePath=/docs/rules/(?<segment>.*), /${segment}
         
         - id: docs-ledger
-          uri: http://ledger-service:8082
+          uri: ${ledger-service.url:http://ledger-service:8082}
           predicates:
             - Path=/docs/ledger/**
           filters:
             - RewritePath=/docs/ledger/(?<segment>.*), /${segment}
         
         - id: docs-onboarding
-          uri: http://onboarding-service:8083
+          uri: ${onboarding-service.url:http://onboarding-service:8083}
           predicates:
             - Path=/docs/onboarding/**
           filters:
             - RewritePath=/docs/onboarding/(?<segment>.*), /${segment}
         
         - id: docs-switch
-          uri: http://switch-adapter-service:8084
+          uri: ${switch-service.url:http://switch-adapter-service:8084}
           predicates:
             - Path=/docs/switch/**
           filters:
             - RewritePath=/docs/switch/(?<segment>.*), /${segment}
         
         - id: docs-biller
-          uri: http://biller-service:8085
+          uri: ${biller-service.url:http://biller-service:8085}
           predicates:
             - Path=/docs/biller/**
           filters:
             - RewritePath=/docs/biller/(?<segment>.*), /${segment}
 
         - id: docs-orchestrator
-          uri: http://orchestrator-service:8086
+          uri: ${orchestrator-service.url:http://orchestrator-service:8086}
           predicates:
             - Path=/docs/orchestrator/**
           filters:
@@ -502,7 +561,7 @@ spring:
 
         # Admin - Health (aggregate all) - handled by gateway directly
         - id: admin-health-all
-          uri: http://gateway:8080
+          uri: ${gateway-service.url:http://gateway:8080}
           predicates:
             - Path=/api/v1/admin/health/all
           filters:
@@ -511,7 +570,7 @@ spring:
 
         # Admin - Health (individual service)
         - id: admin-health-service
-          uri: http://gateway:8080
+          uri: ${gateway-service.url:http://gateway:8080}
           predicates:
             - Path=/api/v1/admin/health/{service}
           filters:
@@ -520,7 +579,7 @@ spring:
 
         # Admin - Metrics - use ServiceRoute filter to proxy to service actuator
         - id: admin-metrics
-          uri: http://gateway:8080
+          uri: ${gateway-service.url:http://gateway:8080}
           predicates:
             - Path=/api/v1/admin/metrics/{service}
           filters:
@@ -529,7 +588,7 @@ spring:
 
         # Admin - Audit Logs - route to service based on ?service= query param
         - id: admin-audit-logs
-          uri: http://gateway:8080
+          uri: ${gateway-service.url:http://gateway:8080}
           predicates:
             - Path=/api/v1/admin/audit-logs
           filters:
@@ -539,7 +598,7 @@ spring:
 
         # Admin - Audit Logs Export
         - id: admin-audit-logs-export
-          uri: http://gateway:8080
+          uri: ${gateway-service.url:http://gateway:8080}
           predicates:
             - Path=/api/v1/admin/audit-logs/export
           filters:

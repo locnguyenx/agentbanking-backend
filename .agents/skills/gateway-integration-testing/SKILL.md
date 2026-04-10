@@ -1,65 +1,7 @@
-
-# Services testing
-## Problem
-Services were rebuilt from code that had missing configuration, exposing pre-existing bugs.
-
-## Root Causes
-1. Missing bean wiring: StpDecisionService, ReconciliationService were added to code but not registered in DomainServiceConfig
-2. Missing annotations: DiscrepancyCaseRepositoryAdapter had no @Repository, BillerService had no @Service
-3. Configuration mismatch: Feign clients referenced properties not in application.yaml
-4. Dependency conflict: ledger-service packaged onboarding-service jar, causing Flyway version collision
-5. Missing component scan: EfmEventPublisher in common package not scanned
-
-## Why It Worked Before
-Old Docker images were built from an earlier commit. New code was added in commit 342e310 without wiring to Spring.
-
-## Lessons Learned
-1. Build ≠ runs: Code compiles but Spring won't start without proper wiring
-2. New classes need registration: Every @Service, @Repository, @Component must be scannable
-3. Cross-service dependencies are fragile: ledger-service depending on onboarding-service caused Flyway conflict
-4. Test Docker builds after every commit: Don't assume "it compiled, it works"
-5. Don't touch working services when fixing unrelated issues (like OpenAPI specs)
-
-## How to detect these issues?
-
-Let me think about alternatives:
-1. Docker build - Yes, but slow and heavy
-2. Local Gradle build + manual start - Faster but still manual
-3. Integration tests with Testcontainers - Can catch some issues but not all
-4. Gradle bootRun task - Can test Spring context loading
-5. Static analysis / custom checks - Could catch config mismatches
-
-Let me suggest practical alternatives that are faster than full Docker build.
-
-Not necessarily. Faster alternatives:
-|	Method |	What It Detects |	Speed |
-|	./gradlew bootRun |	Missing beans, config errors, Flyway conflicts |	~10s per service |
-|	./gradlew bootTestRun |	Spring context loading failures |	~15s per service |
-|	Spring Boot test with @SpringBootTest |	Full context startup |	~30s |
-|	Docker build + run |	Everything |	~60s per service |
-
-**Recommended workflow:**
-```bash
-# Fastest - test Spring context loads
-./gradlew :services:ledger-service:bootRun --no-daemon &
-sleep 10
-curl -f http://localhost:8082/actuator/health || echo "FAILED"
-kill %1
-```
-
-Or add to CI pipeline:
-```bash
-# In .github/workflows or CI script
-./gradlew :services:*:bootJar
-# Then test each service starts
-for svc in rules ledger onboarding biller; do
-  timeout 30 java -jar services/${svc}-service/build/libs/*.jar &
-  sleep 15
-  curl -f http://localhost:808*/actuator/health || exit 1
-  kill %1
-done
-```
-
+---
+name: gateway-integration-testing
+description: Use when testing all external APIs through the API gateway with real JWT tokens, covering all BDD scenarios with different user roles
+---
 
 # Integration tests for gateway
 
@@ -211,4 +153,3 @@ docker logs agentbanking-backend-temporal-1
 # Remove Temporal containers
 docker compose down temporal temporal-postgres temporal-ui
 ```
----

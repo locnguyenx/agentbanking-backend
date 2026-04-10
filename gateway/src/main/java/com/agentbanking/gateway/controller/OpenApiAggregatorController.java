@@ -36,38 +36,60 @@ public class OpenApiAggregatorController {
         put("/internal/debit", "/api/v1/withdrawal");
         put("/internal/credit", "/api/v1/deposit");
         put("/internal/balance-inquiry", "/api/v1/balance-inquiry");
-        put("/internal/balance/{agentId}", "/api/v1/agent/balance");
+        put("/internal/balance", "/api/v1/agent/balance");
         put("/internal/backoffice/dashboard", "/api/v1/backoffice/dashboard");
         put("/internal/backoffice/transactions", "/api/v1/backoffice/transactions");
         put("/internal/backoffice/settlement", "/api/v1/backoffice/settlement");
-        
+        put("/internal/backoffice/ledger-transactions", "/api/v1/backoffice/ledger-transactions");
+
+        // Transaction Service (Orchestrator)
+        put("/internal/transactions/quote", "/api/v1/transactions/quote");
+        put("/internal/transactions", "/api/v1/transactions");
+        put("/internal/transactions/{workflowId}/status", "/api/v1/transactions/{workflowId}/status");
+        put("/internal/transactions/{workflowId}/force-resolve", "/api/v1/transactions/{workflowId}/force-resolve");
+
+        // Transfer / Switch Adapter
+        put("/internal/transfer/proxy/enquiry", "/api/v1/transfer/proxy/enquiry");
+        put("/internal/duitnow", "/api/v1/transfer/duitnow");
+        put("/internal/compliance/status", "/api/v1/compliance/status");
+
         // Onboarding Service
         put("/internal/verify-mykad", "/api/v1/kyc/verify");
         put("/internal/biometric", "/api/v1/kyc/biometric");
+        put("/internal/submit-application", "/api/v1/onboarding/submit-application");
         put("/backoffice/agents", "/api/v1/backoffice/agents");
         put("/backoffice/agents/{id}", "/api/v1/backoffice/agents/{id}");
         put("/internal/kyc/review-queue", "/api/v1/backoffice/kyc/review-queue");
         put("/internal/audit-logs", "/api/v1/backoffice/audit-logs");
-        
+        put("/backoffice/agents/{agentId}/user-status", "/api/v1/backoffice/agents/{agentId}/user-status");
+        put("/backoffice/agents/{agentId}/create-user", "/api/v1/backoffice/agents/{agentId}/create-user");
+
         // Biller Service
         put("/internal/pay-bill", "/api/v1/bill/pay");
+        put("/internal/billpayment/jompay", "/api/v1/billpayment/jompay");
         put("/internal/topup", "/api/v1/topup");
         put("/internal/ewallet/withdrawal", "/api/v1/ewallet/withdraw");
         put("/internal/ewallet/topup", "/api/v1/ewallet/topup");
         put("/internal/essp/purchase", "/api/v1/essp/purchase");
-        
-        // Switch Adapter Service
-        put("/internal/duitnow", "/api/v1/transfer/duitnow");
-        
+
         // Merchant (Ledger Service)
         put("/internal/merchant/retail-sale", "/api/v1/retail/sale");
         put("/internal/merchant/pin-purchase", "/api/v1/retail/pin-purchase");
         put("/internal/merchant/cash-back", "/api/v1/retail/cashback");
-        
+
         // Reconciliation (Ledger Service)
         put("/internal/reconciliation/discrepancy/maker-propose", "/api/v1/backoffice/discrepancy/{caseId}/maker-action");
         put("/internal/reconciliation/discrepancy/checker-approve", "/api/v1/backoffice/discrepancy/{caseId}/checker-approve");
         put("/internal/reconciliation/discrepancy/checker-reject", "/api/v1/backoffice/discrepancy/{caseId}/checker-reject");
+
+        // Auth‑IAM Service
+        put("/internal/auth/me", "/api/v1/auth/me");
+        put("/internal/auth/token", "/api/v1/auth/token");
+        put("/internal/auth/refresh", "/api/v1/auth/refresh");
+        put("/internal/auth/revoke", "/api/v1/auth/revoke");
+        put("/internal/auth/password/forgot", "/api/v1/auth/password/forgot");
+        put("/internal/auth/password/reset", "/api/v1/auth/password/reset");
+        put("/internal/auth/password/change", "/api/v1/auth/password/change");
     }};
 
     @GetMapping("/v3/api-docs")

@@ -32,6 +32,7 @@ export function Agents() {
   const [showAddModal, setShowAddModal] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('All')
+  const [agentIdFilter, setAgentIdFilter] = useState('')
   const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null)
   const [viewAgent, setViewAgent] = useState<Agent | null>(null)
   const [editAgent, setEditAgent] = useState<Agent | null>(null)
@@ -112,13 +113,14 @@ export function Agents() {
     }
   })
 
-  const filteredAgents = agents.filter(agent => {
-    const matchesSearch = agent.businessName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          agent.agentCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          agent.phoneNumber.includes(searchTerm)
-    const matchesStatus = statusFilter === 'All' || agent.status === statusFilter
-    return matchesSearch && matchesStatus
-  })
+const filteredAgents = agents.filter(agent => {
+     const matchesSearch = agent.businessName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           agent.agentCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           agent.phoneNumber.includes(searchTerm)
+     const matchesStatus = statusFilter === 'All' || agent.status === statusFilter
+     const matchesAgentId = !agentIdFilter || agent.agentId.toLowerCase().includes(agentIdFilter.toLowerCase())
+     return matchesSearch && matchesStatus && matchesAgentId
+   })
 
   const totalPages = Math.max(1, Math.ceil(filteredAgents.length / itemsPerPage))
   
@@ -261,7 +263,7 @@ export function Agents() {
 
       {/* Filters */}
       <div className="card" style={{ padding: 16 }}>
-        <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
+<div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
           <div style={{ position: 'relative', flex: 1 }}>
             <Search 
               size={18} 
@@ -283,6 +285,18 @@ export function Agents() {
               data-testid="search-input"
             />
           </div>
+          <input
+            type="text"
+            placeholder="Filter by Agent ID..."
+            className="input"
+            style={{ width: 180, marginLeft: 8 }}
+            value={agentIdFilter}
+            onChange={(e) => {
+              setAgentIdFilter(e.target.value);
+              setCurrentPage(1);
+            }}
+            data-testid="agent-id-filter"
+          />
           <select className="input" style={{ width: 150 }} onChange={handleStatusFilterChange} value={statusFilter} data-testid="status-filter">
             <option value="All">All Status</option>
             <option value="ACTIVE">Active</option>

@@ -19,6 +19,10 @@ dependencies {
     implementation(project(':common')) {
         exclude group: 'org.springframework.boot', module: 'spring-boot-starter-web'
     }
+    testImplementation(testFixtures(project(':common'))) {
+        exclude group: 'org.springframework.boot', module: 'spring-boot-starter-web'
+    }
+
     implementation 'org.springframework.cloud:spring-cloud-starter-gateway'
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
     implementation 'org.springframework.boot:spring-boot-starter-data-redis-reactive'
@@ -34,6 +38,9 @@ dependencies {
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'io.projectreactor:reactor-test'
     testImplementation 'com.nimbusds:nimbus-jose-jwt:9.37.3'
+    testImplementation 'org.wiremock:wiremock-standalone:3.5.4'
+    testImplementation 'org.testcontainers:testcontainers:1.20.1'
+    testImplementation 'org.testcontainers:junit-jupiter:1.20.1'
 }
 
 test {

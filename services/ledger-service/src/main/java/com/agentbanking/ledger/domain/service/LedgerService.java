@@ -61,7 +61,6 @@ public class LedgerService {
       }
     
     @SuppressWarnings("unchecked")
-    @Transactional
     public Map<String, Object> processWithdrawal(UUID agentId, BigDecimal amount, 
                                                    BigDecimal customerFee, BigDecimal agentCommission,
                                                    BigDecimal bankShare, String idempotencyKey,
@@ -196,7 +195,6 @@ public class LedgerService {
     }
 
     @SuppressWarnings("unchecked")
-    @Transactional
     public Map<String, Object> processDeposit(UUID agentId, BigDecimal amount, 
                                                BigDecimal customerFee, BigDecimal agentCommission,
                                                BigDecimal bankShare, String idempotencyKey,
@@ -307,7 +305,7 @@ public class LedgerService {
     }
 
     private TransactionRecord updateTransactionStatus(
-            TransactionRecord transaction, String newStatus,
+            TransactionRecord transaction, TransactionStatus newStatus,
             String errorCode, String switchReference, String referenceNumber) {
 
         TransactionRecord updated = new TransactionRecord(
