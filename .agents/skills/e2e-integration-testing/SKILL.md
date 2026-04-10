@@ -1,6 +1,6 @@
 ---
-name: gateway-integration-testing
-description: Use when testing all external APIs through the API gateway with real JWT tokens, covering all BDD scenarios with different user roles
+name: e2e-integration-testing
+description: Use when testing all external APIs through the API gateway with real JWT tokens, and end to end integration tests covering all BDD scenarios with different user roles
 ---
 
 # Integration tests for gateway
@@ -15,7 +15,7 @@ Integration tests use **TestContainers** which automatically manages Docker cont
 The only exception is **Temporal** (workflow engine) which requires manual Docker setup.
 
 ## Required Docker Services
-Temporal is required for orchestrator-service tests
+Temporal is required for orchestrator-service tests and gateway e2eTest
 
 | Service | Purpose | Port | Reason |
 |---------|---------|------|--------|

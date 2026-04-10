@@ -96,7 +96,7 @@ Each microservice must follow: Controller → Service → Repository.
 * **Logic Location:** All financial calculations and state changes must reside in the `@Service` layer.
 
 ### Law II: Transactional Integrity
-* All financial methods must be marked `@Transactional`.
+* All financial methods must be marked `@Transactional` - kept in use case layer (domain layer violates ArchUnit).
 * **Ledger Updates:** Must use `PESSIMISTIC_WRITE` locks on the `AgentFloat` entity.
 * **Idempotency:** Every transaction request must check the `X-Idempotency-Key` before processing. Cache responses in Redis (TTL: 24h).
 

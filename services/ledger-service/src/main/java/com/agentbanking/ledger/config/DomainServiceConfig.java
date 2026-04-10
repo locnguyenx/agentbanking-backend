@@ -3,6 +3,7 @@ package com.agentbanking.ledger.config;
 import com.agentbanking.ledger.domain.port.out.*;
 import com.agentbanking.ledger.domain.service.LedgerService;
 import com.agentbanking.ledger.domain.service.MerchantTransactionService;
+import com.agentbanking.ledger.domain.service.ReconciliationService;
 import com.agentbanking.common.efm.EfmEventPublisher;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -29,5 +30,15 @@ public class DomainServiceConfig {
                 agentRepository,
                 merchantTransactionService,
                 efmEventPublisher);
+    }
+
+    @Bean
+    public MerchantTransactionService merchantTransactionService() {
+        return new MerchantTransactionService();
+    }
+
+    @Bean
+    public ReconciliationService reconciliationService() {
+        return new ReconciliationService();
     }
 }
