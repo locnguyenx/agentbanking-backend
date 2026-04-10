@@ -379,6 +379,7 @@ setShowCreateCaseModal(true);
       {showDetailModal && selectedWorkflow && (
         <WorkflowDetailModal 
           workflow={selectedWorkflow}
+          createCaseMutation={createCaseMutation}
           onClose={() => { setShowDetailModal(false); setSelectedWorkflow(null); }}
         />
       )}
@@ -461,7 +462,7 @@ setShowCreateCaseModal(true);
   )
 }
 
-function WorkflowDetailModal({ workflow, onClose }: { workflow: WorkflowItem; onClose: () => void }) {
+function WorkflowDetailModal({ workflow, createCaseMutation, onClose }: { workflow: WorkflowItem; createCaseMutation: any; onClose: () => void }) {
   const { data: statusData, isLoading } = useQuery({
     queryKey: ['workflowStatus', workflow.workflowId],
     queryFn: async () => {
@@ -515,7 +516,7 @@ function WorkflowDetailModal({ workflow, onClose }: { workflow: WorkflowItem; on
             {workflow.status === 'PENDING' && (
               <button
                 onClick={() => createCaseMutation.mutate(workflow.workflowId)}
-                disabled={createCaseMutation.isPending}
+                disabled={createCaseMutation?.isPending}
                 style={{
                   padding: '12px 20px',
                   background: '#2563eb',
