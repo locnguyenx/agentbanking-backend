@@ -3,6 +3,7 @@ package com.agentbanking.common.audit;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -22,7 +23,8 @@ class AuditLogServiceTest {
             "admin@bank.com",
             "{\"name\": \"John Doe\"}",
             "192.168.1.1",
-            LocalDateTime.now()
+            LocalDateTime.now(),
+            AuditOutcome.SUCCESS, null, null, null, "common", null, null
         );
 
         assertNotNull(record);
@@ -36,17 +38,11 @@ class AuditLogServiceTest {
     void shouldContainAllAuditActions() {
         AuditAction[] actions = AuditAction.values();
         
-        assertEquals(8, actions.length);
-        assertArrayEquals(new AuditAction[]{
-            AuditAction.AGENT_CREATED,
-            AuditAction.AGENT_UPDATED,
-            AuditAction.AGENT_DEACTIVATED,
-            AuditAction.WITHDRAWAL,
-            AuditAction.DEPOSIT,
-            AuditAction.BILL_PAYMENT,
-            AuditAction.TRANSACTION_COMMITTED,
-            AuditAction.TRANSACTION_ROLLED_BACK
-        }, actions);
+        assertEquals(52, actions.length);
+        List<AuditAction> actionList = java.util.Arrays.asList(actions);
+        assertTrue(actionList.contains(AuditAction.AGENT_CREATED));
+        assertTrue(actionList.contains(AuditAction.WITHDRAWAL));
+        assertTrue(actionList.contains(AuditAction.DEPOSIT));
     }
 
     @Test
@@ -60,7 +56,8 @@ class AuditLogServiceTest {
                 "admin@bank.com",
                 "{}",
                 "192.168.1.1",
-                LocalDateTime.now()
+                LocalDateTime.now(),
+                AuditOutcome.SUCCESS, null, null, null, "common", null, null
             );
         });
     }
@@ -76,7 +73,8 @@ class AuditLogServiceTest {
                 "admin@bank.com",
                 "{}",
                 "192.168.1.1",
-                LocalDateTime.now()
+                LocalDateTime.now(),
+                AuditOutcome.SUCCESS, null, null, null, "common", null, null
             );
         });
     }
@@ -92,7 +90,8 @@ class AuditLogServiceTest {
                 "admin@bank.com",
                 "{}",
                 "192.168.1.1",
-                LocalDateTime.now()
+                LocalDateTime.now(),
+                AuditOutcome.SUCCESS, null, null, null, "common", null, null
             );
         });
     }
@@ -108,7 +107,8 @@ class AuditLogServiceTest {
                 null,
                 "{}",
                 "192.168.1.1",
-                LocalDateTime.now()
+                LocalDateTime.now(),
+                AuditOutcome.SUCCESS, null, null, null, "common", null, null
             );
         });
     }

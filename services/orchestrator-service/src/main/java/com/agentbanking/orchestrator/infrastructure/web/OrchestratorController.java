@@ -79,7 +79,7 @@ public class OrchestratorController {
     @GetMapping("/{workflowId}/status")
     public ResponseEntity<?> getTransactionStatus(@PathVariable String workflowId) {
         return queryWorkflowStatusUseCase.getStatus(workflowId)
-            .map(status -> ResponseEntity.ok(mapToWorkflowStatusResponse(status)))
+            .map(status -> ResponseEntity.ok(mapToWorkflowStatusResponse(workflowId, status)))
             .orElse(ResponseEntity.notFound().build());
     }
 
@@ -94,8 +94,7 @@ public class OrchestratorController {
             var signal = new com.agentbanking.orchestrator.domain.model.ForceResolveSignal(
                 com.agentbanking.orchestrator.domain.model.ForceResolveSignal.Action.valueOf(
                     request.action().name()),
-                request.reason(),
-                request.adminId()
+                request.reason()
             );
             workflowStub.signal("forceResolve", signal);
             return ResponseEntity.ok(Map.of(
@@ -123,19 +122,32 @@ public class OrchestratorController {
     }
 
     private WorkflowStatusResponse mapToWorkflowStatusResponse(
+            String workflowId,
             QueryWorkflowStatusUseCase.WorkflowStatusResponse status) {
         var result = status.result();
+        var metadata = result != null ? result.metadata() : Map.<String, Object>of();
+        
         return new WorkflowStatusResponse(
             status.status() != null ? status.status().name() : "UNKNOWN",
-            status.result() != null ? status.result().transactionId().toString() : null,
-            null,
-            result != null ? result.amount() : null,
-            result != null ? result.customerFee() : null,
-            result != null ? result.referenceNumber() : null,
+            result != null ? result.pendingReason() : null,
+            workflowId,
+            null, // transactionType not currently in WorkflowResult
+            result != null && result.amount() != null ? result.amount() : BigDecimal.ZERO,
+            result != null && result.customerFee() != null ? result.customerFee() : BigDecimal.ZERO,
+            result != null && result.referenceNumber() != null ? result.referenceNumber() : "",
             result != null ? result.errorCode() : null,
             result != null ? result.errorMessage() : null,
             result != null ? result.actionCode() : null,
-            result != null ? result.completedAt() : null
+            result != null ? result.completedAt() : null,
+            (String) metadata.get("agentTier"),
+            (String) metadata.get("targetBin"),
+            (String) metadata.get("customerCardMasked"),
+            (BigDecimal) metadata.get("geofenceLat"),
+            (BigDecimal) metadata.get("geofenceLng"),
+            (String) metadata.get("billerCode"),
+            (String) metadata.get("ref1"),
+            (String) metadata.get("ref2"),
+            (String) metadata.get("destinationAccount")
         );
     }
 

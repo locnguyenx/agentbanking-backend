@@ -53,4 +53,10 @@ public class LedgerServiceAdapter implements LedgerServicePort {
         log.info("Validating account: {}", input.destinationAccount());
         return ledgerServiceClient.validateAccount(input);
     }
+
+    @Override
+    public TransactionDetailsResult getTransactionDetails(UUID transactionId) {
+        log.info("Fetching transaction details from ledger for: {}", transactionId);
+        return ledgerServiceClient.getTransaction(transactionId);
+    }
 }

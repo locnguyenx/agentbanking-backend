@@ -1,6 +1,7 @@
 package com.agentbanking.auth.infrastructure.config;
 
 import com.agentbanking.auth.application.usecase.AuthenticateUserUseCaseImpl;
+import com.agentbanking.auth.application.usecase.AuditLogServiceImpl;
 import com.agentbanking.auth.application.usecase.CheckPermissionUseCaseImpl;
 import com.agentbanking.auth.application.usecase.ManagePermissionUseCaseImpl;
 import com.agentbanking.auth.application.usecase.ManageRoleUseCaseImpl;
@@ -10,7 +11,6 @@ import com.agentbanking.auth.application.usecase.ValidateTokenUseCaseImpl;
 import com.agentbanking.auth.domain.service.AgentUserSyncService;
 import com.agentbanking.auth.domain.service.AuthenticationService;
 import com.agentbanking.auth.domain.service.AuthorizationService;
-import com.agentbanking.auth.domain.service.AuditService;
 import com.agentbanking.auth.domain.service.PasswordResetService;
 import com.agentbanking.auth.domain.service.TemporaryPasswordGenerator;
 import com.agentbanking.auth.domain.service.UserManagementService;
@@ -50,8 +50,8 @@ public class DomainServiceConfig {
     }
 
     @Bean
-    public AuditService auditService(AuditLogRepository auditLogRepository) {
-        return new AuditService(auditLogRepository);
+    public AuditLogServiceImpl auditLogService(AuditLogRepository auditLogRepository) {
+        return new AuditLogServiceImpl(auditLogRepository);
     }
 
     @Bean

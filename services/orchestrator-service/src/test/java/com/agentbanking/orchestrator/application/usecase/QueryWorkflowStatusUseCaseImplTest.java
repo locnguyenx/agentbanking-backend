@@ -3,6 +3,7 @@ package com.agentbanking.orchestrator.application.usecase;
 import com.agentbanking.orchestrator.domain.model.WorkflowResult;
 import com.agentbanking.orchestrator.domain.model.WorkflowStatus;
 import com.agentbanking.orchestrator.domain.port.in.QueryWorkflowStatusUseCase;
+import com.agentbanking.orchestrator.domain.port.out.LedgerServicePort;
 import com.agentbanking.orchestrator.domain.port.out.TransactionRecordRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -24,11 +25,14 @@ class QueryWorkflowStatusUseCaseImplTest {
     @Mock
     private TransactionRecordRepository transactionRecordRepository;
 
+    @Mock
+    private LedgerServicePort ledgerServicePort;
+
     private QueryWorkflowStatusUseCaseImpl queryWorkflowStatusUseCase;
 
     @BeforeEach
     void setUp() {
-        queryWorkflowStatusUseCase = new QueryWorkflowStatusUseCaseImpl(transactionRecordRepository);
+        queryWorkflowStatusUseCase = new QueryWorkflowStatusUseCaseImpl(transactionRecordRepository, ledgerServicePort);
     }
 
     @Test
@@ -51,16 +55,17 @@ class QueryWorkflowStatusUseCaseImplTest {
         var recordDTO = new TransactionRecordRepository.TransactionRecordDTO(
             transactionId,
             workflowId,
-            null,
-            UUID.randomUUID(),
-            new BigDecimal("100.00"),
-            new BigDecimal("2.00"),
-            "COMPLETED",
-            null,
-            null,
-            "REF123",
-            Instant.now(),
-            Instant.now()
+            null, // transactionType
+            UUID.randomUUID(), // agentId
+            new BigDecimal("100.00"), // amount
+            new BigDecimal("2.00"), // customerFee
+            "COMPLETED", // status
+            null, // errorCode
+            null, // errorMessage
+            null, // externalReference
+            "REF123", // referenceNumber
+            Instant.now(), // createdAt
+            Instant.now()  // completedAt
         );
 
         when(transactionRecordRepository.findByWorkflowId(workflowId)).thenReturn(Optional.of(recordDTO));
@@ -84,14 +89,15 @@ class QueryWorkflowStatusUseCaseImplTest {
         var recordDTO = new TransactionRecordRepository.TransactionRecordDTO(
             UUID.randomUUID(),
             workflowId,
-            null,
-            UUID.randomUUID(),
-            new BigDecimal("100.00"),
-            null,
-            "FAILED",
+            null, // transactionType
+            UUID.randomUUID(), // agentId
+            new BigDecimal("100.00"), // amount
+            null, // customerFee
+            "FAILED", // status
             "ERR_BIZ_INSUFFICIENT_FUNDS",
             "Insufficient funds",
-            null,
+            null, // externalReference
+            null, // referenceNumber
             Instant.now(),
             Instant.now()
         );
@@ -115,14 +121,15 @@ class QueryWorkflowStatusUseCaseImplTest {
         var recordDTO = new TransactionRecordRepository.TransactionRecordDTO(
             UUID.randomUUID(),
             workflowId,
+            null, // transactionType
+            UUID.randomUUID(), // agentId
+            new BigDecimal("100.00"), // amount
+            null, // customerFee
+            "RUNNING", // status
             null,
-            UUID.randomUUID(),
-            new BigDecimal("100.00"),
             null,
-            "RUNNING",
-            null,
-            null,
-            null,
+            null, // externalReference
+            null, // referenceNumber
             Instant.now(),
             null
         );
@@ -143,14 +150,15 @@ class QueryWorkflowStatusUseCaseImplTest {
         var recordDTO = new TransactionRecordRepository.TransactionRecordDTO(
             UUID.randomUUID(),
             workflowId,
+            null, // transactionType
+            UUID.randomUUID(), // agentId
+            new BigDecimal("100.00"), // amount
+            null, // customerFee
+            "UNKNOWN_STATE", // status
             null,
-            UUID.randomUUID(),
-            new BigDecimal("100.00"),
             null,
-            "UNKNOWN_STATE",
-            null,
-            null,
-            null,
+            null, // externalReference
+            null, // referenceNumber
             Instant.now(),
             null
         );

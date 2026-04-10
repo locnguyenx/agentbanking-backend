@@ -13,6 +13,7 @@ import java.util.Map;
 import java.util.UUID;
 
 @Service
+@org.springframework.context.annotation.Primary
 public class ProcessDepositUseCaseImpl implements ProcessDepositUseCase {
 
     private static final Logger log = LoggerFactory.getLogger(ProcessDepositUseCaseImpl.class);
@@ -32,18 +33,20 @@ public class ProcessDepositUseCaseImpl implements ProcessDepositUseCase {
     public Map<String, Object> processDeposit(UUID agentId, BigDecimal amount,
                                                BigDecimal customerFee, BigDecimal agentCommission,
                                                BigDecimal bankShare, String idempotencyKey,
-                                               String destinationAccount) {
+                                               String customerMykad, String billerCode,
+                                               String ref1, String ref2,
+                                               BigDecimal geofenceLat, BigDecimal geofenceLng) {
         log.info("Processing deposit for agent: {}, amount: {}", agentId, amount);
 
         try {
             Map<String, Object> result = ledgerService.processDeposit(agentId, amount, customerFee, agentCommission,
-                    bankShare, idempotencyKey, destinationAccount);
+                    bankShare, idempotencyKey, customerMykad, billerCode, ref1, ref2, geofenceLat, geofenceLng);
 
             if (result != null) {
                 transactionEventPublisher.publish(new TransactionEvent(
                     UUID.randomUUID(),
-                    (String) result.get("status"),
-                    UUID.fromString((String) result.get("transactionId")),
+                    String.valueOf(result.get("status")),
+                    result.get("transactionId") instanceof UUID ? (UUID) result.get("transactionId") : UUID.fromString(String.valueOf(result.get("transactionId"))),
                     agentId,
                     "CASH_DEPOSIT",
                     amount,

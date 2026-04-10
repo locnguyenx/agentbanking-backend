@@ -3,6 +3,8 @@ package com.agentbanking.orchestrator.domain.port.out;
 import com.agentbanking.orchestrator.domain.model.TransactionType;
 
 import java.math.BigDecimal;
+import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -12,9 +14,23 @@ public interface TransactionRecordRepository {
                 BigDecimal amount, String status);
 
     void updateStatus(String workflowId, String status, String errorCode,
-                      String errorMessage, String externalReference);
+                      String errorMessage, String externalReference,
+                      BigDecimal customerFee, String referenceNumber);
 
     Optional<TransactionRecordDTO> findByWorkflowId(String workflowId);
+
+    List<TransactionRecordDTO> findStuckTransactions();
+
+    List<TransactionRecordDTO> findAllWithFilters(
+            Instant fromDate,
+            Instant toDate,
+            UUID agentId,
+            String agentCode,
+            String transactionType,
+            String status,
+            int page,
+            int size
+    );
 
     record TransactionRecordDTO(
             UUID id,
@@ -27,7 +43,9 @@ public interface TransactionRecordRepository {
             String errorCode,
             String errorMessage,
             String externalReference,
-            java.time.Instant createdAt,
-            java.time.Instant completedAt
+            String referenceNumber,
+            String pendingReason,
+            Instant createdAt,
+            Instant completedAt
     ) {}
 }

@@ -6,10 +6,12 @@ import com.agentbanking.ledger.infrastructure.persistence.entity.AgentFloatEntit
 import com.agentbanking.ledger.infrastructure.persistence.mapper.AgentFloatMapper;
 import org.springframework.stereotype.Repository;
 
+import java.math.BigDecimal;
 import java.util.Optional;
 import java.util.UUID;
 
 @Repository
+@org.springframework.context.annotation.Primary
 public class JpaAgentFloatRepository implements AgentFloatRepository {
     
     private final AgentFloatJpaRepository jpaRepository;
@@ -38,5 +40,10 @@ public class JpaAgentFloatRepository implements AgentFloatRepository {
         }
         AgentFloatEntity saved = jpaRepository.save(entity);
         return AgentFloatMapper.toRecord(saved);
+    }
+
+    @Override
+    public void updateBalance(UUID agentId, BigDecimal balanceChange) {
+        jpaRepository.updateBalance(agentId, balanceChange);
     }
 }

@@ -43,7 +43,12 @@ public class ProcessCardDepositUseCaseImpl implements ProcessCardDepositUseCase 
                 BigDecimal.ZERO, // agentCommission
                 BigDecimal.ZERO, // bankShare
                 idempotencyKey,
-                null // destinationAccount - not needed
+                null, // customerMykad
+                null, // billerCode
+                null, // ref1
+                null, // ref2
+                null, // geofenceLat
+                null  // geofenceLng
         );
 
         TransactionResult response = new TransactionResult(

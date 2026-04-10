@@ -1,9 +1,11 @@
 package com.agentbanking.ledger.domain.port.out;
 
 import com.agentbanking.ledger.domain.model.TransactionRecord;
-import com.agentbanking.common.transaction.TransactionStatus;
+import com.agentbanking.ledger.domain.model.TransactionStatus;
+import com.agentbanking.ledger.domain.model.TransactionType;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
@@ -13,6 +15,7 @@ public interface TransactionRepository {
     TransactionRecord findByIdempotencyKey(String idempotencyKey);
     TransactionRecord findById(UUID transactionId);
     List<TransactionRecord> findRecentTransactions();
+    BigDecimal sumSuccessfulTransactionAmountByType(TransactionType transactionType);
     BigDecimal sumSuccessfulTransactionAmount();
     long countAllTransactions();
     long countDistinctAgents();
@@ -20,4 +23,6 @@ public interface TransactionRepository {
     boolean existsByAgentIdAndStatusIn(UUID agentId, List<TransactionStatus> statuses);
     List<UUID> findAgentIdsWithTransactionsOnDate(LocalDate date);
     List<TransactionRecord> findByAgentIdAndCompletedDate(UUID agentId, LocalDate date);
+    List<TransactionRecord> findByAgentId(UUID agentId);
+    List<TransactionRecord> findByAgentIdAndStatus(UUID agentId, TransactionStatus status);
 }

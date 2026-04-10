@@ -12,6 +12,7 @@ import { Transactions } from './pages/Transactions'
 import { Settlement } from './pages/Settlement'
 import { KycReview } from './pages/KycReview'
 import { TransactionResolution } from './pages/TransactionResolution'
+import { OrchestratorWorkflows } from './pages/OrchestratorWorkflows'
 import { Profile } from './pages/Profile'
 import { SystemAdmin } from './pages/SystemAdmin'
 import './styles/global.css'
@@ -70,9 +71,10 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
             <Route index element={<Dashboard />} />
             <Route path="agents" element={<Agents />} />
             <Route path="users" element={<UserManagement />} />
-            <Route path="transactions" element={<Transactions />} />
+            <Route path="ledger-transactions" element={<Transactions />} />
             <Route path="settlement" element={<Settlement />} />
             <Route path="kyc-review" element={<KycReview />} />
+            <Route path="orchestrator-workflows" element={<OrchestratorWorkflows />} />
             <Route path="transaction-resolution" element={<TransactionResolution />} />
             <Route path="profile" element={<Profile />} />
             <Route path="system-admin" element={<SystemAdmin />} />

@@ -281,8 +281,11 @@ services:
       SERVICES_LEDGER-SERVICE_URL: http://ledger-service:8082
       AUTH_SERVICE_URL: http://auth-iam-service:8087
       AML-SCREENING_URL: http://mock-server:8090
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
     depends_on:
       postgres-onboarding:
+        condition: service_healthy
+      kafka:
         condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8083/ || true"]

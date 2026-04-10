@@ -18,7 +18,6 @@ class RulesControllerIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void calculateFees_shouldReturnFees() throws Exception {
-        // Seed fee config for CASH_WITHDRAWAL/STANDARD
         String configBody = """
             {
                 "transactionType": "CASH_WITHDRAWAL",
@@ -45,6 +44,53 @@ class RulesControllerIntegrationTest extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.customerFee").exists())
                 .andExpect(jsonPath("$.agentCommission").exists())
                 .andExpect(jsonPath("$.bankShare").exists());
+    }
+
+    @Test
+    void calculateFees_withMultipleConfigs_shouldReturnMostRecent() throws Exception {
+        String oldConfig = """
+            {
+                "transactionType": "CASH_WITHDRAWAL",
+                "agentTier": "PREMIER",
+                "feeType": "FIXED",
+                "customerFeeValue": "1.00",
+                "agentCommissionValue": "0.20",
+                "bankShareValue": "0.80",
+                "dailyLimitAmount": "10000.00",
+                "dailyLimitCount": 10,
+                "effectiveFrom": "2024-01-01"
+            }
+            """;
+        mockMvc.perform(post("/internal/fees")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(oldConfig))
+                .andExpect(status().is2xxSuccessful());
+
+        String newConfig = """
+            {
+                "transactionType": "CASH_WITHDRAWAL",
+                "agentTier": "PREMIER",
+                "feeType": "FIXED",
+                "customerFeeValue": "2.00",
+                "agentCommissionValue": "0.40",
+                "bankShareValue": "1.60",
+                "dailyLimitAmount": "10000.00",
+                "dailyLimitCount": 10,
+                "effectiveFrom": "2026-04-07"
+            }
+            """;
+        mockMvc.perform(post("/internal/fees")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(newConfig))
+                .andExpect(status().is2xxSuccessful());
+
+        mockMvc.perform(post("/internal/fees/calculate")
+                        .param("transactionType", "CASH_WITHDRAWAL")
+                        .param("agentTier", "PREMIER")
+                        .param("amount", "500.00"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.customerFee").value(2.00))
+                .andExpect(jsonPath("$.agentCommission").value(0.40));
     }
 
     @Test
@@ -147,5 +193,42 @@ class RulesControllerIntegrationTest extends AbstractIntegrationTest {
                         .param("amount", "500.00"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.eligible").isBoolean());
+    }
+
+    @Test
+    void getQuote_shouldReturnQuote() throws Exception {
+        String configBody = """
+            {
+                "transactionType": "CASH_WITHDRAWAL",
+                "agentTier": "STANDARD",
+                "feeType": "FIXED",
+                "customerFeeValue": "1.00",
+                "agentCommissionValue": "0.20",
+                "bankShareValue": "0.80",
+                "dailyLimitAmount": "10000.00",
+                "dailyLimitCount": 10,
+                "effectiveFrom": "2026-01-01"
+            }
+            """;
+        mockMvc.perform(post("/internal/fees")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(configBody))
+                .andExpect(status().is2xxSuccessful());
+
+        mockMvc.perform(post("/internal/transactions/quote")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                            {
+                                "serviceCode": "CASH_WITHDRAWAL",
+                                "amount": "100.00",
+                                "fundingSource": "CARD_EMV"
+                            }
+                            """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.quoteId").exists())
+                .andExpect(jsonPath("$.amount").value("100.00"))
+                .andExpect(jsonPath("$.fee").exists())
+                .andExpect(jsonPath("$.total").exists())
+                .andExpect(jsonPath("$.commission").exists());
     }
 }

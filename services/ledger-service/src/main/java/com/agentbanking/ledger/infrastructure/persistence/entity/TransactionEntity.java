@@ -1,6 +1,6 @@
 package com.agentbanking.ledger.infrastructure.persistence.entity;
 
-import com.agentbanking.common.transaction.TransactionStatus;
+import com.agentbanking.ledger.domain.model.TransactionStatus;
 import com.agentbanking.ledger.domain.model.TransactionType;
 import jakarta.persistence.*;
 import java.math.BigDecimal;
@@ -11,6 +11,7 @@ import java.util.UUID;
 @Table(name = "ledger_transaction")
 public class TransactionEntity {
     @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "transaction_id")
     private UUID transactionId;
     
@@ -52,6 +53,9 @@ public class TransactionEntity {
     @Column(name = "switch_reference")
     private String switchReference;
     
+    @Column(name = "reference_number")
+    private String referenceNumber;
+    
     @Column(name = "geofence_lat")
     private BigDecimal geofenceLat;
     
@@ -63,6 +67,24 @@ public class TransactionEntity {
     
     @Column(name = "completed_at")
     private LocalDateTime completedAt;
+
+    @Column(name = "agent_tier")
+    private String agentTier;
+
+    @Column(name = "target_bin")
+    private String targetBin;
+
+    @Column(name = "biller_code")
+    private String billerCode;
+
+    @Column(name = "ref1")
+    private String ref1;
+
+    @Column(name = "ref2")
+    private String ref2;
+
+    @Column(name = "destination_account")
+    private String destinationAccount;
 
     public UUID getTransactionId() { return transactionId; }
     public void setTransactionId(UUID transactionId) { this.transactionId = transactionId; }
@@ -90,6 +112,9 @@ public class TransactionEntity {
     public void setCustomerCardMasked(String customerCardMasked) { this.customerCardMasked = customerCardMasked; }
     public String getSwitchReference() { return switchReference; }
     public void setSwitchReference(String switchReference) { this.switchReference = switchReference; }
+    
+    public String getReferenceNumber() { return referenceNumber; }
+    public void setReferenceNumber(String referenceNumber) { this.referenceNumber = referenceNumber; }
     public BigDecimal getGeofenceLat() { return geofenceLat; }
     public void setGeofenceLat(BigDecimal geofenceLat) { this.geofenceLat = geofenceLat; }
     public BigDecimal getGeofenceLng() { return geofenceLng; }
@@ -98,4 +123,17 @@ public class TransactionEntity {
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
     public LocalDateTime getCompletedAt() { return completedAt; }
     public void setCompletedAt(LocalDateTime completedAt) { this.completedAt = completedAt; }
+
+    public String getAgentTier() { return agentTier; }
+    public void setAgentTier(String agentTier) { this.agentTier = agentTier; }
+    public String getTargetBin() { return targetBin; }
+    public void setTargetBin(String targetBin) { this.targetBin = targetBin; }
+    public String getBillerCode() { return billerCode; }
+    public void setBillerCode(String billerCode) { this.billerCode = billerCode; }
+    public String getRef1() { return ref1; }
+    public void setRef1(String ref1) { this.ref1 = ref1; }
+    public String getRef2() { return ref2; }
+    public void setRef2(String ref2) { this.ref2 = ref2; }
+    public String getDestinationAccount() { return destinationAccount; }
+    public void setDestinationAccount(String destinationAccount) { this.destinationAccount = destinationAccount; }
 }

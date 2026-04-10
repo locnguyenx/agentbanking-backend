@@ -31,6 +31,8 @@ public class DepositWorkflowImpl implements DepositWorkflow {
     private final ReleaseFloatActivity releaseFloatActivity;
     private final PostToCBSActivity postToCBSActivity;
     private final PublishKafkaEventActivity publishKafkaEventActivity;
+    private final SaveResolutionCaseActivity saveResolutionCaseActivity;
+    private final PersistWorkflowResultActivity persistWorkflowResultActivity;
 
     private WorkflowStatus currentStatus = WorkflowStatus.PENDING;
 
@@ -59,6 +61,8 @@ public class DepositWorkflowImpl implements DepositWorkflow {
         this.releaseFloatActivity = Workflow.newActivityStub(ReleaseFloatActivity.class, defaultOptions);
         this.postToCBSActivity = Workflow.newActivityStub(PostToCBSActivity.class, cbsOptions);
         this.publishKafkaEventActivity = Workflow.newActivityStub(PublishKafkaEventActivity.class, defaultOptions);
+        this.saveResolutionCaseActivity = Workflow.newActivityStub(SaveResolutionCaseActivity.class, defaultOptions);
+        this.persistWorkflowResultActivity = Workflow.newActivityStub(PersistWorkflowResultActivity.class, defaultOptions);
     }
 
     @Override
@@ -72,7 +76,10 @@ public class DepositWorkflowImpl implements DepositWorkflow {
                     new VelocityCheckInput(input.agentId(), input.amount(), input.customerMykad()));
             if (!velocityResult.passed()) {
                 currentStatus = WorkflowStatus.FAILED;
-                return WorkflowResult.failed(velocityResult.errorCode(), "Velocity check failed", "DECLINE");
+                WorkflowResult failResult = WorkflowResult.failed(velocityResult.errorCode(), "Velocity check failed", "DECLINE");
+                persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
+                        input.idempotencyKey(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null));
+                return failResult;
             }
 
             // Step 2: Evaluate STP
@@ -82,8 +89,23 @@ public class DepositWorkflowImpl implements DepositWorkflow {
                     input.amount().toString(),
                     input.customerMykad());
             if (!stpDecision.approved()) {
+                // Auto-create resolution case for non-STP transactions
+                if (stpDecision.category().equals("NON_STP") || 
+                    stpDecision.category().equals("CONDITIONAL_STP")) {
+                    saveResolutionCaseActivity.saveResolutionCase(
+                        new SaveResolutionCaseActivity.Input(
+                            input.idempotencyKey(),
+                            null, // transactionId not available yet
+                            stpDecision.category(),
+                            stpDecision.reason()
+                        )
+                    );
+                }
                 currentStatus = WorkflowStatus.PENDING_REVIEW;
-                return WorkflowResult.failed("ERR_STP_REVIEW", stpDecision.reason(), "REVIEW");
+                WorkflowResult reviewResult = WorkflowResult.failed("ERR_STP_REVIEW", stpDecision.reason(), "REVIEW");
+                persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
+                        input.idempotencyKey(), "PENDING_REVIEW", reviewResult.errorCode(), reviewResult.errorMessage(), null, null, null));
+                return reviewResult;
             }
 
             // Step 3: Calculate fees
@@ -95,15 +117,35 @@ public class DepositWorkflowImpl implements DepositWorkflow {
                     new AccountValidationInput(input.destinationAccount()));
             if (!accountResult.valid()) {
                 currentStatus = WorkflowStatus.FAILED;
-                return WorkflowResult.failed(accountResult.errorCode(), "Invalid account", "DECLINE");
+                WorkflowResult failResult = WorkflowResult.failed(accountResult.errorCode(), "Invalid account", "DECLINE");
+                persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
+                        input.idempotencyKey(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null));
+                return failResult;
             }
 
             // Step 4: Credit agent float
             FloatCreditResult creditResult = creditAgentFloatActivity.creditAgentFloat(
-                    new FloatCreditInput(input.agentId(), input.amount()));
+                    new FloatCreditInput(
+                            input.agentId(),
+                            input.amount(),
+                            fees.customerFee(),
+                            fees.agentCommission(),
+                            fees.bankShare(),
+                            input.idempotencyKey(),
+                            input.destinationAccount(),
+                            input.agentTier(),
+                            input.targetBin(),
+                            input.idempotencyKey(), // referenceNumber fallback
+                            input.geofenceLat(),
+                            input.geofenceLng()
+                    )
+            );
             if (!creditResult.success()) {
                 currentStatus = WorkflowStatus.FAILED;
-                return WorkflowResult.failed(creditResult.errorCode(), "Float credit failed", "DECLINE");
+                WorkflowResult failResult = WorkflowResult.failed(creditResult.errorCode(), "Float credit failed", "DECLINE");
+                persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
+                        input.idempotencyKey(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null));
+                return failResult;
             }
 
             // Step 5: Post to CBS
@@ -114,7 +156,10 @@ public class DepositWorkflowImpl implements DepositWorkflow {
                 releaseFloatActivity.releaseFloat(
                         new FloatReleaseInput(input.agentId(), input.amount(), null));
                 currentStatus = WorkflowStatus.FAILED;
-                return WorkflowResult.failed(cbsResult.errorCode(), "CBS posting failed", "RETRY");
+                WorkflowResult failResult = WorkflowResult.failed(cbsResult.errorCode(), "CBS posting failed", "RETRY");
+                persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
+                        input.idempotencyKey(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null));
+                return failResult;
             }
 
             // Step 6: Publish event (non-critical)
@@ -128,13 +173,25 @@ public class DepositWorkflowImpl implements DepositWorkflow {
             }
 
             currentStatus = WorkflowStatus.COMPLETED;
-            return WorkflowResult.completed(UUID.randomUUID(), cbsResult.reference(),
+            UUID txId = UUID.randomUUID();
+            WorkflowResult completedResult = WorkflowResult.completed(txId, cbsResult.reference(),
                     input.amount(), fees.customerFee());
+            persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
+                    input.idempotencyKey(), "COMPLETED", null, null,
+                    cbsResult.reference(), fees.customerFee(), cbsResult.reference()));
+            return completedResult;
 
         } catch (Exception e) {
             log.error("Workflow failed with exception: {}", e.getMessage());
             currentStatus = WorkflowStatus.FAILED;
-            return WorkflowResult.failed("ERR_SYS_WORKFLOW_FAILED", e.getMessage(), "REVIEW");
+            WorkflowResult failResult = WorkflowResult.failed("ERR_SYS_WORKFLOW_FAILED", e.getMessage(), "REVIEW");
+            try {
+                persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
+                        input.idempotencyKey(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null));
+            } catch (Exception ex) {
+                log.warn("Failed to persist fail result: {}", ex.getMessage());
+            }
+            return failResult;
         }
     }
 

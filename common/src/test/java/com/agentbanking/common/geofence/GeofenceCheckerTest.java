@@ -41,21 +41,17 @@ class GeofenceCheckerTest {
     }
 
     @Test
-    void isWithinGeofence_withNullPosLat_throwsException() {
-        BigDecimal agentLat = new BigDecimal("3.1578");
-        BigDecimal agentLng = new BigDecimal("101.7123");
-
-        assertThrows(NullPointerException.class, () ->
-                GeofenceChecker.isWithinGeofence(agentLat, agentLng, null, new BigDecimal("101.7123")));
+    void isWithinGeofence_withNullPosLat_shouldReturnFalse() {
+        assertFalse(GeofenceChecker.isWithinGeofence(
+            BigDecimal.valueOf(3.1390), BigDecimal.valueOf(101.6869),
+            null, BigDecimal.valueOf(101.6869), 1.0));
     }
 
     @Test
-    void isWithinGeofence_withNullPosLng_throwsException() {
-        BigDecimal agentLat = new BigDecimal("3.1578");
-        BigDecimal agentLng = new BigDecimal("101.7123");
-
-        assertThrows(NullPointerException.class, () ->
-                GeofenceChecker.isWithinGeofence(agentLat, agentLng, new BigDecimal("3.1578"), null));
+    void isWithinGeofence_withNullPosLng_shouldReturnFalse() {
+        assertFalse(GeofenceChecker.isWithinGeofence(
+            BigDecimal.valueOf(3.1390), BigDecimal.valueOf(101.6869),
+            BigDecimal.valueOf(3.1390), null, 1.0));
     }
 
     @Test

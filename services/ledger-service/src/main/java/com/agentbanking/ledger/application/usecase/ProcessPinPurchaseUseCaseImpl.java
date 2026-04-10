@@ -41,7 +41,13 @@ public class ProcessPinPurchaseUseCaseImpl implements ProcessPinPurchaseUseCase 
                 command.agentId(),
                 command.productCode(),
                 command.amount(),
-                idempotencyKey
+                idempotencyKey,
+                null, // agentTier
+                null, // billerCode
+                null, // targetBin
+                null, // destinationAccount
+                null, // ref1
+                null  // ref2
         );
 
         PinPurchaseResponse response = new PinPurchaseResponse(

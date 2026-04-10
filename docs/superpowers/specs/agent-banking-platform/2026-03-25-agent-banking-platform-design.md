@@ -527,6 +527,7 @@ The Translation Layer (Tier 3) normalizes legacy error codes to clean business e
 | CBS | E102 | Hold on Account | ERR_ACCOUNT_FROZEN | Notify Customer |
 | CBS | E999 | System Error | ERR_DOWNSTREAM_UNAVAILABLE | Retry / Alert |
 | HSM | 15 | PIN Block Mismatch | ERR_INVALID_PIN | Block / Security Alert |
+| <source> | <code> | <Description > | ... | ... |
 
 **Action Categories:**
 - **Notify Customer:** Clean failure — stop and tell customer why

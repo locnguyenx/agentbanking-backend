@@ -122,7 +122,7 @@ class OrchestratorControllerIntegrationTest extends AbstractOrchestratorIntegrat
             mockMvc.perform(post("/api/v1/transactions")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(requestBody))
-                    .andExpect(status().is5xxServerError());
+                    .andExpect(status().is4xxClientError());
         }
     }
 

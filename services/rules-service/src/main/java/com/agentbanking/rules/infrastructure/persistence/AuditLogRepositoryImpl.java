@@ -1,0 +1,101 @@
+package com.agentbanking.rules.infrastructure.persistence;
+
+import com.agentbanking.common.audit.AuditLogRecord;
+import com.agentbanking.rules.domain.port.out.AuditLogRepository;
+import com.agentbanking.rules.infrastructure.persistence.entity.AuditLogEntity;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+import org.springframework.stereotype.Repository;
+
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+
+@Repository
+public class AuditLogRepositoryImpl implements AuditLogRepository {
+    
+    private static final String SERVICE_NAME = "rules-service";
+    
+    private final AuditLogJpaRepository auditLogJpaRepository;
+    
+    public AuditLogRepositoryImpl(AuditLogJpaRepository auditLogJpaRepository) {
+        this.auditLogJpaRepository = auditLogJpaRepository;
+    }
+    
+    @Override
+    public Optional<AuditLogRecord> findById(UUID auditLogId) {
+        return auditLogJpaRepository.findById(auditLogId)
+            .map(this::toRecord);
+    }
+    
+    @Override
+    public AuditLogRecord save(AuditLogRecord record) {
+        AuditLogEntity entity = toEntity(record);
+        if (entity.getTimestamp() == null) {
+            entity.setTimestamp(java.time.LocalDateTime.now());
+        }
+        if (entity.getIpAddress() == null) {
+            entity.setIpAddress("unknown");
+        }
+        if (entity.getServiceName() == null) {
+            entity.setServiceName(SERVICE_NAME);
+        }
+        AuditLogEntity saved = auditLogJpaRepository.save(entity);
+        return toRecord(saved);
+    }
+    
+    @Override
+    public List<AuditLogRecord> findAll(int page, int size) {
+        List<AuditLogEntity> entities = auditLogJpaRepository.findAll(
+            PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "timestamp"))
+        ).getContent();
+        return entities.stream().map(this::toRecord).toList();
+    }
+    
+    @Override
+    public long count() {
+        return auditLogJpaRepository.count();
+    }
+    
+    private AuditLogRecord toRecord(AuditLogEntity entity) {
+        if (entity == null) return null;
+        return new AuditLogRecord(
+            entity.getAuditId(),
+            entity.getEntityType(),
+            entity.getEntityId(),
+            entity.getAction(),
+            entity.getPerformedBy(),
+            entity.getChanges(),
+            entity.getIpAddress(),
+            entity.getTimestamp(),
+            entity.getOutcome(),
+            entity.getFailureReason(),
+            entity.getTraceId(),
+            entity.getSessionId(),
+            entity.getServiceName(),
+            entity.getDeviceInfo(),
+            entity.getGeographicLocation()
+        );
+    }
+    
+    private AuditLogEntity toEntity(AuditLogRecord record) {
+        if (record == null) return null;
+        AuditLogEntity entity = new AuditLogEntity();
+        entity.setAuditId(record.auditId());
+        entity.setEntityType(record.entityType());
+        entity.setEntityId(record.entityId());
+        entity.setAction(record.action());
+        entity.setPerformedBy(record.performedBy());
+        entity.setChanges(record.changes());
+        entity.setIpAddress(record.ipAddress() != null ? record.ipAddress() : "unknown");
+        entity.setTimestamp(record.timestamp());
+        entity.setOutcome(record.outcome());
+        entity.setFailureReason(record.failureReason());
+        entity.setTraceId(record.traceId());
+        entity.setSessionId(record.sessionId());
+        entity.setServiceName(record.serviceName() != null ? record.serviceName() : SERVICE_NAME);
+        entity.setDeviceInfo(record.deviceInfo());
+        entity.setGeographicLocation(record.geographicLocation());
+        return entity;
+    }
+}

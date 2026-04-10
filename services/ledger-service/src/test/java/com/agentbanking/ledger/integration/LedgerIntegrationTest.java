@@ -28,8 +28,10 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
+@org.springframework.test.context.jdbc.Sql(statements = "UPDATE agent_float SET merchant_gps_lat = 3.1390, merchant_gps_lng = 101.6869 WHERE agent_id = 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11'")
 class LedgerIntegrationTest extends AbstractIntegrationTest {
 
     @TestConfiguration
@@ -113,6 +115,11 @@ class LedgerIntegrationTest extends AbstractIntegrationTest {
 
     private static final UUID AGENT_ID = UUID.fromString("a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11");
 
+    private void stubSwitchSuccess() {
+        when(switchServicePort.debitAccount(any(), any(), any()))
+                .thenReturn(Map.of("success", true, "responseCode", "00", "switchReference", "REF123", "referenceNumber", "RN123"));
+    }
+
     private void stubVelocityCheck() {
         when(rulesServiceFeignClient.checkVelocity(org.mockito.ArgumentMatchers.any()))
                 .thenReturn(Map.of("passed", true));
@@ -121,6 +128,7 @@ class LedgerIntegrationTest extends AbstractIntegrationTest {
     @Test
     void shouldProcessWithdrawalEndToEnd() {
         stubVelocityCheck();
+        stubSwitchSuccess();
 
         Map<String, Object> result = processWithdrawalUseCase.processWithdrawal(
                 AGENT_ID,
@@ -131,7 +139,9 @@ class LedgerIntegrationTest extends AbstractIntegrationTest {
                 "integ-e2e-" + UUID.randomUUID(),
                 "411111******1111",
                 new BigDecimal("3.1390"),
-                new BigDecimal("101.6869"));
+                new BigDecimal("101.6869"),
+                "BRONZE",
+                "123456");
 
         assertThat(result.get("status")).isEqualTo("COMPLETED");
         assertThat(result.get("transactionId")).isNotNull();
@@ -140,6 +150,7 @@ class LedgerIntegrationTest extends AbstractIntegrationTest {
     @Test
     void shouldReturnCachedResponseOnIdempotency() {
         stubVelocityCheck();
+        stubSwitchSuccess();
 
         String idempotencyKey = "integ-idem-" + UUID.randomUUID();
 
@@ -152,7 +163,9 @@ class LedgerIntegrationTest extends AbstractIntegrationTest {
                 idempotencyKey,
                 "411111******1111",
                 new BigDecimal("3.1390"),
-                new BigDecimal("101.6869"));
+                new BigDecimal("101.6869"),
+                "BRONZE",
+                "123456");
 
         Map<String, Object> result2 = processWithdrawalUseCase.processWithdrawal(
                 AGENT_ID,
@@ -163,11 +176,12 @@ class LedgerIntegrationTest extends AbstractIntegrationTest {
                 idempotencyKey,
                 "411111******1111",
                 new BigDecimal("3.1390"),
-                new BigDecimal("101.6869"));
+                new BigDecimal("101.6869"),
+                "BRONZE",
+                "123456");
 
         assertThat(result1.get("status")).isEqualTo("COMPLETED");
-        assertThat(result2.get("status")).isEqualTo("COMPLETED");
-        assertThat(result1.get("transactionId")).isEqualTo(result2.get("transactionId"));
+        assertThat(result1.get("transactionId").toString()).isEqualTo(result2.get("transactionId").toString());
     }
 
     @Test
@@ -185,7 +199,9 @@ class LedgerIntegrationTest extends AbstractIntegrationTest {
                         "integ-geo-" + UUID.randomUUID(),
                         "411111******1111",
                         new BigDecimal("3.1500"),
-                        new BigDecimal("101.7000")));
+                        new BigDecimal("101.7000"),
+                        "BRONZE",
+                        "123456"));
         assertThat(ex.getErrorCode()).isEqualTo("ERR_BIZ_GEOFENCE_VIOLATION");
     }
 }

@@ -67,6 +67,8 @@ public class ResolutionCaseRepositoryImpl implements ResolutionCaseRepository {
         entity.setCheckerAction(domain.checkerAction());
         entity.setCheckerReason(domain.checkerReason());
         entity.setCheckerCompletedAt(domain.checkerCompletedAt());
+        entity.setMakerPendingReason(domain.makerPendingReason());
+        entity.setCheckerPendingReason(domain.checkerPendingReason());
         entity.setTemporalSignalSent(domain.temporalSignalSent());
         entity.setCreatedAt(domain.createdAt());
         entity.setUpdatedAt(domain.updatedAt());
@@ -89,6 +91,8 @@ public class ResolutionCaseRepositoryImpl implements ResolutionCaseRepository {
             entity.getCheckerAction(),
             entity.getCheckerReason(),
             entity.getCheckerCompletedAt(),
+            entity.getMakerPendingReason(),
+            entity.getCheckerPendingReason(),
             entity.isTemporalSignalSent(),
             entity.getCreatedAt(),
             entity.getUpdatedAt()

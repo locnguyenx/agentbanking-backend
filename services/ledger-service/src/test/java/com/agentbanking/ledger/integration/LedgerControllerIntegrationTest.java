@@ -33,6 +33,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @AutoConfigureMockMvc
+@org.springframework.test.context.jdbc.Sql(statements = "UPDATE agent_float SET merchant_gps_lat = 3.1390, merchant_gps_lng = 101.6869 WHERE agent_id = 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11'")
 class LedgerControllerIntegrationTest extends AbstractIntegrationTest {
 
     @TestConfiguration
@@ -111,6 +112,13 @@ class LedgerControllerIntegrationTest extends AbstractIntegrationTest {
 
     private static final UUID AGENT_ID = UUID.fromString("a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11");
 
+    private void stubSwitchSuccess() {
+        when(switchServicePort.debitAccount(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any()))
+                .thenReturn(Map.of("responseCode", "00", "status", "SUCCESS", "switchReference", "SWITCH-123", "referenceNumber", "REF-123"));
+        when(switchServicePort.creditAccount(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any()))
+                .thenReturn(Map.of("responseCode", "00", "status", "SUCCESS", "switchReference", "SWITCH-456", "referenceNumber", "REF-456"));
+    }
+
     private void stubVelocityCheck() {
         when(rulesServiceFeignClient.checkVelocity(org.mockito.ArgumentMatchers.any()))
                 .thenReturn(Map.of("passed", true));
@@ -131,11 +139,13 @@ class LedgerControllerIntegrationTest extends AbstractIntegrationTest {
         
         mockMvc.perform(get("/internal/balance/{agentId}", nonExistentAgentId))
                 .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value("FAILED"))
                 .andExpect(jsonPath("$.error.code").value("ERR_SYS_AGENT_FLOAT_NOT_FOUND"));
     }
 
     @Test
     void postDebit_shouldProcessWithdrawal() throws Exception {
+        stubSwitchSuccess();
         stubVelocityCheck();
         
         String requestBody = """
@@ -148,7 +158,9 @@ class LedgerControllerIntegrationTest extends AbstractIntegrationTest {
                 "idempotencyKey": "test-debit-%s",
                 "customerCardMasked": "411111******1111",
                 "geofenceLat": 3.1390,
-                "geofenceLng": 101.6869
+                "geofenceLng": 101.6869,
+                "agentTier": "GOLD",
+                "targetBin": "123456"
             }
             """.formatted(AGENT_ID, UUID.randomUUID());
 
@@ -163,6 +175,8 @@ class LedgerControllerIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void postCredit_shouldProcessDeposit() throws Exception {
+        stubSwitchSuccess();
+        stubVelocityCheck();
         String requestBody = """
             {
                 "agentId": "%s",
@@ -171,6 +185,9 @@ class LedgerControllerIntegrationTest extends AbstractIntegrationTest {
                 "agentCommission": 15.00,
                 "bankShare": 5.00,
                 "idempotencyKey": "test-credit-%s",
+                "customerMykad": "900101015566",
+                "geofenceLat": 3.1390,
+                "geofenceLng": 101.6869,
                 "destinationAccount": "1234567890"
             }
             """.formatted(AGENT_ID, UUID.randomUUID());
@@ -284,6 +301,68 @@ class LedgerControllerIntegrationTest extends AbstractIntegrationTest {
         mockMvc.perform(post("/internal/balance-inquiry")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
+                .andExpect(jsonPath("$.status").value("FAILED"));
+    }
+
+    @Test
+    void postDebit_withInvalidAgentId_shouldReturn400() throws Exception {
+        stubVelocityCheck();
+        
+        String requestBody = """
+            {
+                "agentId": "not-a-valid-uuid",
+                "amount": 500.00,
+                "customerFee": 2.50,
+                "agentCommission": 10.00,
+                "bankShare": 5.00,
+                "idempotencyKey": "test-invalid-uuid-%s"
+            }
+            """.formatted(UUID.randomUUID());
+
+        mockMvc.perform(post("/internal/debit")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value("FAILED"));
+    }
+
+    @Test
+    void postDebit_withMissingRequiredFields_shouldReturn400() throws Exception {
+        stubVelocityCheck();
+        
+        String requestBody = """
+            {
+                "agentId": "%s"
+            }
+            """.formatted(AGENT_ID);
+
+        mockMvc.perform(post("/internal/debit")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value("FAILED"));
+    }
+
+    @Test
+    void postDebit_withNegativeAmount_shouldReturn400() throws Exception {
+        stubVelocityCheck();
+        
+        String requestBody = """
+            {
+                "agentId": "%s",
+                "amount": -100.00,
+                "customerFee": 2.50,
+                "agentCommission": 10.00,
+                "bankShare": 5.00,
+                "idempotencyKey": "test-negative-%s",
+                "customerCardMasked": "411111******1111"
+            }
+            """.formatted(AGENT_ID, UUID.randomUUID());
+
+        mockMvc.perform(post("/internal/debit")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody))
+                .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.status").value("FAILED"));
     }
 }

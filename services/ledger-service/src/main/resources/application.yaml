@@ -1,6 +1,6 @@
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5432/ledger_db
+    url: jdbc:postgresql://postgres-ledger:5432/ledger_db
     username: postgres
     password: postgres
   jpa:
@@ -13,18 +13,31 @@ spring:
     ignore-missing-migrations: true
   data:
     redis:
-      host: localhost
+      host: ${SPRING_DATA_REDIS_HOST:redis}
       port: 6379
       timeout: 2000
   kafka:
-    bootstrap-servers: localhost:9092
+    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:kafka:9092}
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+    consumer:
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
       properties:
-        spring.json.type.mapping: >
-          transactionEvent:com.agentbanking.ledger.infrastructure.messaging.TransactionEvent,
-          reversalEvent:com.agentbanking.ledger.infrastructure.messaging.ReversalEvent
+        spring.json.trusted.packages: "*"
+        spring.json.value.default.type: com.agentbanking.common.event.AgentCreatedEvent
+  cloud:
+    stream:
+      kafka:
+        binder:
+          brokers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:kafka:9092}
+      bindings:
+        agentCreated-in-0:
+          destination: agentCreatedIn-in-0
+          group: ledger-service
+          content-type: application/json
 
 server:
   port: 8082

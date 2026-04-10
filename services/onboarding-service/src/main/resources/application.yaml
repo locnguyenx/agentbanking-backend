@@ -1,6 +1,6 @@
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5432/onboarding_db
+    url: jdbc:postgresql://postgres-onboarding:5432/onboarding_db
     username: postgres
     password: postgres
   jpa:
@@ -9,6 +9,23 @@ spring:
   flyway:
     enabled: true
     locations: classpath:db/migration
+  kafka:
+    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      properties:
+        spring.json.type.mapping: >
+          agentCreatedEvent:com.agentbanking.common.event.AgentCreatedEvent
+  cloud:
+    stream:
+      kafka:
+        binder:
+          brokers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:kafka:9092}
+      bindings:
+        agentCreated-out-0:
+          destination: agentCreatedIn-in-0
+          content-type: application/json
 
 server:
   port: 8083

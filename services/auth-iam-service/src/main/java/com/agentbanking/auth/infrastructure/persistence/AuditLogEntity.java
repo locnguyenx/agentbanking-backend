@@ -1,14 +1,11 @@
 package com.agentbanking.auth.infrastructure.persistence;
 
-import com.agentbanking.auth.domain.model.AuditAction;
-import com.agentbanking.auth.domain.model.AuditOutcome;
+import com.agentbanking.common.audit.AuditAction;
+import com.agentbanking.common.audit.AuditOutcome;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
-/**
- * JPA entity for AuditLog table
- */
 @Entity
 @Table(name = "audit_logs")
 public class AuditLogEntity {
@@ -17,20 +14,20 @@ public class AuditLogEntity {
     @Column(name = "audit_id")
     private UUID auditId;
 
-    @Column(name = "entity_type", length = 100)
+    @Column(name = "entity_type", length = 100, nullable = false)
     private String entityType;
 
     @Column(name = "entity_id")
     private UUID entityId;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "action", nullable = false, length = 30)
+    @Column(name = "action", nullable = false, length = 50)
     private AuditAction action;
 
-    @Column(name = "performed_by", length = 100)
+    @Column(name = "performed_by", length = 100, nullable = false)
     private String performedBy;
 
-    @Column(name = "changes", length = 2000)
+    @Column(name = "changes", columnDefinition = "TEXT")
     private String changes;
 
     @Column(name = "ip_address", length = 45)
@@ -43,10 +40,26 @@ public class AuditLogEntity {
     @Column(name = "outcome", nullable = false, length = 20)
     private AuditOutcome outcome;
 
-    @Column(name = "failure_reason", length = 255)
+    @Column(name = "failure_reason", length = 500)
     private String failureReason;
 
-    // Getters and setters
+    @Column(name = "trace_id", length = 50)
+    private String traceId;
+
+    @Column(name = "session_id", length = 100)
+    private String sessionId;
+
+    @Column(name = "service_name", length = 50, nullable = false)
+    private String serviceName;
+
+    @Column(name = "device_info", length = 255)
+    private String deviceInfo;
+
+    @Column(name = "geographic_location", length = 100)
+    private String geographicLocation;
+
+    public AuditLogEntity() {}
+
     public UUID getAuditId() { return auditId; }
     public void setAuditId(UUID auditId) { this.auditId = auditId; }
     public String getEntityType() { return entityType; }
@@ -67,4 +80,14 @@ public class AuditLogEntity {
     public void setOutcome(AuditOutcome outcome) { this.outcome = outcome; }
     public String getFailureReason() { return failureReason; }
     public void setFailureReason(String failureReason) { this.failureReason = failureReason; }
+    public String getTraceId() { return traceId; }
+    public void setTraceId(String traceId) { this.traceId = traceId; }
+    public String getSessionId() { return sessionId; }
+    public void setSessionId(String sessionId) { this.sessionId = sessionId; }
+    public String getServiceName() { return serviceName; }
+    public void setServiceName(String serviceName) { this.serviceName = serviceName; }
+    public String getDeviceInfo() { return deviceInfo; }
+    public void setDeviceInfo(String deviceInfo) { this.deviceInfo = deviceInfo; }
+    public String getGeographicLocation() { return geographicLocation; }
+    public void setGeographicLocation(String geographicLocation) { this.geographicLocation = geographicLocation; }
 }

@@ -54,8 +54,8 @@ export const api = {
   createAgentUser: (agentId: string, data: { phone?: string; email?: string; businessName?: string }) => 
     client.post(`/backoffice/agents/${agentId}/create-user`, data).then((r) => r.data),
   
-  // Transactions & Settlement
-  getTransactions: (params?: any) => client.get('/backoffice/transactions', { params }).then((r) => r.data),
+  // Ledger Transactions & Settlement
+  getTransactions: (params?: any) => client.get('/backoffice/ledger-transactions', { params }).then((r) => r.data),
   getSettlement: (params?: any) => client.get('/backoffice/settlement', { params }).then((r) => r.data),
   exportSettlement: (params?: any) => client.get('/backoffice/settlement/export', { params, responseType: 'blob' }).then((r) => r.data),
   
@@ -65,14 +65,32 @@ export const api = {
   rejectKyc: (id: string, reason: string) => client.post(`/backoffice/kyc/review-queue/${id}/reject`, { reason }).then((r) => r.data),
 
   // Transaction Resolution
+  createResolutionCase: (workflowId: string) =>
+    client.post(`/backoffice/transactions/${workflowId}/create-case`).then((r) => r.data),
   proposeResolution: (workflowId: string, data: { action: 'COMMIT' | 'REVERSE'; reasonCode: string; reason: string; evidenceUrl?: string }) => 
     client.post(`/backoffice/transactions/${workflowId}/maker-propose`, data).then((r) => r.data),
   approveResolution: (workflowId: string, data: { reason: string }) =>
     client.post(`/backoffice/transactions/${workflowId}/checker-approve`, data).then((r) => r.data),
   rejectResolution: (workflowId: string, data: { reason: string }) =>
     client.post(`/backoffice/transactions/${workflowId}/checker-reject`, data).then((r) => r.data),
+  forceResolve: (workflowId: string, data: { action: 'COMMIT' | 'REVERSE'; reason: string }) =>
+    client.post(`/backoffice/transactions/${workflowId}/force-resolve`, data).then((r) => r.data),
   getResolutions: (params?: { status?: string }) =>
     client.get('/backoffice/transactions', { params }).then((r) => r.data),
+  getStuckTransactions: () =>
+    client.get('/backoffice/transactions/stuck').then((r) => r.data),
+  getWorkflows: (params?: { 
+    fromDate?: string; 
+    toDate?: string; 
+    agentId?: string; 
+    agentCode?: string; 
+    transactionType?: string; 
+    status?: string; 
+    page?: number; 
+    size?: number 
+  }) => client.get('/backoffice/transactions/workflows', { params }).then((r) => r.data),
+  getWorkflowStatus: (workflowId: string) => 
+    client.get(`/transactions/${workflowId}/status`).then((r) => r.data),
 
   // Auth
   login: (username: string, password: string) => 
@@ -87,7 +105,7 @@ export const api = {
   // System Admin
   getAdminHealthAll: () => client.get('/admin/health/all').then((r) => r.data),
   getAdminMetrics: (service: string) => client.get(`/admin/metrics/${service}`).then((r) => r.data),
-  getAdminAuditLogs: (params?: Record<string, string | number>) =>
+  getAdminAuditLogs: (params?: { service?: string; page?: number; size?: number }) =>
     client.get('/admin/audit-logs', { params }).then((r) => r.data),
 }
 

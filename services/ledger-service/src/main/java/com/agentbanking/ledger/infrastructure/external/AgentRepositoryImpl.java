@@ -2,7 +2,7 @@ package com.agentbanking.ledger.infrastructure.external;
 
 import com.agentbanking.ledger.domain.model.AgentFloatRecord;
 import com.agentbanking.ledger.domain.port.out.AgentRepository;
-import com.agentbanking.onboarding.domain.model.AgentRecord;
+import com.agentbanking.ledger.domain.port.out.AgentRepository;
 import org.springframework.stereotype.Component;
 
 import java.util.Optional;
@@ -12,6 +12,7 @@ import java.util.UUID;
  * Feign client for querying agent data from Onboarding Service
  */
 @Component
+@org.springframework.context.annotation.Primary
 public class AgentRepositoryImpl implements AgentRepository {
 
     private final OnboardingServiceFeignClient onboardingServiceClient;
@@ -20,15 +21,6 @@ public class AgentRepositoryImpl implements AgentRepository {
         this.onboardingServiceClient = onboardingServiceClient;
     }
 
-    @Override
-    public Optional<AgentRecord> findById(UUID agentId) {
-        try {
-            AgentRecord record = onboardingServiceClient.getAgent(agentId.toString());
-            return Optional.ofNullable(record);
-        } catch (Exception e) {
-            return Optional.empty();
-        }
-    }
 
     @Override
     public Optional<AgentFloatRecord> findAgentFloat(UUID agentId) {

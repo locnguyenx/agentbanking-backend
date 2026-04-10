@@ -50,6 +50,12 @@ public class TransactionResolutionCaseEntity {
     @Column(name = "checker_completed_at")
     private Instant checkerCompletedAt;
 
+    @Column(name = "maker_pending_reason", length = 100)
+    private String makerPendingReason;
+
+    @Column(name = "checker_pending_reason", length = 100)
+    private String checkerPendingReason;
+
     @Column(name = "temporal_signal_sent", nullable = false)
     private boolean temporalSignalSent;
 
@@ -87,6 +93,10 @@ public class TransactionResolutionCaseEntity {
     public void setCheckerReason(String checkerReason) { this.checkerReason = checkerReason; }
     public Instant getCheckerCompletedAt() { return checkerCompletedAt; }
     public void setCheckerCompletedAt(Instant checkerCompletedAt) { this.checkerCompletedAt = checkerCompletedAt; }
+    public String getMakerPendingReason() { return makerPendingReason; }
+    public void setMakerPendingReason(String makerPendingReason) { this.makerPendingReason = makerPendingReason; }
+    public String getCheckerPendingReason() { return checkerPendingReason; }
+    public void setCheckerPendingReason(String checkerPendingReason) { this.checkerPendingReason = checkerPendingReason; }
     public boolean isTemporalSignalSent() { return temporalSignalSent; }
     public void setTemporalSignalSent(boolean temporalSignalSent) { this.temporalSignalSent = temporalSignalSent; }
     public Instant getCreatedAt() { return createdAt; }

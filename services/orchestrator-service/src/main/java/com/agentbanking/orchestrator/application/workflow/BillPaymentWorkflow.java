@@ -33,6 +33,7 @@ public interface BillPaymentWorkflow {
         String customerMykad,
         BigDecimal geofenceLat,
         BigDecimal geofenceLng,
-        String agentTier
+        String agentTier,
+        String targetBin
     ) {}
 }

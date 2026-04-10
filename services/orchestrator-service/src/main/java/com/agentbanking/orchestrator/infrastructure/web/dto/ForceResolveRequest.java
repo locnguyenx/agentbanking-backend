@@ -5,8 +5,7 @@ import jakarta.validation.constraints.NotNull;
 
 public record ForceResolveRequest(
     @NotNull Action action,
-    @NotBlank String reason,
-    @NotBlank String adminId
+    @NotBlank String reason
 ) {
     public enum Action {
         COMMIT,

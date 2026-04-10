@@ -27,6 +27,7 @@ public interface RetailSaleWorkflow {
         String customerProxy,
         BigDecimal geofenceLat,
         BigDecimal geofenceLng,
-        String agentTier
+        String agentTier,
+        String targetBin
     ) {}
 }

@@ -1,6 +1,6 @@
 package com.agentbanking.ledger.domain.service;
 
-import com.agentbanking.onboarding.domain.model.AgentTier;
+import com.agentbanking.ledger.domain.model.AgentTier;
 import com.agentbanking.ledger.domain.model.MdrCalculation;
 import java.math.BigDecimal;
 

@@ -27,6 +27,9 @@ public class TransactionRecordEntity {
     @Column(name = "customer_fee", precision = 10, scale = 2)
     private BigDecimal customerFee;
 
+    @Column(name = "reference_number", length = 50)
+    private String referenceNumber;
+
     @Column(nullable = false, length = 20)
     private String status;
 
@@ -38,6 +41,9 @@ public class TransactionRecordEntity {
 
     @Column(name = "external_reference", length = 128)
     private String externalReference;
+
+    @Column(name = "pending_reason", length = 100)
+    private String pendingReason;
 
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
@@ -96,6 +102,14 @@ public class TransactionRecordEntity {
         this.customerFee = customerFee;
     }
 
+    public String getReferenceNumber() {
+        return referenceNumber;
+    }
+
+    public void setReferenceNumber(String referenceNumber) {
+        this.referenceNumber = referenceNumber;
+    }
+
     public String getStatus() {
         return status;
     }
@@ -126,6 +140,14 @@ public class TransactionRecordEntity {
 
     public void setExternalReference(String externalReference) {
         this.externalReference = externalReference;
+    }
+
+    public String getPendingReason() {
+        return pendingReason;
+    }
+
+    public void setPendingReason(String pendingReason) {
+        this.pendingReason = pendingReason;
     }
 
     public Instant getCreatedAt() {

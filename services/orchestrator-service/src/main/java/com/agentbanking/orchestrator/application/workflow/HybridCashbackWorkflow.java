@@ -27,6 +27,7 @@ public interface HybridCashbackWorkflow {
         String customerProxy,
         BigDecimal geofenceLat,
         BigDecimal geofenceLng,
-        String agentTier
+        String agentTier,
+        String targetBin
     ) {}
 }

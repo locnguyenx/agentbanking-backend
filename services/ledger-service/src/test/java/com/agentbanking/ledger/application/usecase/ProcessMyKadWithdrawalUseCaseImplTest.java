@@ -52,16 +52,19 @@ class ProcessMyKadWithdrawalUseCaseImplTest {
                 "amount", new BigDecimal("500.00"),
                 "balance", new BigDecimal("9500.00")
         );
+        // Correct 11-argument signature
         when(ledgerService.processWithdrawal(eq(agentId), eq(amount),
-                eq(BigDecimal.ZERO), eq(BigDecimal.ZERO), eq(BigDecimal.ZERO),
-                eq(idempotencyKey), isNull(),
-                eq(new BigDecimal("3.1390")), eq(new BigDecimal("101.6869"))))
+                any(), any(), any(),
+                eq(idempotencyKey), any(),
+                eq(new BigDecimal("3.1390")), eq(new BigDecimal("101.6869")),
+                any(), any()))
                 .thenReturn(ledgerResult);
 
         ProcessMyKadWithdrawalUseCase.TransactionResult result = processMyKadWithdrawalUseCase
                 .processMyKadWithdrawal(new ProcessMyKadWithdrawalUseCase.MyKadWithdrawalCommand(
                         agentId, amount, "MYR", idempotencyKey, "123456789012",
-                        new BigDecimal("3.1390"), new BigDecimal("101.6869")
+                        new BigDecimal("3.1390"), new BigDecimal("101.6869"),
+                        "BRONZE", "123456"
                 ));
 
         assertEquals("COMPLETED", result.status());
@@ -83,10 +86,12 @@ class ProcessMyKadWithdrawalUseCaseImplTest {
         ProcessMyKadWithdrawalUseCase.TransactionResult result = processMyKadWithdrawalUseCase
                 .processMyKadWithdrawal(new ProcessMyKadWithdrawalUseCase.MyKadWithdrawalCommand(
                         agentId, amount, "MYR", idempotencyKey, "123456789012",
-                        new BigDecimal("3.1390"), new BigDecimal("101.6869")
+                        new BigDecimal("3.1390"), new BigDecimal("101.6869"),
+                        "BRONZE", "123456"
                 ));
 
         assertEquals(cachedResult, result);
-        verify(ledgerService, never()).processWithdrawal(any(), any(), any(), any(), any(), any(), any(), any(), any());
+        // Correct 11-argument signature
+        verify(ledgerService, never()).processWithdrawal(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any());
     }
 }

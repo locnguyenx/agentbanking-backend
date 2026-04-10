@@ -5,6 +5,7 @@ import java.time.Instant;
 
 public record WorkflowStatusResponse(
     String status,
+    String pendingReason,
     String workflowId,
     String transactionType,
     BigDecimal amount,
@@ -13,5 +14,14 @@ public record WorkflowStatusResponse(
     String errorCode,
     String errorMessage,
     String actionCode,
-    Instant completedAt
+    Instant completedAt,
+    String agentTier,
+    String targetBin,
+    String customerCardMasked,
+    BigDecimal geofenceLat,
+    BigDecimal geofenceLng,
+    String billerCode,
+    String ref1,
+    String ref2,
+    String destinationAccount
 ) {}

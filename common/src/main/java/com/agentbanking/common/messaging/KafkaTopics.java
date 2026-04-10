@@ -8,6 +8,7 @@ public final class KafkaTopics {
     public static final String EFM_EVENTS = "efm.events";
     public static final String COMMISSION_EVENTS = "commission.events";
     public static final String AUDIT_LOGS = "audit-logs";
+    public static final String AGENT_LIFECYCLE = "agent.lifecycle";
 
     private KafkaTopics() {
     }

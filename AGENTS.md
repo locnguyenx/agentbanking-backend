@@ -170,6 +170,15 @@ Add to main application class:
 ### Law X: Pre-Commit Startup Validation
 **Before committing significant changes, validate ALL services start**
 
+### Law XI: Docker Build Cache Invalidation
+**When source code changes are not reflected in the container, force a clean build.**
+
+When rebuilding Docker containers after code changes:
+- Always use `--no-cache` flag: `docker compose build --no-cache <service>`
+- If issues persist, check if the build context is correct and files are being copied
+- For Java services: rebuild with Gradle first, then rebuild Docker container
+- For React/Vite frontends: delete `dist/` folder before rebuild
+
 ## Coding Standards
 
 **Coding Reference:** Always use Context7 when you need library/API documentation, code generation, setup or configuration steps without having to explicitly ask.

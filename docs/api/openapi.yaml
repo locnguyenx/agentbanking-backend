@@ -16,7 +16,7 @@ paths:
   /api/v1/transactions/quote:
     post:
       tags:
-      - transaction-controller (switch-adapter-service)
+      - transaction-controller (rules-service)
       operationId: getTransactionQuote
       security:
         - bearerAuth: []
@@ -172,7 +172,7 @@ paths:
   /api/v1/transfer/proxy/enquiry:
     get:
       tags:
-      - switch-controller (switch-adapter-service)
+      - switch-controller (biller-service)
       operationId: proxyEnquiry
       security:
         - bearerAuth: []
@@ -216,7 +216,7 @@ paths:
   /api/v1/compliance/status:
     get:
       tags:
-      - compliance-controller (rules-service)
+      - compliance-controller (onboarding-service)
       operationId: getComplianceStatus
       security:
         - bearerAuth: []
@@ -844,7 +844,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-  /api/v1/backoffice/transactions:
+  /api/v1/backoffice/ledger-transactions:
     get:
       tags:
       - ledger-controller (ledger-service)
@@ -1160,6 +1160,29 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/auth/me:
+    get:
+      tags:
+      - auth-controller (auth-iam-service)
+      operationId: getMyProfile
+      security:
+        - bearerAuth: []
+      summary: Get current user profile
+      description: Returns the profile of the currently authenticated user. For external agents, includes linked agentId.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MyProfileResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
   /api/v1/auth/token:
     post:
       tags:
@@ -1615,6 +1638,8 @@ components:
       properties:
         serviceCode:
           type: string
+          enum: [CASH_WITHDRAWAL, CASH_DEPOSIT, BILL_PAYMENT, DUITNOW_TRANSFER, CASHLESS_PAYMENT, PIN_BASED_PURCHASE, PREPAID_TOPUP, EWALLET_WITHDRAWAL, EWALLET_TOPUP, ESSP_PURCHASE, PIN_PURCHASE, RETAIL_SALE, HYBRID_CASHBACK, BALANCE_INQUIRY, JOMPAY, ASTRO_RPN, TM_RPN, CELCOM_TOPUP, M1_TOPUP]
+          description: Service code for the transaction. Legacy codes (JOMPAY, ASTRO_RPN, TM_RPN, CELCOM_TOPUP, M1_TOPUP) are mapped to canonical types.
         amount:
           type: string
         agentId:
@@ -2297,19 +2322,20 @@ components:
     # Fee Config Request
     FeeConfigRequest:
       required:
-      - agentType
+      - agentTier
       - transactionType
       - feeType
       - currency
       - effectiveFrom
       type: object
       properties:
-        agentType:
+        agentTier:
           type: string
           enum: [MICRO, STANDARD, PREMIER]
         transactionType:
           type: string
-          enum: [CASH_WITHDRAWAL, CASH_DEPOSIT, BALANCE_INQUIRY, DUITNOW_TRANSFER, JOMPAY, CELCOM_TOPUP, M1_TOPUP, ESSP_PURCHASE, PIN_PURCHASE]
+          enum: [CASH_WITHDRAWAL, CASH_DEPOSIT, BALANCE_INQUIRY, DUITNOW_TRANSFER, BILL_PAYMENT, JOMPAY, ASTRO_RPN, TM_RPN, EPF_PAYMENT, PREPAID_TOPUP, CELCOM_TOPUP, M1_TOPUP, SARAWAK_PAY_WITHDRAWAL, SARAWAK_PAY_TOPUP, ESSP_PURCHASE, PIN_PURCHASE, CASHLESS_PAYMENT, PIN_BASED_PURCHASE, EWALLET_WITHDRAWAL, EWALLET_TOPUP, RETAIL_SALE, HYBRID_CASHBACK]
+          description: Transaction type. JOMPAY, ASTRO_RPN, TM_RPN map to BILL_PAYMENT. CELCOM_TOPUP, M1_TOPUP map to PREPAID_TOPUP.
         feeType:
           type: string
           enum: [FIXED, PERCENTAGE]
@@ -2410,7 +2436,7 @@ components:
         feeConfigId:
           type: string
           format: uuid
-        agentType:
+        agentTier:
           type: string
         transactionType:
           type: string
@@ -2602,8 +2628,8 @@ components:
     # Transaction Type Enum
     TransactionType:
       type: string
-      enum: [CASH_WITHDRAWAL, CASH_DEPOSIT, BILL_PAYMENT, DUITNOW_TRANSFER, CASHLESS_PAYMENT, PIN_BASED_PURCHASE, PREPAID_TOPUP, EWALLET_WITHDRAWAL, EWALLET_TOPUP, ESSP_PURCHASE, PIN_PURCHASE, RETAIL_SALE, HYBRID_CASHBACK]
-      description: Type of transaction to initiate
+      enum: [CASH_WITHDRAWAL, CASH_DEPOSIT, BILL_PAYMENT, DUITNOW_TRANSFER, CASHLESS_PAYMENT, PIN_BASED_PURCHASE, PREPAID_TOPUP, EWALLET_WITHDRAWAL, EWALLET_TOPUP, ESSP_PURCHASE, PIN_PURCHASE, RETAIL_SALE, HYBRID_CASHBACK, BALANCE_INQUIRY]
+      description: Type of transaction to initiate. BILL_PAYMENT includes JOMPAY, ASTRO_RPN, TM_RPN. PREPAID_TOPUP includes CELCOM_TOPUP, M1_TOPUP.
 
     # Transaction Start Request
     TransactionStartRequest:
@@ -2864,6 +2890,34 @@ components:
         token_type:
           type: string
           enum: [Bearer]
+    MyProfileResponse:
+      type: object
+      properties:
+        userId:
+          type: string
+          nullable: true
+        username:
+          type: string
+        email:
+          type: string
+        fullName:
+          type: string
+        userType:
+          type: string
+          enum: [INTERNAL, EXTERNAL]
+        status:
+          type: string
+        agentId:
+          type: string
+          nullable: true
+          description: The linked agent ID for external users
+        mustChangePassword:
+          type: boolean
+        permissions:
+          type: array
+          items:
+            type: string
+
     RefreshTokenRequest:
       required:
       - refresh_token

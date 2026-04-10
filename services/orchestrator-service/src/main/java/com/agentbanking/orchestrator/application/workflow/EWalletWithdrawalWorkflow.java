@@ -26,6 +26,7 @@ public interface EWalletWithdrawalWorkflow {
         String idempotencyKey,
         BigDecimal geofenceLat,
         BigDecimal geofenceLng,
-        String agentTier
+        String agentTier,
+        String targetBin
     ) {}
 }

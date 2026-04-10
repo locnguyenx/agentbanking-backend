@@ -1,6 +1,10 @@
 package com.agentbanking.auth.infrastructure.web;
 
+import com.agentbanking.auth.application.usecase.AuditLogServiceImpl;
 import com.agentbanking.auth.application.usecase.ManageUserUseCaseImpl;
+import com.agentbanking.common.audit.AuditAction;
+import com.agentbanking.common.audit.AuditLogRecord;
+import com.agentbanking.common.audit.AuditOutcome;
 import com.agentbanking.auth.domain.model.UserRecord;
 import com.agentbanking.auth.infrastructure.web.dto.MyProfileResponse;
 import com.agentbanking.auth.infrastructure.web.dto.PasswordResetDto;
@@ -8,6 +12,7 @@ import com.agentbanking.auth.infrastructure.web.dto.UserCreateDto;
 import com.agentbanking.auth.infrastructure.web.dto.UserResponseDto;
 import com.agentbanking.auth.infrastructure.web.dto.UserUpdateDto;
 import jakarta.validation.Valid;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -21,9 +26,36 @@ import org.springframework.web.bind.annotation.*;
 public class UserController {
 
     private final ManageUserUseCaseImpl manageUserUseCase;
+    private final AuditLogServiceImpl auditLogService;
 
-    public UserController(ManageUserUseCaseImpl manageUserUseCase) {
+    public UserController(ManageUserUseCaseImpl manageUserUseCase, AuditLogServiceImpl auditLogService) {
         this.manageUserUseCase = manageUserUseCase;
+        this.auditLogService = auditLogService;
+    }
+
+    @GetMapping("/me")
+    public ResponseEntity<MyProfileResponse> getCurrentUserProfile(
+            @RequestHeader("X-User-Id") String userId) {
+        UserRecord user = manageUserUseCase.getProfile(
+                java.util.UUID.fromString(userId));
+        if (user == null) {
+            return ResponseEntity.notFound().build();
+        }
+        MyProfileResponse profile = new MyProfileResponse(
+                user.userId() != null ? user.userId().toString() : null,
+                user.username(),
+                user.email(),
+                user.fullName(),
+                user.userType() != null ? user.userType().name() : null,
+                user.status() != null ? user.status().name() : null,
+                user.agentId() != null ? user.agentId().toString() : null,
+                user.mustChangePassword(),
+                user.temporaryPasswordExpiresAt(),
+                user.createdAt(),
+                user.lastLoginAt(),
+                user.permissions()
+        );
+        return ResponseEntity.ok(profile);
     }
 
     @PostMapping("/bootstrap")
@@ -89,6 +121,25 @@ public class UserController {
                 "admin" // createdBy
         );
         UserRecord created = manageUserUseCase.createUser(userRecord);
+        
+        auditLogService.log(new AuditLogRecord(
+            UUID.randomUUID(),
+            "User",
+            created.userId(),
+            AuditAction.USER_CREATED,
+            "admin",
+            null,
+            "unknown",
+            LocalDateTime.now(),
+            AuditOutcome.SUCCESS,
+            null,
+            null,
+            null,
+            "auth-iam-service",
+            null,
+            null
+        ));
+        
         return new ResponseEntity<>(toResponseDto(created), HttpStatus.CREATED);
     }
 

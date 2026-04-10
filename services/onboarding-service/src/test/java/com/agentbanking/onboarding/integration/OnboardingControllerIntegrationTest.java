@@ -144,4 +144,41 @@ class OnboardingControllerIntegrationTest extends AbstractIntegrationTest {
                         .content(requestBody))
                 .andExpect(jsonPath("$.status").value("FAILED"));
     }
+
+    @Test
+    void verifyMyKad_withShortMyKad_shouldReturn400() throws Exception {
+        String requestBody = """
+            {
+                "mykadNumber": "123"
+            }
+            """;
+
+        mockMvc.perform(post("/internal/verify-mykad")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value("FAILED"));
+    }
+
+    @Test
+    void submitApplication_withInvalidAgentTier_shouldReturn400() throws Exception {
+        String requestBody = """
+            {
+                "mykadNumber": "880101011234",
+                "extractedName": "TEST USER",
+                "ssmBusinessName": "TEST BUSINESS",
+                "ssmOwnerName": "TEST OWNER",
+                "agentTier": "INVALID_TIER",
+                "merchantGpsLat": "3.1390",
+                "merchantGpsLng": "101.6869",
+                "phoneNumber": "0123456789"
+            }
+            """;
+
+        mockMvc.perform(post("/internal/onboarding/application")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value("FAILED"));
+    }
 }

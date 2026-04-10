@@ -5,6 +5,7 @@ import com.agentbanking.auth.application.usecase.ManageUserUseCaseImpl;
 import com.agentbanking.auth.domain.model.AuthenticationResult;
 import com.agentbanking.auth.domain.model.UserRecord;
 import com.agentbanking.auth.domain.port.in.ManageSessionUseCase;
+import com.agentbanking.auth.domain.service.UserManagementService;
 import com.agentbanking.auth.infrastructure.web.dto.AuthRequestDto;
 import com.agentbanking.auth.infrastructure.web.dto.AuthResponseDto;
 import com.agentbanking.auth.infrastructure.web.dto.MyProfileResponse;
@@ -24,13 +25,16 @@ public class AuthController {
     private final AuthenticateUserUseCaseImpl authenticateUserUseCase;
     private final ManageSessionUseCase manageSessionUseCase;
     private final ManageUserUseCaseImpl manageUserUseCase;
+    private final UserManagementService userManagementService;
 
     public AuthController(AuthenticateUserUseCaseImpl authenticateUserUseCase,
                           ManageSessionUseCase manageSessionUseCase,
-                          ManageUserUseCaseImpl manageUserUseCase) {
+                          ManageUserUseCaseImpl manageUserUseCase,
+                          UserManagementService userManagementService) {
         this.authenticateUserUseCase = authenticateUserUseCase;
         this.manageSessionUseCase = manageSessionUseCase;
         this.manageUserUseCase = manageUserUseCase;
+        this.userManagementService = userManagementService;
     }
 
     @PostMapping("/token")
@@ -97,12 +101,26 @@ public class AuthController {
 
     @GetMapping("/me")
     public ResponseEntity<MyProfileResponse> getMyProfile(
-            @RequestHeader("X-User-Id") String userId) {
-        UserRecord user = manageUserUseCase.getProfile(
-            java.util.UUID.fromString(userId));
-        if (user == null) {
-            return ResponseEntity.notFound().build();
+            @RequestHeader(value = "X-User-Id", required = false) String userId,
+            @RequestHeader(value = "X-Agent-Id", required = false) String agentId) {
+        UserRecord user = null;
+        
+        // Try to find user by agent ID first (external users have agentId in JWT)
+        if (agentId != null && !agentId.isBlank()) {
+            user = userManagementService.findByAgentId(UUID.fromString(agentId)).orElse(null);
         }
+        
+        // Fall back to user ID if provided
+        if (user == null && userId != null && !userId.isBlank()) {
+            user = manageUserUseCase.getProfile(UUID.fromString(userId));
+        }
+        
+        if (user == null) {
+            return ResponseEntity.ok(new MyProfileResponse(
+                null, null, null, null, null, null, null, null, null, null, null, null
+            ));
+        }
+        
         MyProfileResponse profile = new MyProfileResponse(
             user.userId() != null ? user.userId().toString() : null,
             user.username(),

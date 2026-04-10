@@ -1,8 +1,11 @@
 package com.agentbanking.ledger.infrastructure.persistence.repository;
 
+import com.agentbanking.ledger.domain.model.TransactionStatus;
+import com.agentbanking.ledger.domain.model.TransactionType;
 import com.agentbanking.ledger.infrastructure.persistence.entity.TransactionEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;
@@ -19,10 +22,13 @@ public interface TransactionJpaRepository extends JpaRepository<TransactionEntit
     @Query("SELECT COUNT(t) FROM TransactionEntity t")
     long countAllTransactions();
     
-    @Query("SELECT COALESCE(SUM(t.amount), 0) FROM TransactionEntity t WHERE t.status = 'SUCCESS'")
+    @Query("SELECT COALESCE(SUM(t.amount), 0) FROM TransactionEntity t WHERE t.status = 'COMPLETED'")
     BigDecimal sumSuccessfulTransactionAmount();
     
-    @Query("SELECT COUNT(DISTINCT t.agentId) FROM TransactionEntity t WHERE t.status = 'SUCCESS'")
+    @Query("SELECT COALESCE(SUM(t.amount), 0) FROM TransactionEntity t WHERE t.status = com.agentbanking.ledger.domain.model.TransactionStatus.COMPLETED AND t.transactionType = :type")
+    BigDecimal sumSuccessfulTransactionAmountByType(@Param("type") TransactionType type);
+    
+    @Query("SELECT COUNT(DISTINCT t.agentId) FROM TransactionEntity t WHERE t.status = 'COMPLETED'")
     long countDistinctAgents();
     
     List<TransactionEntity> findByAgentIdOrderByCreatedAtDesc(UUID agentId);
@@ -30,12 +36,16 @@ public interface TransactionJpaRepository extends JpaRepository<TransactionEntit
     @Query("SELECT t FROM TransactionEntity t ORDER BY t.createdAt DESC")
     List<TransactionEntity> findRecentTransactions();
 
-    long countByAgentIdAndStatus(UUID agentId, com.agentbanking.common.transaction.TransactionStatus status);
+    List<TransactionEntity> findByAgentIdAndStatus(UUID agentId, TransactionStatus status);
 
-    boolean existsByAgentIdAndStatusIn(UUID agentId, List<com.agentbanking.common.transaction.TransactionStatus> statuses);
+    long countByAgentIdAndStatus(UUID agentId, TransactionStatus status);
+
+    boolean existsByAgentIdAndStatusIn(UUID agentId, List<TransactionStatus> statuses);
 
     @Query("SELECT DISTINCT t.agentId FROM TransactionEntity t WHERE t.completedAt BETWEEN :start AND :end")
-    List<UUID> findDistinctAgentIdsByCompletedAtBetween(LocalDateTime start, LocalDateTime end);
+    List<UUID> findDistinctAgentIdsByCompletedAtBetween(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
 
     List<TransactionEntity> findByAgentIdAndCompletedAtBetween(UUID agentId, LocalDateTime start, LocalDateTime end);
+
+    List<TransactionEntity> findByCreatedAtBetween(LocalDateTime start, LocalDateTime end);
 }

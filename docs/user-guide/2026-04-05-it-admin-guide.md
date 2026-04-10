@@ -130,7 +130,9 @@ The only exception is **Temporal** (workflow engine) which requires manual Docke
 
 ```bash
 # Start Temporal (required for orchestrator-service tests)
-cd docker/temporal && docker-compose up -d
+docker compose up -d temporal temporal-postgres
+# or with ui
+docker compose up -d temporal temporal-postgres temporal-ui
 
 # Verify Temporal is running
 docker ps | grep temporal
@@ -163,6 +165,11 @@ static final KafkaContainer kafka = new KafkaContainer(DockerImageName.parse("co
 
 # Run tests with coverage
 ./gradlew test jacocoTestReport
+
+# Run e2e integration tests and automatically runs cleanup first via cleanE2eTestData
+# e2e tests required all services running in docker containers
+./gradlew :gateway:e2eTest --no-daemon
+# can runt only SelfContainedOrchestratorE2ETest to test transaction
 ```
 
 ### Test Profile Configuration
@@ -202,7 +209,7 @@ open http://localhost:8082
 
 ```bash
 # Remove Temporal containers
-cd docker/temporal && docker-compose down -v
+docker compose down temporal temporal-postgres temporal-ui
 
 ---
 
@@ -263,7 +270,7 @@ cd agentbanking-backend
 docker-compose up -d
 
 # 3. Start Temporal (required for Orchestrator)
-cd docker/temporal && docker-compose up -d && cd ../..
+docker compose up -d temporal temporal-postgres temporal-ui
 
 # 4. Verify services are running
 docker ps
@@ -462,6 +469,9 @@ docker-compose logs -f
 
 # Filter by level
 docker-compose logs | grep ERROR
+
+# do filter on a specific container
+docker logs agentbanking-backend-gateway-1 --since 60s | grep -i "audit-logs" | tail -20
 ```
 
 ### Metrics

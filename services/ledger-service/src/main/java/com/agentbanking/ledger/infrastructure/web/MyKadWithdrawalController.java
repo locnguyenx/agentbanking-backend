@@ -29,6 +29,8 @@ public class MyKadWithdrawalController {
             String customerMykad = (String) request.get("customerMykad");
             BigDecimal geofenceLat = new BigDecimal(request.get("geofenceLat").toString());
             BigDecimal geofenceLng = new BigDecimal(request.get("geofenceLng").toString());
+            String agentTier = (String) request.get("agentTier");
+            String targetBin = (String) request.get("targetBin");
 
             ProcessMyKadWithdrawalUseCase.TransactionResult result = processMyKadWithdrawalUseCase.processMyKadWithdrawal(
                     new ProcessMyKadWithdrawalUseCase.MyKadWithdrawalCommand(
@@ -38,7 +40,9 @@ public class MyKadWithdrawalController {
                             idempotencyKey,
                             customerMykad,
                             geofenceLat,
-                            geofenceLng
+                            geofenceLng,
+                            agentTier,
+                            targetBin
                     )
             );
 

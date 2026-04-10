@@ -7,6 +7,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.UUID;
 
 @Repository
@@ -15,8 +16,9 @@ public interface FeeConfigJpaRepository extends JpaRepository<FeeConfigEntity, U
     @Query("SELECT f FROM FeeConfigEntity f WHERE f.transactionType = :transactionType " +
            "AND f.agentTier = :agentTier " +
            "AND f.effectiveFrom <= :asOfDate " +
-           "AND (f.effectiveTo IS NULL OR f.effectiveTo >= :asOfDate)")
-    FeeConfigEntity findByTransactionTypeAndAgentTierAndEffectiveDate(
+           "AND (f.effectiveTo IS NULL OR f.effectiveTo >= :asOfDate) " +
+           "ORDER BY f.effectiveFrom DESC")
+    List<FeeConfigEntity> findByTransactionTypeAndAgentTierAndEffectiveDate(
         @Param("transactionType") com.agentbanking.rules.domain.model.TransactionType transactionType,
         @Param("agentTier") com.agentbanking.rules.domain.model.AgentTier agentTier,
         @Param("asOfDate") LocalDate asOfDate);

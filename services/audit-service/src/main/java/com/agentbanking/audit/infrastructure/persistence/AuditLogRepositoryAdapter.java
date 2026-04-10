@@ -7,6 +7,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Repository;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Repository
 public class AuditLogRepositoryAdapter implements AuditLogRepository {
@@ -27,16 +28,31 @@ public class AuditLogRepositoryAdapter implements AuditLogRepository {
         String serviceName, String action, String performedBy,
         String outcome, LocalDateTime from, LocalDateTime to, int page, int size
     ) {
-        var springPage = jpaRepository.findByFilters(
-            serviceName, action, performedBy, outcome, from, to,
-            PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "timestamp"))
-        );
+        var pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "timestamp"));
+        
+        var allLogs = jpaRepository.findAll(pageable);
+        
+        var filtered = allLogs.getContent().stream()
+            .filter(e -> serviceName == null || serviceName.isEmpty() || e.getServiceName().equals(serviceName))
+            .filter(e -> action == null || action.isEmpty() || e.getAction().equals(action))
+            .filter(e -> performedBy == null || performedBy.isEmpty() || e.getPerformedBy().equals(performedBy))
+            .filter(e -> outcome == null || outcome.isEmpty() || e.getOutcome().equals(outcome))
+            .filter(e -> from == null || !e.getTimestamp().isBefore(from))
+            .filter(e -> to == null || !e.getTimestamp().isAfter(to))
+            .toList();
+        
+        int total = filtered.size();
+        int start = page * size;
+        int end = Math.min(start + size, total);
+        
+        var pageContent = start < total ? filtered.subList(start, end) : java.util.Collections.emptyList();
+        
         return new AuditLogPage(
-            springPage.getContent().stream().map(JpaAuditLogEntity::toRecord).toList(),
-            springPage.getNumber(),
-            springPage.getSize(),
-            springPage.getTotalElements(),
-            springPage.getTotalPages()
+            pageContent.stream().map(e -> ((JpaAuditLogEntity) e).toRecord()).toList(),
+            page,
+            size,
+            total,
+            (int) Math.ceil((double) total / size)
         );
     }
 }

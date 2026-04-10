@@ -14,6 +14,7 @@ import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.core.io.buffer.DataBufferUtils;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.http.server.reactive.ServerHttpRequestDecorator;
@@ -137,6 +138,7 @@ public class RequestTransformGatewayFilterFactory
                             mutatedExchange.getResponse()) {
                             @Override
                             public Mono<Void> writeWith(org.reactivestreams.Publisher<? extends DataBuffer> body) {
+                                HttpStatusCode originalStatus = getStatusCode();
                                 return DataBufferUtils.join(Flux.from(body))
                                     .flatMap(dataBuffer -> {
                                         try {
@@ -153,9 +155,10 @@ public class RequestTransformGatewayFilterFactory
                                                 internalResponse = mapper.readValue(responseBody, 
                                                     new TypeReference<Map<String, Object>>() {});
                                             } catch (Exception e) {
-                                                // If response is not JSON, pass through
+                                                // If response is not JSON, pass through - preserve status
                                                 DataBuffer original = exchange.getResponse().bufferFactory()
                                                     .wrap(bytes);
+                                                setStatusCode(originalStatus);
                                                 return super.writeWith(Flux.just(original));
                                             }
                                             
@@ -170,10 +173,13 @@ public class RequestTransformGatewayFilterFactory
                                             DataBuffer transformedBuffer = exchange.getResponse().bufferFactory()
                                                 .wrap(transformedBytes);
                                             
+                                            // Preserve original status code
+                                            setStatusCode(originalStatus);
                                             return super.writeWith(Flux.just(transformedBuffer));
                                         } catch (Exception e) {
                                             log.error("Response transformation failed: {}", e.getMessage());
-                                            // Pass through original response on error
+                                            // Preserve status code on error - pass through original body
+                                            setStatusCode(originalStatus);
                                             return super.writeWith(body);
                                         }
                                     });

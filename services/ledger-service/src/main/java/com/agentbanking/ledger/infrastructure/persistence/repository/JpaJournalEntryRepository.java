@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.UUID;
 
 @Repository
+@org.springframework.context.annotation.Primary
 public class JpaJournalEntryRepository implements JournalEntryRepository {
     
     private final JournalEntryJpaRepository jpaRepository;

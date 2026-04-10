@@ -16,6 +16,7 @@ import java.util.Map;
 import java.util.UUID;
 
 @Service
+@org.springframework.context.annotation.Primary
 public class ProcessWithdrawalUseCaseImpl implements ProcessWithdrawalUseCase {
 
     private static final Logger log = LoggerFactory.getLogger(ProcessWithdrawalUseCaseImpl.class);
@@ -39,20 +40,21 @@ public class ProcessWithdrawalUseCaseImpl implements ProcessWithdrawalUseCase {
                                                   BigDecimal customerFee, BigDecimal agentCommission,
                                                   BigDecimal bankShare, String idempotencyKey,
                                                   String customerCardMasked,
-                                                  BigDecimal geofenceLat, BigDecimal geofenceLng) {
-        log.info("Processing withdrawal for agent: {}, amount: {}", agentId, amount);
+                                                  BigDecimal geofenceLat, BigDecimal geofenceLng,
+                                                  String agentTier, String targetBin) {
+        log.info("Processing withdrawal for agent: {}, amount: {}, tier: {}", agentId, amount, agentTier);
 
         checkVelocity(agentId, amount);
 
         try {
             Map<String, Object> result = ledgerService.processWithdrawal(agentId, amount, customerFee, agentCommission,
-                    bankShare, idempotencyKey, customerCardMasked, geofenceLat, geofenceLng);
+                    bankShare, idempotencyKey, customerCardMasked, geofenceLat, geofenceLng, agentTier, targetBin);
 
             if (result != null) {
                 transactionEventPublisher.publish(new TransactionEvent(
                     UUID.randomUUID(),
-                    (String) result.get("status"),
-                    UUID.fromString((String) result.get("transactionId")),
+                    String.valueOf(result.get("status")),
+                    result.get("transactionId") instanceof UUID ? (UUID) result.get("transactionId") : UUID.fromString(String.valueOf(result.get("transactionId"))),
                     agentId,
                     "CASH_WITHDRAWAL",
                     amount,

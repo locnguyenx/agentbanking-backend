@@ -10,6 +10,7 @@ import java.util.UUID;
 @Table(name = "journal_entry")
 public class JournalEntryEntity {
     @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "journal_id")
     private UUID journalId;
     

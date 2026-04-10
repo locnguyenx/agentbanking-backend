@@ -47,7 +47,7 @@ class ProcessDepositUseCaseImplTest {
         );
 
         when(ledgerService.processDeposit(
-            any(), any(), any(), any(), any(), any(), any()
+            any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()
         )).thenReturn(ledgerResponse);
 
         Map<String, Object> result = useCase.processDeposit(
@@ -57,7 +57,12 @@ class ProcessDepositUseCaseImplTest {
             new BigDecimal("5.00"),
             new BigDecimal("2.00"),
             "idem-key-456",
-            "ACC123"
+            "ACC123",
+            "BILL001",
+            "REF1",
+            "REF2",
+            new BigDecimal("3.1390"),
+            new BigDecimal("101.6869")
         );
 
         assertEquals("COMPLETED", result.get("status"));
@@ -77,7 +82,7 @@ class ProcessDepositUseCaseImplTest {
     @Test
     void processDeposit_publishesFailedEventOnError() {
         when(ledgerService.processDeposit(
-            any(), any(), any(), any(), any(), any(), any()
+            any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()
         )).thenThrow(new com.agentbanking.common.exception.LedgerException(
             com.agentbanking.common.security.ErrorCodes.ERR_AGENT_FLOAT_NOT_FOUND, "RETRY"
         ));
@@ -90,7 +95,12 @@ class ProcessDepositUseCaseImplTest {
                 new BigDecimal("5.00"),
                 new BigDecimal("2.00"),
                 "idem-key-456",
-                "ACC123"
+                "ACC123",
+                "BILL001",
+                "REF1",
+                "REF2",
+                new BigDecimal("3.1390"),
+                new BigDecimal("101.6869")
             )
         );
 

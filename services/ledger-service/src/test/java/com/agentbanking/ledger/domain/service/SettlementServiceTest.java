@@ -1,6 +1,5 @@
 package com.agentbanking.ledger.domain.service;
 
-import com.agentbanking.common.transaction.TransactionStatus;
 import com.agentbanking.ledger.domain.model.*;
 import com.agentbanking.ledger.domain.port.out.CbsFileGenerator;
 import com.agentbanking.ledger.domain.port.out.SettlementSummaryRepository;
@@ -8,7 +7,6 @@ import com.agentbanking.ledger.domain.port.out.TransactionRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -52,8 +50,6 @@ class SettlementServiceTest {
 
     @Test
     void shouldCalculatePositiveNetSettlement_bankOwesAgent() {
-        // Given: Withdrawals=10000, Deposits=3000, BillPayments=2000, Commissions=500
-        // Net = (10000 + 500) - (3000 + 2000) = 5500 -> BANK_OWES_AGENT
         when(transactionRepository.findByAgentIdAndCompletedDate(agentId, settlementDate))
             .thenReturn(List.of(
                 createTransaction(agentId, TransactionType.CASH_WITHDRAWAL, new BigDecimal("10000.00"), BigDecimal.ZERO),
@@ -64,10 +60,8 @@ class SettlementServiceTest {
         when(settlementSummaryRepository.save(any(SettlementSummaryRecord.class)))
             .thenAnswer(inv -> inv.getArgument(0));
 
-        // When
         SettlementSummaryRecord result = settlementService.calculateNetSettlement(agentId, settlementDate);
 
-        // Then
         assertNotNull(result);
         assertEquals(agentId, result.agentId());
         assertEquals(settlementDate, result.settlementDate());
@@ -84,8 +78,6 @@ class SettlementServiceTest {
 
     @Test
     void shouldCalculateNegativeNetSettlement_agentOwesBank() {
-        // Given: Withdrawals=3000, Deposits=10000, BillPayments=2000, Commissions=500
-        // Net = (3000 + 500) - (10000 + 2000) = -8500 -> AGENT_OWES_BANK
         when(transactionRepository.findByAgentIdAndCompletedDate(agentId, settlementDate))
             .thenReturn(List.of(
                 createTransaction(agentId, TransactionType.CASH_WITHDRAWAL, new BigDecimal("3000.00"), BigDecimal.ZERO),
@@ -96,10 +88,8 @@ class SettlementServiceTest {
         when(settlementSummaryRepository.save(any(SettlementSummaryRecord.class)))
             .thenAnswer(inv -> inv.getArgument(0));
 
-        // When
         SettlementSummaryRecord result = settlementService.calculateNetSettlement(agentId, settlementDate);
 
-        // Then
         assertEquals(new BigDecimal("3000.00"), result.totalWithdrawals());
         assertEquals(new BigDecimal("10000.00"), result.totalDeposits());
         assertEquals(new BigDecimal("2000.00"), result.totalBillPayments());
@@ -110,8 +100,6 @@ class SettlementServiceTest {
 
     @Test
     void shouldIncludeRetailSalesInNetCalculation() {
-        // Given: Withdrawals=5000, Deposits=2000, RetailSales=3000, BillPayments=1000, Commissions=200
-        // Net = (5000 + 200 + 3000) - (2000 + 1000) = 5200 -> BANK_OWES_AGENT
         when(transactionRepository.findByAgentIdAndCompletedDate(agentId, settlementDate))
             .thenReturn(List.of(
                 createTransaction(agentId, TransactionType.CASH_WITHDRAWAL, new BigDecimal("5000.00"), BigDecimal.ZERO),
@@ -123,10 +111,8 @@ class SettlementServiceTest {
         when(settlementSummaryRepository.save(any(SettlementSummaryRecord.class)))
             .thenAnswer(inv -> inv.getArgument(0));
 
-        // When
         SettlementSummaryRecord result = settlementService.calculateNetSettlement(agentId, settlementDate);
 
-        // Then
         assertEquals(new BigDecimal("3000.00"), result.totalRetailSales());
         assertEquals(new BigDecimal("5200.00"), result.netAmount());
         assertEquals(SettlementDirection.BANK_OWES_AGENT, result.direction());
@@ -134,7 +120,6 @@ class SettlementServiceTest {
 
     @Test
     void shouldGenerateCsvForCBS() {
-        // Given
         SettlementSummaryRecord record1 = new SettlementSummaryRecord(
             UUID.randomUUID(), UUID.randomUUID(), settlementDate,
             new BigDecimal("10000.00"), new BigDecimal("3000.00"),
@@ -153,10 +138,8 @@ class SettlementServiceTest {
         String expectedCsv = "settlement_id,agent_id,settlement_date,total_withdrawals,total_deposits,total_bill_payments,total_retail_sales,total_commissions,net_amount,direction,currency\n";
         when(cbsFileGenerator.generateCsv(anyList())).thenReturn(expectedCsv);
 
-        // When
         String csv = settlementService.generateCbsFile(List.of(record1, record2));
 
-        // Then
         assertNotNull(csv);
         assertTrue(csv.contains("settlement_id"));
         assertTrue(csv.contains("agent_id"));
@@ -167,7 +150,6 @@ class SettlementServiceTest {
 
     @Test
     void shouldRunEodSettlementForAllAgentsWithActivity() {
-        // Given
         UUID agent2Id = UUID.randomUUID();
         when(transactionRepository.findAgentIdsWithTransactionsOnDate(settlementDate))
             .thenReturn(List.of(agentId, agent2Id));
@@ -183,10 +165,8 @@ class SettlementServiceTest {
             .thenAnswer(inv -> inv.getArgument(0));
         when(cbsFileGenerator.generateCsv(anyList())).thenReturn("csv-content");
 
-        // When
         List<SettlementSummaryRecord> results = settlementService.runEodSettlement(settlementDate);
 
-        // Then
         assertEquals(2, results.size());
         verify(settlementSummaryRepository, times(2)).save(any(SettlementSummaryRecord.class));
         verify(cbsFileGenerator).generateCsv(argThat(list -> list.size() == 2));
@@ -194,30 +174,24 @@ class SettlementServiceTest {
 
     @Test
     void shouldHandleAgentWithNoTransactions_gracefully() {
-        // Given
         when(transactionRepository.findAgentIdsWithTransactionsOnDate(settlementDate))
             .thenReturn(List.of());
 
-        // When
         List<SettlementSummaryRecord> results = settlementService.runEodSettlement(settlementDate);
 
-        // Then
         assertTrue(results.isEmpty());
         verify(settlementSummaryRepository, never()).save(any());
     }
 
     @Test
     void shouldReturnZeroNetWhenAllCategoriesZero() {
-        // Given: No transactions
         when(transactionRepository.findByAgentIdAndCompletedDate(agentId, settlementDate))
             .thenReturn(List.of());
         when(settlementSummaryRepository.save(any(SettlementSummaryRecord.class)))
             .thenAnswer(inv -> inv.getArgument(0));
 
-        // When
         SettlementSummaryRecord result = settlementService.calculateNetSettlement(agentId, settlementDate);
 
-        // Then
         assertEquals(BigDecimal.ZERO.compareTo(result.netAmount()), 0);
     }
 
@@ -239,8 +213,15 @@ class SettlementServiceTest {
             null,
             null,
             null,
+            null,
             LocalDateTime.now(),
-            LocalDateTime.now()
+            LocalDateTime.now(),
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
         );
     }
 }

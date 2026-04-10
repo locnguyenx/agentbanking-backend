@@ -65,7 +65,8 @@ public class StartTransactionUseCaseImpl implements StartTransactionUseCase {
                     command.geofenceLat(),
                     command.geofenceLng(),
                     command.customerMykad(),
-                    command.agentTier());
+                    command.agentTier(),
+                    command.targetBIN());
             case CASH_DEPOSIT -> new DepositWorkflow.DepositInput(
                     command.agentId(),
                     command.destinationAccount(),
@@ -75,7 +76,8 @@ public class StartTransactionUseCaseImpl implements StartTransactionUseCase {
                     command.geofenceLat(),
                     command.geofenceLng(),
                     command.requiresBiometric(),
-                    command.agentTier());
+                    command.agentTier(),
+                    command.targetBIN());
             case BILL_PAYMENT -> new BillPaymentWorkflow.BillPaymentInput(
                     command.agentId(),
                     command.billerCode(),
@@ -86,7 +88,8 @@ public class StartTransactionUseCaseImpl implements StartTransactionUseCase {
                     command.customerMykad(),
                     command.geofenceLat(),
                     command.geofenceLng(),
-                    command.agentTier());
+                    command.agentTier(),
+                    command.targetBIN());
             case DUITNOW_TRANSFER -> new DuitNowTransferWorkflow.DuitNowTransferInput(
                     command.agentId(),
                     command.proxyType(),
@@ -96,7 +99,8 @@ public class StartTransactionUseCaseImpl implements StartTransactionUseCase {
                     command.customerMykad(),
                     command.geofenceLat(),
                     command.geofenceLng(),
-                    command.agentTier());
+                    command.agentTier(),
+                    command.targetBIN());
             case CASHLESS_PAYMENT -> new CashlessPaymentWorkflow.CashlessPaymentInput(
                     command.agentId(),
                     "QR",
@@ -105,7 +109,8 @@ public class StartTransactionUseCaseImpl implements StartTransactionUseCase {
                     command.proxyValue(),
                     command.geofenceLat(),
                     command.geofenceLng(),
-                    command.agentTier());
+                    command.agentTier(),
+                    command.targetBIN());
             case PIN_BASED_PURCHASE -> new PinBasedPurchaseWorkflow.PinBasedPurchaseInput(
                     command.agentId(),
                     "DEFAULT",
@@ -115,7 +120,8 @@ public class StartTransactionUseCaseImpl implements StartTransactionUseCase {
                     command.idempotencyKey(),
                     command.geofenceLat(),
                     command.geofenceLng(),
-                    command.agentTier());
+                    command.agentTier(),
+                    command.targetBIN());
             case PREPAID_TOPUP -> new PrepaidTopupWorkflow.PrepaidTopupInput(
                     command.agentId(),
                     "DEFAULT",
@@ -124,7 +130,8 @@ public class StartTransactionUseCaseImpl implements StartTransactionUseCase {
                     command.idempotencyKey(),
                     command.geofenceLat(),
                     command.geofenceLng(),
-                    command.agentTier());
+                    command.agentTier(),
+                    command.targetBIN());
             case EWALLET_WITHDRAWAL -> new EWalletWithdrawalWorkflow.EWalletWithdrawalInput(
                     command.agentId(),
                     "DEFAULT",
@@ -133,7 +140,8 @@ public class StartTransactionUseCaseImpl implements StartTransactionUseCase {
                     command.idempotencyKey(),
                     command.geofenceLat(),
                     command.geofenceLng(),
-                    command.agentTier());
+                    command.agentTier(),
+                    command.targetBIN());
             case EWALLET_TOPUP -> new EWalletTopupWorkflow.EWalletTopupInput(
                     command.agentId(),
                     "DEFAULT",
@@ -142,7 +150,8 @@ public class StartTransactionUseCaseImpl implements StartTransactionUseCase {
                     command.idempotencyKey(),
                     command.geofenceLat(),
                     command.geofenceLng(),
-                    command.agentTier());
+                    command.agentTier(),
+                    command.targetBIN());
             case ESSP_PURCHASE -> new ESSPPurchaseWorkflow.ESSPPurchaseInput(
                     command.agentId(),
                     command.amount(),
@@ -150,7 +159,8 @@ public class StartTransactionUseCaseImpl implements StartTransactionUseCase {
                     command.idempotencyKey(),
                     command.geofenceLat(),
                     command.geofenceLng(),
-                    command.agentTier());
+                    command.agentTier(),
+                    command.targetBIN());
             case PIN_PURCHASE -> new PINPurchaseWorkflow.PINPurchaseInput(
                     command.agentId(),
                     "DEFAULT",
@@ -159,7 +169,8 @@ public class StartTransactionUseCaseImpl implements StartTransactionUseCase {
                     command.idempotencyKey(),
                     command.geofenceLat(),
                     command.geofenceLng(),
-                    command.agentTier());
+                    command.agentTier(),
+                    command.targetBIN());
             case RETAIL_SALE -> new RetailSaleWorkflow.RetailSaleInput(
                     command.agentId(),
                     "QR",
@@ -169,7 +180,8 @@ public class StartTransactionUseCaseImpl implements StartTransactionUseCase {
                     command.proxyValue(),
                     command.geofenceLat(),
                     command.geofenceLng(),
-                    command.agentTier());
+                    command.agentTier(),
+                    command.targetBIN());
             case HYBRID_CASHBACK -> new HybridCashbackWorkflow.HybridCashbackInput(
                     command.agentId(),
                     "QR",
@@ -179,7 +191,8 @@ public class StartTransactionUseCaseImpl implements StartTransactionUseCase {
                     command.proxyValue(),
                     command.geofenceLat(),
                     command.geofenceLng(),
-                    command.agentTier());
+                    command.agentTier(),
+                    command.targetBIN());
         };
     }
 }

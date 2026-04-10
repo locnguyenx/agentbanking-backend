@@ -16,7 +16,9 @@ public interface ProcessMyKadWithdrawalUseCase {
         String idempotencyKey,
         String customerMykad,
         BigDecimal geofenceLat,
-        BigDecimal geofenceLng
+        BigDecimal geofenceLng,
+        String agentTier,
+        String targetBin
     ) {}
 
     record TransactionResult(

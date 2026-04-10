@@ -25,6 +25,9 @@ public class GeofenceChecker {
     public static boolean isWithinGeofence(BigDecimal merchantLat, BigDecimal merchantLng,
                                             BigDecimal deviceLat, BigDecimal deviceLng,
                                             double maxDistanceMeters) {
+        if (merchantLat == null || merchantLng == null || deviceLat == null || deviceLng == null) {
+            return false;
+        }
         double distance = calculateDistance(
             merchantLat.doubleValue(), merchantLng.doubleValue(),
             deviceLat.doubleValue(), deviceLng.doubleValue()

@@ -9,5 +9,6 @@ public interface ProcessWithdrawalUseCase {
                                           BigDecimal customerFee, BigDecimal agentCommission,
                                           BigDecimal bankShare, String idempotencyKey,
                                           String customerCardMasked,
-                                          BigDecimal geofenceLat, BigDecimal geofenceLng);
+                                          BigDecimal geofenceLat, BigDecimal geofenceLng,
+                                          String agentTier, String targetBin);
 }

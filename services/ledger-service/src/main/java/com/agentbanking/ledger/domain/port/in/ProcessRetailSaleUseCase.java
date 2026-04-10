@@ -14,7 +14,16 @@ public interface ProcessRetailSaleUseCase {
         BigDecimal amount,
         String cardData,
         String pinBlock,
-        String idempotencyKey
+        String idempotencyKey,
+        UUID agentId,
+        String description,
+        String referenceNumber,
+        String agentTier,
+        String targetBin,
+        String billerCode,
+        String destinationAccount,
+        String ref1,
+        String ref2
     ) {}
 
     record RetailSaleResponse(

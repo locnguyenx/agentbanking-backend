@@ -1,6 +1,5 @@
 package com.agentbanking.ledger.domain.model;
 
-import com.agentbanking.common.transaction.TransactionStatus;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -19,8 +18,15 @@ public record TransactionRecord(
     String customerMykad,
     String customerCardMasked,
     String switchReference,
+    String referenceNumber,
     BigDecimal geofenceLat,
     BigDecimal geofenceLng,
     LocalDateTime createdAt,
-    LocalDateTime completedAt
+    LocalDateTime completedAt,
+    String agentTier,
+    String targetBin,
+    String billerCode,
+    String ref1,
+    String ref2,
+    String destinationAccount
 ) {}

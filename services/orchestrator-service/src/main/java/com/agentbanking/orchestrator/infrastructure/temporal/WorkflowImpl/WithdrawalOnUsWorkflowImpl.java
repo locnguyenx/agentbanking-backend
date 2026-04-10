@@ -30,6 +30,7 @@ public class WithdrawalOnUsWorkflowImpl implements WithdrawalOnUsWorkflow {
     private final ReleaseFloatActivity releaseFloatActivity;
     private final PostToCBSActivity postToCBSActivity;
     private final PublishKafkaEventActivity publishKafkaEventActivity;
+    private final PersistWorkflowResultActivity persistWorkflowResultActivity;
 
     private WorkflowStatus currentStatus = WorkflowStatus.PENDING;
 
@@ -64,6 +65,7 @@ public class WithdrawalOnUsWorkflowImpl implements WithdrawalOnUsWorkflow {
         this.releaseFloatActivity = Workflow.newActivityStub(ReleaseFloatActivity.class, defaultOptions);
         this.postToCBSActivity = Workflow.newActivityStub(PostToCBSActivity.class, cbsOptions);
         this.publishKafkaEventActivity = Workflow.newActivityStub(PublishKafkaEventActivity.class, defaultOptions);
+        this.persistWorkflowResultActivity = Workflow.newActivityStub(PersistWorkflowResultActivity.class, defaultOptions);
     }
 
     @Override
@@ -77,7 +79,10 @@ public class WithdrawalOnUsWorkflowImpl implements WithdrawalOnUsWorkflow {
                     new VelocityCheckInput(input.agentId(), input.amount(), input.customerMykad()));
             if (!velocityResult.passed()) {
                 currentStatus = WorkflowStatus.FAILED;
-                return WorkflowResult.failed(velocityResult.errorCode(), "Velocity check failed", "DECLINE");
+                WorkflowResult failResult = WorkflowResult.failed(velocityResult.errorCode(), "Velocity check failed", "DECLINE");
+                persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
+                        input.idempotencyKey(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null));
+                return failResult;
             }
 
             // Step 2: Calculate fees
@@ -88,10 +93,26 @@ public class WithdrawalOnUsWorkflowImpl implements WithdrawalOnUsWorkflow {
 
             // Step 3: Block float
             FloatBlockResult blockResult = blockFloatActivity.blockFloat(
-                    new FloatBlockInput(input.agentId(), totalAmount, input.idempotencyKey()));
+                    new FloatBlockInput(
+                            input.agentId(),
+                            input.amount(),
+                            fees.customerFee(),
+                            fees.agentCommission(),
+                            fees.bankShare(),
+                            input.idempotencyKey(),
+                            null,
+                            input.geofenceLat(),
+                            input.geofenceLng(),
+                            input.agentTier(),
+                            input.targetBin()
+                    )
+            );
             if (!blockResult.success()) {
                 currentStatus = WorkflowStatus.FAILED;
-                return WorkflowResult.failed(blockResult.errorCode(), "Float block failed", "DECLINE");
+                WorkflowResult failResult = WorkflowResult.failed(blockResult.errorCode(), "Float block failed", "DECLINE");
+                persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
+                        input.idempotencyKey(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null));
+                return failResult;
             }
             UUID transactionId = blockResult.transactionId();
 
@@ -102,7 +123,10 @@ public class WithdrawalOnUsWorkflowImpl implements WithdrawalOnUsWorkflow {
                 releaseFloatActivity.releaseFloat(
                         new FloatReleaseInput(input.agentId(), totalAmount, transactionId));
                 currentStatus = WorkflowStatus.FAILED;
-                return WorkflowResult.failed(cbsResult.errorCode(), "CBS authorization failed", "DECLINE");
+                WorkflowResult failResult = WorkflowResult.failed(cbsResult.errorCode(), "CBS authorization failed", "DECLINE");
+                persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
+                        input.idempotencyKey(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null));
+                return failResult;
             }
 
             // Step 5: Commit float
@@ -112,7 +136,10 @@ public class WithdrawalOnUsWorkflowImpl implements WithdrawalOnUsWorkflow {
                 releaseFloatActivity.releaseFloat(
                         new FloatReleaseInput(input.agentId(), totalAmount, transactionId));
                 currentStatus = WorkflowStatus.FAILED;
-                return WorkflowResult.failed(commitResult.errorCode(), "Float commit failed", "RETRY");
+                WorkflowResult failResult = WorkflowResult.failed(commitResult.errorCode(), "Float commit failed", "RETRY");
+                persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
+                        input.idempotencyKey(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null));
+                return failResult;
             }
 
             // Step 6: Publish event (non-critical)
@@ -126,13 +153,23 @@ public class WithdrawalOnUsWorkflowImpl implements WithdrawalOnUsWorkflow {
             }
 
             currentStatus = WorkflowStatus.COMPLETED;
-            return WorkflowResult.completed(transactionId, cbsResult.reference(),
+            WorkflowResult completedResult = WorkflowResult.completed(transactionId, cbsResult.reference(),
                     input.amount(), fees.customerFee());
+            persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
+                    input.idempotencyKey(), "COMPLETED", null, null, cbsResult.reference(), fees.customerFee(), cbsResult.reference()));
+            return completedResult;
 
         } catch (Exception e) {
             log.error("Workflow failed with exception: {}", e.getMessage());
             currentStatus = WorkflowStatus.FAILED;
-            return WorkflowResult.failed("ERR_SYS_WORKFLOW_FAILED", e.getMessage(), "REVIEW");
+            WorkflowResult failResult = WorkflowResult.failed("ERR_SYS_WORKFLOW_FAILED", e.getMessage(), "REVIEW");
+            try {
+                persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
+                        input.idempotencyKey(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null));
+            } catch (Exception ex) {
+                log.warn("Failed to persist fail result: {}", ex.getMessage());
+            }
+            return failResult;
         }
     }
 

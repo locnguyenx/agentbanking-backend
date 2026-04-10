@@ -18,12 +18,14 @@ public record TransactionResolutionCase(
     String checkerAction,
     String checkerReason,
     Instant checkerCompletedAt,
+    String makerPendingReason,
+    String checkerPendingReason,
     boolean temporalSignalSent,
     Instant createdAt,
     Instant updatedAt
 ) {
     public static TransactionResolutionCase createPendingMaker(
-            UUID workflowId, UUID transactionId) {
+            UUID workflowId, UUID transactionId, String pendingReason) {
         var now = Instant.now();
         return new TransactionResolutionCase(
             UUID.randomUUID(), workflowId, transactionId,
@@ -31,6 +33,7 @@ public record TransactionResolutionCase(
             ResolutionStatus.PENDING_MAKER,
             null, null,
             null, null, null, null,
+            pendingReason, null,
             false, now, now
         );
     }
@@ -52,6 +55,7 @@ public record TransactionResolutionCase(
             ResolutionStatus.PENDING_CHECKER,
             userId, now,
             checkerUserId, checkerAction, checkerReason, checkerCompletedAt,
+            makerPendingReason, null,
             temporalSignalSent, createdAt, now
         );
     }
@@ -71,6 +75,7 @@ public record TransactionResolutionCase(
             ResolutionStatus.APPROVED,
             makerUserId, makerCreatedAt,
             userId, "APPROVED", reason, now,
+            makerPendingReason, null,
             true, createdAt, now
         );
     }
@@ -90,6 +95,7 @@ public record TransactionResolutionCase(
             ResolutionStatus.PENDING_MAKER,
             makerUserId, makerCreatedAt,
             userId, "REJECTED", reason, now,
+            makerPendingReason, null,
             false, createdAt, now
         );
     }

@@ -1,0 +1,2968 @@
+openapi: 3.0.3
+info:
+  version: 1.0.0
+  title: Agent Banking Platform API
+  description: Aggregated API from all microservices
+  contact:
+    name: Agent Banking Platform Team
+servers:
+- description: Gateway
+  url: http://localhost:8080
+- description: Production
+  url: https://api.agentbanking.example.com
+- description: Sandbox
+  url: https://sandbox.agentbanking.example.com
+paths:
+  /api/v1/transactions/quote:
+    post:
+      tags:
+      - transaction-controller (switch-adapter-service)
+      operationId: getTransactionQuote
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TransactionQuoteRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransactionQuoteResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/transactions:
+    post:
+      tags:
+      - orchestrator-controller (orchestrator-service)
+      operationId: startTransaction
+      summary: Start a new transaction via Temporal SAGA orchestration
+      description: Initiates a transaction workflow (withdrawal, deposit, bill payment, or DuitNow transfer) using Temporal durable execution. Returns a workflow ID for polling status.
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TransactionStartRequest'
+        required: true
+      responses:
+        '200':
+          description: Transaction started successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransactionStartResponse'
+        '400':
+          description: Bad Request - Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/transactions/{workflowId}/status:
+    get:
+      tags:
+      - orchestrator-controller (orchestrator-service)
+      operationId: getTransactionStatus
+      summary: Get transaction workflow status
+      description: Poll the status of a previously started transaction workflow.
+      security:
+        - bearerAuth: []
+      parameters:
+      - name: workflowId
+        in: path
+        required: true
+        schema:
+          type: string
+        description: The workflow ID returned from the start transaction response
+      responses:
+        '200':
+          description: Transaction status retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransactionStatusResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Not Found - Workflow not found
+  /api/v1/transactions/{workflowId}/force-resolve:
+    post:
+      tags:
+      - orchestrator-controller (orchestrator-service)
+      operationId: forceResolveTransaction
+      summary: Force resolve a stuck transaction workflow
+      description: Admin operation to manually resolve a stuck or failed workflow. Requires admin credentials.
+      security:
+        - bearerAuth: []
+      parameters:
+      - name: workflowId
+        in: path
+        required: true
+        schema:
+          type: string
+        description: The workflow ID to force resolve
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ForceResolveRequest'
+        required: true
+      responses:
+        '200':
+          description: Force resolve signal sent successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: SUCCESS
+                  message:
+                    type: string
+        '400':
+          description: Bad Request - Invalid action or workflow not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden - Admin access required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/transfer/proxy/enquiry:
+    get:
+      tags:
+      - switch-controller (switch-adapter-service)
+      operationId: proxyEnquiry
+      security:
+        - bearerAuth: []
+      parameters:
+      - name: proxyId
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: proxyType
+        in: query
+        required: true
+        schema:
+          type: string
+          enum: [MOBILE, NRIC, PASSPORT, BIZ_REG_NO]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/compliance/status:
+    get:
+      tags:
+      - compliance-controller (rules-service)
+      operationId: getComplianceStatus
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: string
+                enum: [LOCKED, UNLOCKED]
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/transfer/duitnow:
+    post:
+      tags:
+      - switch-controller (switch-adapter-service)
+      operationId: duitNowTransfer
+      deprecated: true
+      description: |
+        **DEPRECATED** - Use `POST /api/v1/transactions` with `transactionType: DUITNOW_TRANSFER` instead.
+        This endpoint will be removed in a future version. See [API Changelog](/docs/api/CHANGELOG-2026-04-05-transaction-orchestrator.md) for migration guide.
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DuitNowRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransactionResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/balance-inquiry:
+    post:
+      tags:
+      - ledger-controller (ledger-service)
+      operationId: balanceInquiry
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BalanceInquiryExternalRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BalanceResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/rules/fees:
+    post:
+      tags:
+      - rules-controller (rules-service)
+      operationId: createFeeConfig
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FeeConfigRequest'
+        required: true
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FeeConfigResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/topup:
+    post:
+      tags:
+      - biller-controller (biller-service)
+      operationId: topup
+      deprecated: true
+      description: |
+        **DEPRECATED** - Use `POST /api/v1/transactions` with `transactionType: BILL_PAYMENT` instead.
+        This endpoint will be removed in a future version. See [API Changelog](/docs/api/CHANGELOG-2026-04-05-transaction-orchestrator.md) for migration guide.
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TopupExternalRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransactionResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/bill/pay:
+    post:
+      tags:
+      - biller-controller (biller-service)
+      operationId: payBill
+      deprecated: true
+      description: |
+        **DEPRECATED** - Use `POST /api/v1/transactions` with `transactionType: BILL_PAYMENT` instead.
+        This endpoint will be removed in a future version. See [API Changelog](/docs/api/CHANGELOG-2026-04-05-transaction-orchestrator.md) for migration guide.
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BillPayExternalRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransactionResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/billpayment/jompay:
+    post:
+      tags:
+      - biller-controller (biller-service)
+      operationId: jomPay
+      deprecated: true
+      description: |
+        **DEPRECATED** - Use `POST /api/v1/transactions` with `transactionType: BILL_PAYMENT` instead.
+        This endpoint will be removed in a future version. See [API Changelog](/docs/api/CHANGELOG-2026-04-05-transaction-orchestrator.md) for migration guide.
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JomPayExternalRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransactionResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/ewallet/withdraw:
+    post:
+      tags:
+      - e-wallet-controller (biller-service)
+      operationId: withdrawal
+      deprecated: true
+      description: |
+        **DEPRECATED** - Use `POST /api/v1/transactions` with `transactionType: CASH_WITHDRAWAL` instead.
+        This endpoint will be removed in a future version. See [API Changelog](/docs/api/CHANGELOG-2026-04-05-transaction-orchestrator.md) for migration guide.
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EWalletWithdrawExternalRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransactionResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '402':
+          description: Payment Required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/ewallet/topup:
+    post:
+      tags:
+      - e-wallet-controller (biller-service)
+      operationId: topup_1
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EWalletTopupExternalRequest'
+              additionalProperties:
+                type: object
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: object
+  /api/v1/essp/purchase:
+    post:
+      tags:
+      - essp-controller (biller-service)
+      operationId: purchase
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EsspExternalRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransactionResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/onboarding/verify-mykad:
+    post:
+      tags:
+      - onboarding-controller (onboarding-service)
+      operationId: verifyMyKad
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MyKadVerifyRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KycVerifyResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/onboarding/submit-application:
+    post:
+      tags:
+      - onboarding-controller (onboarding-service)
+      operationId: submitApplication
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApplicationSubmitRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApplicationSubmitResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/backoffice/discrepancy/{caseId}/maker-action:
+    post:
+      tags:
+      - reconciliation-controller (ledger-service)
+      operationId: makerPropose
+      security:
+        - bearerAuth: []
+      parameters:
+      - name: caseId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DiscrepancyMakerActionRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransactionResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/backoffice/discrepancy/{caseId}/checker-reject:
+    post:
+      tags:
+      - reconciliation-controller (ledger-service)
+      operationId: checkerReject
+      security:
+        - bearerAuth: []
+      parameters:
+      - name: caseId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DiscrepancyCheckerActionRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransactionResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/backoffice/discrepancy/{caseId}/checker-approve:
+    post:
+      tags:
+      - reconciliation-controller (ledger-service)
+      operationId: checkerApprove
+      security:
+        - bearerAuth: []
+      parameters:
+      - name: caseId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DiscrepancyCheckerActionRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransactionResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/retail/sale:
+    post:
+      tags:
+      - merchant-controller (ledger-service)
+      operationId: processRetailSale
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RetailSaleCommand'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RetailSaleResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/retail/pin-purchase:
+    post:
+      tags:
+      - merchant-controller (ledger-service)
+      operationId: processPinPurchase
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PinPurchaseCommand'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PinPurchaseResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/retail/cashback:
+    post:
+      tags:
+      - merchant-controller (ledger-service)
+      operationId: processCashBack
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CashBackCommand'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CashBackResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/withdrawal:
+    post:
+      tags:
+      - ledger-controller (ledger-service)
+      operationId: debit
+      deprecated: true
+      description: |
+        **DEPRECATED** - Use `POST /api/v1/transactions` with `transactionType: CASH_WITHDRAWAL` instead.
+        This endpoint will be removed in a future version. See [API Changelog](/docs/api/CHANGELOG-2026-04-05-transaction-orchestrator.md) for migration guide.
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WithdrawalExternalRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransactionResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/deposit:
+    post:
+      tags:
+      - ledger-controller (ledger-service)
+      operationId: credit
+      deprecated: true
+      description: |
+        **DEPRECATED** - Use `POST /api/v1/transactions` with `transactionType: CASH_DEPOSIT` instead.
+        This endpoint will be removed in a future version. See [API Changelog](/docs/api/CHANGELOG-2026-04-05-transaction-orchestrator.md) for migration guide.
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DepositExternalRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransactionResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/agent/balance:
+    get:
+      tags:
+      - ledger-controller (ledger-service)
+      operationId: getBalance
+      security:
+        - bearerAuth: []
+      parameters:
+      - name: agentId
+        in: query
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BalanceResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/backoffice/transactions:
+    get:
+      tags:
+      - ledger-controller (ledger-service)
+      operationId: getTransactions
+      security:
+        - bearerAuth: []
+      parameters:
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 0
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 20
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransactionListResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/backoffice/settlement:
+    get:
+      tags:
+      - ledger-controller (ledger-service)
+      operationId: getSettlement
+      security:
+        - bearerAuth: []
+      parameters:
+      - name: date
+        in: query
+        required: true
+        schema:
+          type: string
+          format: date
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SettlementResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/backoffice/dashboard:
+    get:
+      tags:
+      - ledger-controller (ledger-service)
+      operationId: getDashboard
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/backoffice/agents/{id}:
+    get:
+      tags:
+      - agent-controller (onboarding-service)
+      operationId: getAgent
+      security:
+        - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    put:
+      tags:
+      - agent-controller (onboarding-service)
+      operationId: updateAgent
+      security:
+        - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateAgentRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    delete:
+      tags:
+      - agent-controller (onboarding-service)
+      operationId: deactivateAgent
+      security:
+        - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/kyc/verify:
+    post:
+      tags:
+      - onboarding-controller (onboarding-service)
+      operationId: verifyMyKadKyc
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties:
+                type: string
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: object
+  /api/v1/kyc/biometric:
+    post:
+      tags:
+      - onboarding-controller (onboarding-service)
+      operationId: biometricMatch
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties:
+                type: string
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: object
+  /api/v1/backoffice/agents:
+    get:
+      tags:
+      - agent-controller (onboarding-service)
+      operationId: listAgents
+      security:
+        - bearerAuth: []
+      parameters:
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 0
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 20
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AgentResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    post:
+      tags:
+      - agent-controller (onboarding-service)
+      operationId: createAgent
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAgentExternalRequest'
+        required: true
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/backoffice/kyc/review-queue:
+    get:
+      tags:
+      - onboarding-controller (onboarding-service)
+      operationId: getKycReviewQueue
+      security:
+        - bearerAuth: []
+      parameters:
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 0
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 20
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: object
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/auth/token:
+    post:
+      tags:
+      - auth-controller (auth-iam-service)
+      operationId: authenticateUser
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TokenRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/auth/refresh:
+    post:
+      tags:
+      - auth-controller (auth-iam-service)
+      operationId: refreshToken
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshTokenRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/auth/revoke:
+    post:
+      tags:
+      - auth-controller (auth-iam-service)
+      operationId: revokeToken
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RevokeTokenRequest'
+        required: true
+      responses:
+        '204':
+          description: No Content
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/auth/password/forgot:
+    post:
+      tags:
+      - user-management-controller (auth-iam-service)
+      operationId: forgotPassword
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ForgotPasswordRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ForgotPasswordResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/auth/password/reset:
+    post:
+      tags:
+      - user-management-controller (auth-iam-service)
+      operationId: resetPassword
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResetPasswordRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResetPasswordResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/auth/password/change:
+    post:
+      tags:
+      - user-management-controller (auth-iam-service)
+      operationId: changePassword
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangePasswordRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChangePasswordResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/backoffice/agents/{agentId}/user-status:
+    get:
+      tags:
+      - user-management-controller (auth-iam-service)
+      operationId: getAgentUserStatus
+      security:
+        - bearerAuth: []
+      parameters:
+      - name: agentId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentUserStatusResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/backoffice/agents/{agentId}/create-user:
+    post:
+      tags:
+      - user-management-controller (auth-iam-service)
+      operationId: createAgentUser
+      security:
+        - bearerAuth: []
+      parameters:
+      - name: agentId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username:
+                  type: string
+                email:
+                  type: string
+                fullName:
+                  type: string
+        required: true
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/backoffice/audit-logs:
+    get:
+      tags:
+      - audit-log-controller (onboarding-service)
+      operationId: getAuditLogs
+      security:
+        - bearerAuth: []
+      parameters:
+      - name: entityType
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: fromDate
+        in: query
+        required: false
+        schema:
+          type: string
+          format: date-time
+      - name: toDate
+        in: query
+        required: false
+        schema:
+          type: string
+          format: date-time
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 0
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 50
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: object
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/backoffice/transactions/{workflowId}/maker-propose:
+    post:
+      tags:
+      - resolution-controller (orchestrator-service)
+      operationId: makerProposeResolution
+      summary: Maker proposes resolution for a transaction
+      description: First step in four-eyes approval - maker proposes an action (COMMIT, ROLLBACK, ESCALATE)
+      security:
+        - bearerAuth: []
+      parameters:
+      - name: workflowId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MakerProposalRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResolutionResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/backoffice/transactions/{workflowId}/checker-approve:
+    post:
+      tags:
+      - resolution-controller (orchestrator-service)
+      operationId: checkerApproveResolution
+      summary: Checker approves proposed resolution
+      description: Second step in four-eyes approval - checker approves the maker's proposal
+      security:
+        - bearerAuth: []
+      parameters:
+      - name: workflowId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CheckerActionRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResolutionResponse'
+        '400':
+          description: Bad Request - Four-eyes violation or validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden - Self approval not allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/backoffice/transactions/{workflowId}/checker-reject:
+    post:
+      tags:
+      - resolution-controller (orchestrator-service)
+      operationId: checkerRejectResolution
+      summary: Checker rejects proposed resolution
+      description: Second step in four-eyes approval - checker rejects the maker's proposal, returning to maker
+      security:
+        - bearerAuth: []
+      parameters:
+      - name: workflowId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CheckerActionRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResolutionResponse'
+        '400':
+          description: Bad Request - Four-eyes violation or validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden - Self approval not allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    TransactionQuoteRequest:
+      required:
+      - amount
+      - serviceCode
+      - fundingSource
+      - agentId
+      type: object
+      properties:
+        serviceCode:
+          type: string
+        amount:
+          type: string
+        agentId:
+          type: string
+        fundingSource:
+          type: string
+          enum: [CARD_EMV, CASH, DUITNOW_MOBILE, DUITNOW_MYKAD, DUITNOW_BRN, MYKAD_BIOMETRIC, DUITNOW_QR]
+        billerRouting:
+          type: string
+          enum: [ON_US, OFF_US]
+
+    TransactionQuoteResponse:
+      required:
+      - amount
+      - fee
+      - commission
+      - total
+      - quoteId
+      type: object
+      properties:
+        quoteId:
+          type: string
+        amount:
+          type: string
+        fee:
+          type: string
+        total:
+          type: string
+        commission:
+          type: string
+
+    ReversalRequest:
+      required:
+      - amount
+      - originalReference
+      - originalTransactionId
+      type: object
+      properties:
+        originalTransactionId:
+          type: string
+          format: uuid
+        originalReference:
+          type: string
+        amount:
+          type: string
+    DuitNowRequest:
+      required:
+      - amount
+      - internalTransactionId
+      - proxyType
+      - proxyValue
+      type: object
+      properties:
+        internalTransactionId:
+          type: string
+          format: uuid
+        proxyType:
+          type: string
+        proxyValue:
+          type: string
+        amount:
+          type: string
+    BalanceInquiryRequest:
+      required:
+      - encryptedCardData
+      - pinBlock
+      type: object
+      properties:
+        encryptedCardData:
+          type: string
+        pinBlock:
+          type: string
+    CardAuthRequest:
+      required:
+      - amount
+      - internalTransactionId
+      - pan
+      type: object
+      properties:
+        internalTransactionId:
+          type: string
+          format: uuid
+        pan:
+          type: string
+        amount:
+          type: string
+    RetailSaleCommand:
+      type: object
+      properties:
+        merchantId:
+          type: string
+          format: uuid
+        amount:
+          type: string
+        cardData:
+          type: string
+        pinBlock:
+          type: string
+        idempotencyKey:
+          type: string
+    RetailSaleResponse:
+      type: object
+      properties:
+        status:
+          type: string
+        transactionId:
+          type: string
+        amount:
+          type: string
+        mdrAmount:
+          type: string
+        netToMerchant:
+          type: string
+    PinPurchaseCommand:
+      type: object
+      properties:
+        agentId:
+          type: string
+          format: uuid
+        productCode:
+          type: string
+        amount:
+          type: string
+        idempotencyKey:
+          type: string
+    PinPurchaseResponse:
+      type: object
+      properties:
+        status:
+          type: string
+        transactionId:
+          type: string
+        pinCode:
+          type: string
+        commission:
+          type: string
+        timestamp:
+          type: string
+    CashBackCommand:
+      type: object
+      properties:
+        merchantId:
+          type: string
+          format: uuid
+        cashBackAmount:
+          type: string
+        cardData:
+          type: string
+        pinBlock:
+          type: string
+        idempotencyKey:
+          type: string
+    CashBackResponse:
+      type: object
+      properties:
+        status:
+          type: string
+        transactionId:
+          type: string
+        cashBackAmount:
+          type: string
+        commission:
+          type: string
+    # ============================================================
+    # EXTERNAL API REQUEST SCHEMAS
+    # These are what external consumers should send
+    # ============================================================
+    
+    # Withdrawal - External API Contract
+    WithdrawalExternalRequest:
+      required:
+      - amount
+      - currency
+      - idempotencyKey
+      - customerCard
+      - customerPin
+      type: object
+      properties:
+        amount:
+          type: string
+          description: Transaction amount in MYR
+          minimum: 0.01
+        currency:
+          type: string
+          enum: [MYR]
+          default: MYR
+        idempotencyKey:
+          type: string
+          format: uuid
+          description: Unique key to prevent duplicate transactions
+        customerCard:
+          type: string
+          description: Customer card number (PAN)
+          pattern: '^[0-9]{13,19}$'
+        customerPin:
+          type: string
+          description: Customer PIN (4-6 digits)
+          pattern: '^[0-9]{4,6}$'
+        location:
+          $ref: '#/components/schemas/GeoLocation'
+    
+    # Deposit - External API Contract
+    DepositExternalRequest:
+      required:
+      - amount
+      - currency
+      - idempotencyKey
+      - customerAccount
+      type: object
+      properties:
+        amount:
+          type: string
+          description: Transaction amount in MYR
+          minimum: 0.01
+        currency:
+          type: string
+          enum: [MYR]
+          default: MYR
+        idempotencyKey:
+          type: string
+          format: uuid
+          description: Unique key to prevent duplicate transactions
+        customerAccount:
+          type: string
+          description: Customer account number
+          minLength: 10
+          maxLength: 20
+        customerName:
+          type: string
+          description: Customer full name
+          maxLength: 100
+        location:
+          $ref: '#/components/schemas/GeoLocation'
+    
+    # Top-up - External API Contract
+    TopupExternalRequest:
+      required:
+      - telco
+      - phoneNumber
+      - amount
+      - currency
+      - idempotencyKey
+      type: object
+      properties:
+        telco:
+          type: string
+          enum: [CELCOM, M1, UMOBILE, MAXIS, DIGI]
+          description: Telco provider
+        phoneNumber:
+          type: string
+          description: Mobile number (MSISDN format)
+          pattern: '^60[0-9]{8,9}$'
+        amount:
+          type: string
+          description: Top-up amount in MYR
+          minimum: 1
+          maximum: 500
+        currency:
+          type: string
+          enum: [MYR]
+          default: MYR
+        idempotencyKey:
+          type: string
+          format: uuid
+    
+    # Bill Payment - External API Contract
+    BillPayExternalRequest:
+      required:
+      - billerCode
+      - ref1
+      - amount
+      - currency
+      - idempotencyKey
+      type: object
+      properties:
+        billerCode:
+          type: string
+          description: Biller code (4 digits)
+          pattern: '^[0-9]{4}$'
+        ref1:
+          type: string
+          description: Reference 1 (bill account number)
+          minLength: 5
+          maxLength: 20
+        ref2:
+          type: string
+          description: Reference 2 (optional)
+          maxLength: 20
+        amount:
+          type: string
+          description: Payment amount in MYR
+          minimum: 0.01
+        currency:
+          type: string
+          enum: [MYR]
+          default: MYR
+        idempotencyKey:
+          type: string
+          format: uuid
+        customerMobile:
+          type: string
+          description: Customer mobile number
+
+    # JomPay - External API Contract
+    JomPayExternalRequest:
+      required:
+      - billerCode
+      - ref1
+      - amount
+      - currency
+      - idempotencyKey
+      type: object
+      properties:
+        billerCode:
+          type: string
+          description: JomPay biller code
+          pattern: '^[0-9]{4}$'
+        ref1:
+          type: string
+          description: JomPay reference 1 (bill account)
+          minLength: 10
+          maxLength: 19
+        ref2:
+          type: string
+          description: JomPay reference 2 (optional)
+          maxLength: 12
+        amount:
+          type: string
+          description: Payment amount in MYR
+          minimum: 0.01
+        currency:
+          type: string
+          enum: [MYR]
+          default: MYR
+        idempotencyKey:
+          type: string
+          format: uuid
+        customerMobile:
+          type: string
+
+    # E-wallet Withdraw - External API Contract
+    EWalletWithdrawExternalRequest:
+      required:
+      - walletProvider
+      - walletAccountId
+      - amount
+      - currency
+      - idempotencyKey
+      type: object
+      properties:
+        walletProvider:
+          type: string
+          enum: [SARAWAK_PAY, SARAWAK_TOPUP]
+          description: E-wallet provider
+        walletAccountId:
+          type: string
+          description: E-wallet account ID
+          minLength: 5
+          maxLength: 20
+        amount:
+          type: string
+          description: Withdrawal amount in MYR
+          minimum: 1
+        currency:
+          type: string
+          enum: [MYR]
+          default: MYR
+        idempotencyKey:
+          type: string
+          format: uuid
+        customerCard:
+          type: string
+          description: Customer card for card-based withdrawal
+        customerPin:
+          type: string
+    
+    # E-wallet Topup - External API Contract
+    EWalletTopupExternalRequest:
+      required:
+      - walletProvider
+      - walletAccountId
+      - amount
+      - currency
+      - idempotencyKey
+      type: object
+      properties:
+        walletProvider:
+          type: string
+          enum: [SARAWAK_PAY, SARAWAK_TOPUP]
+        walletAccountId:
+          type: string
+        amount:
+          type: string
+        currency:
+          type: string
+          enum: [MYR]
+        idempotencyKey:
+          type: string
+          format: uuid
+
+    # DuitNow Transfer - External API Contract
+    DuitNowExternalRequest:
+      required:
+      - amount
+      - currency
+      - idempotencyKey
+      - proxyType
+      - proxyValue
+      type: object
+      properties:
+        amount:
+          type: string
+        currency:
+          type: string
+          enum: [MYR]
+        idempotencyKey:
+          type: string
+          format: uuid
+        proxyType:
+          type: string
+          enum: [IC, PHONE, EMAIL, TGAN]
+        proxyValue:
+          type: string
+        recipientName:
+          type: string
+    
+    # ESSP Purchase - External API Contract
+    EsspExternalRequest:
+      required:
+      - productCode
+      - amount
+      - currency
+      - idempotencyKey
+      type: object
+      properties:
+        productCode:
+          type: string
+        amount:
+          type: string
+        currency:
+          type: string
+          enum: [MYR]
+        idempotencyKey:
+          type: string
+          format: uuid
+        customerMobile:
+          type: string
+    
+    # Retail Sale - External API Contract
+    RetailSaleExternalRequest:
+      required:
+      - merchantId
+      - amount
+      - idempotencyKey
+      type: object
+      properties:
+        merchantId:
+          type: string
+          format: uuid
+        amount:
+          type: string
+        cardData:
+          type: string
+        pinBlock:
+          type: string
+        idempotencyKey:
+          type: string
+          format: uuid
+    
+    # Retail PIN Purchase - External API Contract
+    RetailPinPurchaseExternalRequest:
+      required:
+      - productCode
+      - amount
+      - idempotencyKey
+      type: object
+      properties:
+        productCode:
+          type: string
+        amount:
+          type: string
+        idempotencyKey:
+          type: string
+          format: uuid
+    
+    # Retail Cashback - External API Contract
+    RetailCashbackExternalRequest:
+      required:
+      - merchantId
+      - cashBackAmount
+      - idempotencyKey
+      type: object
+      properties:
+        merchantId:
+          type: string
+          format: uuid
+        cashBackAmount:
+          type: string
+        cardData:
+          type: string
+        pinBlock:
+          type: string
+        idempotencyKey:
+          type: string
+          format: uuid
+    
+    # MyKad Verify Request
+    MyKadVerifyRequest:
+      required:
+      - mykadNumber
+      - name
+      type: object
+      properties:
+        mykadNumber:
+          type: string
+          description: MyKad number (12 digits)
+          pattern: '^[0-9]{12}$'
+        name:
+          type: string
+          description: Full name from MyKad
+        dateOfBirth:
+          type: string
+          format: date
+        address:
+          type: string
+    
+    # Application Submit Request
+    ApplicationSubmitRequest:
+      required:
+      - agentCode
+      - businessName
+      - tier
+      - mykadNumber
+      - phoneNumber
+      - merchantGpsLat
+      - merchantGpsLng
+      type: object
+      properties:
+        agentCode:
+          type: string
+          description: Unique agent code
+        businessName:
+          type: string
+        tier:
+          type: string
+          enum: [MICRO, STANDARD, PREMIUM]
+        mykadNumber:
+          type: string
+        phoneNumber:
+          type: string
+        merchantGpsLat:
+          type: number
+        merchantGpsLng:
+          type: number
+        email:
+          type: string
+          format: email
+        address:
+          type: string
+    
+    # Application Submit Response
+    ApplicationSubmitResponse:
+      type: object
+      properties:
+        applicationId:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [SUBMITTED, PENDING_REVIEW, APPROVED, REJECTED]
+        message:
+          type: string
+        submittedAt:
+          type: string
+          format: date-time
+    
+    # Balance Inquiry - External API Contract
+    BalanceInquiryExternalRequest:
+      required:
+      - encryptedCardData
+      - pinBlock
+      type: object
+      properties:
+        encryptedCardData:
+          type: string
+        pinBlock:
+          type: string
+    
+    # Create Agent Request
+    CreateAgentExternalRequest:
+      required:
+      - agentCode
+      - businessName
+      - tier
+      - mykadNumber
+      - phoneNumber
+      - merchantGpsLat
+      - merchantGpsLng
+      type: object
+      properties:
+        agentCode:
+          type: string
+          description: Unique agent code
+          pattern: '^AGT-[0-9]{3}$'
+        businessName:
+          type: string
+          description: Business name
+          maxLength: 200
+        tier:
+          type: string
+          enum: [MICRO, STANDARD, PREMIER]
+          description: Agent tier level
+        mykadNumber:
+          type: string
+          description: MyKad number (NRIC)
+          pattern: '^[0-9]{12}$'
+        phoneNumber:
+          type: string
+          description: Contact number
+          pattern: '^60[0-9]{8,9}$'
+        merchantGpsLat:
+          type: number
+          description: Merchant GPS latitude
+          minimum: -90
+          maximum: 90
+        merchantGpsLng:
+          type: number
+          description: Merchant GPS longitude
+          minimum: -180
+          maximum: 180
+        email:
+          type: string
+          format: email
+        address:
+          type: string
+          maxLength: 500
+    
+    # Update Agent Request
+    UpdateAgentRequest:
+      required:
+      - businessName
+      - merchantGpsLat
+      - merchantGpsLng
+      - phoneNumber
+      - tier
+      type: object
+      properties:
+        businessName:
+          type: string
+          description: Business name
+          maxLength: 200
+        tier:
+          type: string
+          enum: [MICRO, STANDARD, PREMIUM]
+          description: Agent tier level
+        merchantGpsLat:
+          type: number
+          description: Merchant GPS latitude
+          minimum: -90
+          maximum: 90
+        merchantGpsLng:
+          type: number
+          description: Merchant GPS longitude
+          minimum: -180
+          maximum: 180
+        phoneNumber:
+          type: string
+          description: Contact number
+          pattern: '^60[0-9]{8,9}$'
+        email:
+          type: string
+          format: email
+        address:
+          type: string
+          maxLength: 500
+        status:
+          type: string
+          enum: [ACTIVE, INACTIVE, SUSPENDED]
+    
+    # Fee Config Request
+    FeeConfigRequest:
+      required:
+      - agentType
+      - transactionType
+      - feeType
+      - currency
+      - effectiveFrom
+      type: object
+      properties:
+        agentType:
+          type: string
+          enum: [MICRO, STANDARD, PREMIER]
+        transactionType:
+          type: string
+          enum: [CASH_WITHDRAWAL, CASH_DEPOSIT, BALANCE_INQUIRY, DUITNOW_TRANSFER, JOMPAY, CELCOM_TOPUP, M1_TOPUP, ESSP_PURCHASE, PIN_PURCHASE]
+        feeType:
+          type: string
+          enum: [FIXED, PERCENTAGE]
+        feeAmount:
+          type: string
+        percentage:
+          type: string
+        minFee:
+          type: string
+        maxFee:
+          type: string
+        currency:
+          type: string
+          enum: [MYR]
+        effectiveFrom:
+          type: string
+          format: date-time
+        effectiveTo:
+          type: string
+          format: date-time
+    
+    # Discrepancy Maker Action Request
+    DiscrepancyMakerActionRequest:
+      required:
+      - action
+      - notes
+      type: object
+      properties:
+        action:
+          type: string
+          enum: [PROPOSE, ESCALATE]
+        notes:
+          type: string
+        adjustmentAmount:
+          type: string
+
+    # Discrepancy Checker Action Request
+    DiscrepancyCheckerActionRequest:
+      required:
+      - action
+      - notes
+      type: object
+      properties:
+        action:
+          type: string
+          enum: [APPROVE, REJECT]
+        notes:
+          type: string
+    
+    # Geo Location
+    GeoLocation:
+      required:
+      - latitude
+      - longitude
+      type: object
+      properties:
+        latitude:
+          type: number
+          minimum: -90
+          maximum: 90
+        longitude:
+          type: number
+          minimum: -180
+          maximum: 180
+    
+    # ============================================================
+    # RESPONSE SCHEMAS
+    # ============================================================
+    
+    # Transaction Success Response
+    TransactionResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [SUCCESS, PENDING, FAILED]
+        transactionId:
+          type: string
+          format: uuid
+        amount:
+          type: string
+        currency:
+          type: string
+        transactionType:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        message:
+          type: string
+        reference:
+          type: string
+    
+    # Fee Config Response
+    FeeConfigResponse:
+      type: object
+      properties:
+        feeConfigId:
+          type: string
+          format: uuid
+        agentType:
+          type: string
+        transactionType:
+          type: string
+        feeType:
+          type: string
+        feeAmount:
+          type: string
+        percentage:
+          type: string
+        status:
+          type: string
+          enum: [CREATED, ACTIVE, INACTIVE]
+        effectiveFrom:
+          type: string
+          format: date-time
+        effectiveTo:
+          type: string
+          format: date-time
+    
+    # KYC Verify Response
+    KycVerifyResponse:
+      type: object
+      properties:
+        verificationId:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [VERIFIED, PENDING, FAILED]
+        message:
+          type: string
+        kycLevel:
+          type: string
+          enum: [BASIC, INTERMEDIATE, ADVANCED]
+        expiresAt:
+          type: string
+          format: date-time
+    
+    # Agent Response
+    AgentResponse:
+      type: object
+      properties:
+        agentId:
+          type: string
+          format: uuid
+        agentCode:
+          type: string
+        businessName:
+          type: string
+        tier:
+          type: string
+          enum: [MICRO, STANDARD, PREMIUM]
+        status:
+          type: string
+          enum: [ACTIVE, INACTIVE, PENDING, SUSPENDED]
+        merchantGpsLat:
+          type: number
+        merchantGpsLng:
+          type: number
+        phoneNumber:
+          type: string
+        email:
+          type: string
+        address:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    
+    # Balance Response
+    BalanceResponse:
+      type: object
+      properties:
+        agentId:
+          type: string
+          format: uuid
+        availableBalance:
+          type: string
+        ledgerBalance:
+          type: string
+        pendingBalance:
+          type: string
+        currency:
+          type: string
+        lastTransactionId:
+          type: string
+          format: uuid
+        lastUpdated:
+          type: string
+          format: date-time
+    
+    # Dashboard Response
+    DashboardResponse:
+      type: object
+      properties:
+        totalAgents:
+          type: integer
+        activeAgents:
+          type: integer
+        totalTransactions:
+          type: integer
+        totalVolume:
+          type: string
+        successRate:
+          type: number
+        dailyStats:
+          type: array
+          items:
+            type: object
+            properties:
+              date:
+                type: string
+              transactionCount:
+                type: integer
+              volume:
+                type: string
+    
+    # Transaction List Response
+    TransactionListResponse:
+      type: object
+      properties:
+        transactions:
+          type: array
+          items:
+            $ref: '#/components/schemas/TransactionResponse'
+        page:
+          type: integer
+        size:
+          type: integer
+        totalElements:
+          type: integer
+        totalPages:
+          type: integer
+    
+    # Settlement Response
+    SettlementResponse:
+      type: object
+      properties:
+        settlementId:
+          type: string
+          format: uuid
+        agentId:
+          type: string
+        date:
+          type: string
+          format: date
+        totalTransactions:
+          type: integer
+        totalAmount:
+          type: string
+        commission:
+          type: string
+        status:
+          type: string
+    
+    # Error Response
+    ErrorResponse:
+      required:
+      - status
+      - error
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [FAILED]
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            action_code:
+              type: string
+              enum: [DECLINE, RETRY, REVIEW]
+            trace_id:
+              type: string
+            timestamp:
+              type: string
+              format: date-time
+
+    # ============================================================
+    # TRANSACTION ORCHESTRATOR SCHEMAS (NEW - 2026-04-05)
+    # ============================================================
+
+    # Transaction Type Enum
+    TransactionType:
+      type: string
+      enum: [CASH_WITHDRAWAL, CASH_DEPOSIT, BILL_PAYMENT, DUITNOW_TRANSFER, CASHLESS_PAYMENT, PIN_BASED_PURCHASE, PREPAID_TOPUP, EWALLET_WITHDRAWAL, EWALLET_TOPUP, ESSP_PURCHASE, PIN_PURCHASE, RETAIL_SALE, HYBRID_CASHBACK]
+      description: Type of transaction to initiate
+
+    # Transaction Start Request
+    TransactionStartRequest:
+      required:
+      - transactionType
+      - agentId
+      - amount
+      type: object
+      properties:
+        transactionType:
+          $ref: '#/components/schemas/TransactionType'
+        agentId:
+          type: string
+          format: uuid
+          description: Unique identifier of the agent
+        amount:
+          type: number
+          format: double
+          minimum: 0.01
+          description: Transaction amount in MYR
+        idempotencyKey:
+          type: string
+          description: Optional unique key to prevent duplicate transactions. If not provided, server will generate one.
+        pan:
+          type: string
+          description: Card number (PAN) - required for CASH_WITHDRAWAL
+          pattern: '^[0-9]{13,19}$'
+        pinBlock:
+          type: string
+          description: Encrypted PIN block - required for CASH_WITHDRAWAL
+        customerCardMasked:
+          type: string
+          description: Masked card number for display (e.g., 411111******1111)
+        destinationAccount:
+          type: string
+          description: Destination account number - required for CASH_DEPOSIT
+        requiresBiometric:
+          type: boolean
+          default: false
+          description: Whether biometric verification is required
+        billerCode:
+          type: string
+          description: Biller code - required for BILL_PAYMENT
+        ref1:
+          type: string
+          description: Reference 1 (bill account number) - required for BILL_PAYMENT
+        ref2:
+          type: string
+          description: Reference 2 (optional) - for BILL_PAYMENT
+        proxyType:
+          type: string
+          enum: [IC, PHONE, EMAIL, TGAN]
+          description: DuitNow proxy type - required for DUITNOW_TRANSFER
+        proxyValue:
+          type: string
+          description: DuitNow proxy value - required for DUITNOW_TRANSFER
+        customerMykad:
+          type: string
+          description: Encrypted customer MyKad number
+        geofenceLat:
+          type: number
+          format: double
+          description: GPS latitude of transaction location
+        geofenceLng:
+          type: number
+          format: double
+          description: GPS longitude of transaction location
+        targetBIN:
+          type: string
+          description: Target bank BIN for routing
+        agentTier:
+          type: string
+          enum: [TIER_1, TIER_2, TIER_3]
+          description: Agent tier level
+
+    # Transaction Start Response
+    TransactionStartResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [PENDING]
+          description: Initial status of the transaction
+        workflowId:
+          type: string
+          description: Unique workflow identifier for polling status
+        pollUrl:
+          type: string
+          description: URL to poll for transaction status
+
+    # Transaction Status Response
+    TransactionStatusResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [PENDING, RUNNING, COMPLETED, FAILED, COMPENSATING, UNKNOWN]
+          description: Current workflow status
+        workflowId:
+          type: string
+          description: Workflow identifier
+        transactionType:
+          type: string
+          description: Type of transaction
+        amount:
+          type: number
+          format: double
+          description: Transaction amount
+        customerFee:
+          type: number
+          format: double
+          description: Fee charged to customer
+        referenceNumber:
+          type: string
+          description: External reference number from switch/biller
+        errorCode:
+          type: string
+          description: Error code if transaction failed
+        errorMessage:
+          type: string
+          description: Human-readable error message
+        actionCode:
+          type: string
+          enum: [DECLINE, RETRY, REVIEW]
+          description: Recommended action for failed transactions
+        completedAt:
+          type: string
+          format: date-time
+          description: Timestamp when transaction completed
+
+    # Force Resolve Request
+    ForceResolveRequest:
+      required:
+      - action
+      - adminId
+      type: object
+      properties:
+        action:
+          type: string
+          enum: [RETRY, ABORT]
+          description: Action to take - RETRY to retry, ABORT to cancel
+        reason:
+          type: string
+          description: Reason for force resolve
+        adminId:
+          type: string
+          description: ID of the admin performing the action
+
+    # Maker Proposal Request
+    MakerProposalRequest:
+      required:
+      - action
+      type: object
+      properties:
+        action:
+          type: string
+          enum: [COMMIT, ROLLBACK, ESCALATE]
+          description: Proposed action for the transaction
+        reasonCode:
+          type: string
+          description: Reason code for the proposal
+        reason:
+          type: string
+          description: Detailed reason for the proposal
+        evidenceUrl:
+          type: string
+          description: URL to supporting evidence
+
+    # Checker Action Request
+    CheckerActionRequest:
+      required:
+      - reason
+      type: object
+      properties:
+        reason:
+          type: string
+          description: Reason for approve/reject action
+
+    # Resolution Response
+    ResolutionResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        workflowId:
+          type: string
+          format: uuid
+        transactionId:
+          type: string
+          format: uuid
+        proposedAction:
+          type: string
+          enum: [COMMIT, ROLLBACK, ESCALATE]
+        reasonCode:
+          type: string
+        reason:
+          type: string
+        evidenceUrl:
+          type: string
+        status:
+          type: string
+          enum: [PENDING_MAKER, PENDING_CHECKER, APPROVED, REJECTED]
+        makerUserId:
+          type: string
+        makerCreatedAt:
+          type: string
+          format: date-time
+        checkerUserId:
+          type: string
+        checkerAction:
+          type: string
+        checkerReason:
+          type: string
+        checkerCompletedAt:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    # Token Management
+    TokenRequest:
+      required:
+      - username
+      - password
+      type: object
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+        grantType:
+          type: string
+          enum: [password, refresh_token]
+          default: password
+          minLength: 8
+          maxLength: 64
+    TokenResponse:
+      required:
+      - access_token
+      - refresh_token
+      - expires_in
+      - token_type
+      type: object
+      properties:
+        access_token:
+          type: string
+        refresh_token:
+          type: string
+        expires_in:
+          type: integer
+          format: int32
+          description: Token expiry in seconds
+        token_type:
+          type: string
+          enum: [Bearer]
+    RefreshTokenRequest:
+      required:
+      - refresh_token
+      type: object
+      properties:
+        refresh_token:
+          type: string
+    RevokeTokenRequest:
+      type: object
+      properties:
+        token:
+          type: string
+          description: Optional. If not provided, revokes all sessions for the current user.
+
+    # Password Management
+    ForgotPasswordRequest:
+      required:
+      - username
+      type: object
+      properties:
+        username:
+          type: string
+    ForgotPasswordResponse:
+      type: object
+      properties:
+        message:
+          type: string
+    ResetPasswordRequest:
+      required:
+      - username
+      - otp
+      - newPassword
+      type: object
+      properties:
+        username:
+          type: string
+        otp:
+          type: string
+          minLength: 6
+          maxLength: 6
+        newPassword:
+          type: string
+          minLength: 8
+          maxLength: 64
+    ResetPasswordResponse:
+      type: object
+      properties:
+        message:
+          type: string
+    ChangePasswordRequest:
+      required:
+      - currentPassword
+      - newPassword
+      type: object
+      properties:
+        currentPassword:
+          type: string
+        newPassword:
+          type: string
+          minLength: 8
+          maxLength: 64
+    ChangePasswordResponse:
+      type: object
+      properties:
+        message:
+          type: string
+
+    # Agent User Management
+    AgentUserStatusResponse:
+      type: object
+      properties:
+        agentId:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [PENDING, CREATED, FAILED]
+        userId:
+          type: string
+          format: uuid
+        error:
+          type: string
+    UserResponse:
+      type: object
+      properties:
+        userId:
+          type: string
+          format: uuid
+        username:
+          type: string
+        email:
+          type: string
+        fullName:
+          type: string
+        status:
+          type: string
+        userType:
+          type: string
+          enum: [INTERNAL, EXTERNAL]
+        mustChangePassword:
+          type: boolean
+tags: []

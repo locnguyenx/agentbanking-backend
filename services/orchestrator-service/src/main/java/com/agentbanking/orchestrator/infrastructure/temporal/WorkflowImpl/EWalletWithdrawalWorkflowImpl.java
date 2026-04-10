@@ -31,6 +31,7 @@ public class EWalletWithdrawalWorkflowImpl implements EWalletWithdrawalWorkflow 
     private final CommitFloatActivity commitFloatActivity;
     private final ReleaseFloatActivity releaseFloatActivity;
     private final CreditAgentFloatActivity creditAgentFloatActivity;
+    private final PersistWorkflowResultActivity persistWorkflowResultActivity;
 
     private WorkflowStatus currentStatus = WorkflowStatus.PENDING;
 
@@ -45,6 +46,7 @@ public class EWalletWithdrawalWorkflowImpl implements EWalletWithdrawalWorkflow 
         this.commitFloatActivity = Workflow.newActivityStub(CommitFloatActivity.class, defaultOptions);
         this.releaseFloatActivity = Workflow.newActivityStub(ReleaseFloatActivity.class, defaultOptions);
         this.creditAgentFloatActivity = Workflow.newActivityStub(CreditAgentFloatActivity.class, defaultOptions);
+        this.persistWorkflowResultActivity = Workflow.newActivityStub(PersistWorkflowResultActivity.class, defaultOptions);
     }
 
     @Override
@@ -56,14 +58,33 @@ public class EWalletWithdrawalWorkflowImpl implements EWalletWithdrawalWorkflow 
             var validationResult = validateEWalletActivity.validate(input.provider(), input.walletId());
             if (!validationResult.valid()) {
                 currentStatus = WorkflowStatus.FAILED;
-                return WorkflowResult.failed("ERR_INVALID_EWALLET", "Invalid eWallet", "DECLINE");
+                WorkflowResult failResult = WorkflowResult.failed("ERR_INVALID_EWALLET", "Invalid eWallet", "DECLINE");
+                persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
+                        input.idempotencyKey(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null));
+                return failResult;
             }
 
             FloatBlockResult blockResult = blockFloatActivity.blockFloat(
-                    new FloatBlockInput(input.agentId(), input.amount(), input.idempotencyKey()));
+                    new FloatBlockInput(
+                            input.agentId(),
+                            input.amount(),
+                            BigDecimal.ZERO,
+                            BigDecimal.ZERO,
+                            BigDecimal.ZERO,
+                            input.idempotencyKey(),
+                            null,
+                            input.geofenceLat(),
+                            input.geofenceLng(),
+                            input.agentTier(),
+                            input.targetBin()
+                    )
+            );
             if (!blockResult.success()) {
                 currentStatus = WorkflowStatus.FAILED;
-                return WorkflowResult.failed(blockResult.errorCode(), "Float block failed", "DECLINE");
+                WorkflowResult failResult = WorkflowResult.failed(blockResult.errorCode(), "Float block failed", "DECLINE");
+                persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
+                        input.idempotencyKey(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null));
+                return failResult;
             }
             UUID transactionId = blockResult.transactionId();
 
@@ -71,19 +92,47 @@ public class EWalletWithdrawalWorkflowImpl implements EWalletWithdrawalWorkflow 
             if (!withdrawResult.success()) {
                 releaseFloatActivity.releaseFloat(new FloatReleaseInput(input.agentId(), input.amount(), transactionId));
                 currentStatus = WorkflowStatus.FAILED;
-                return WorkflowResult.failed(withdrawResult.errorCode(), "Withdrawal failed", "DECLINE");
+                WorkflowResult failResult = WorkflowResult.failed(withdrawResult.errorCode(), "Withdrawal failed", "DECLINE");
+                persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
+                        input.idempotencyKey(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null));
+                return failResult;
             }
 
             commitFloatActivity.commitFloat(new FloatCommitInput(input.agentId(), input.amount(), transactionId));
-            creditAgentFloatActivity.creditAgentFloat(new FloatCreditInput(input.agentId(), input.amount()));
+            creditAgentFloatActivity.creditAgentFloat(
+                    new FloatCreditInput(
+                            input.agentId(),
+                            input.amount(),
+                            BigDecimal.ZERO,
+                            BigDecimal.ZERO,
+                            BigDecimal.ZERO,
+                            input.idempotencyKey(),
+                            null,
+                            input.agentTier(),
+                            input.targetBin(),
+                            withdrawResult.ewalletReference(),
+                            input.geofenceLat(),
+                            input.geofenceLng()
+                    )
+            );
 
             currentStatus = WorkflowStatus.COMPLETED;
-            return WorkflowResult.completed(transactionId, withdrawResult.ewalletReference(), input.amount(), BigDecimal.ZERO);
+            WorkflowResult completedResult = WorkflowResult.completed(transactionId, withdrawResult.ewalletReference(), input.amount(), BigDecimal.ZERO);
+            persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
+                    input.idempotencyKey(), "COMPLETED", null, null, withdrawResult.ewalletReference(), BigDecimal.ZERO, withdrawResult.ewalletReference()));
+            return completedResult;
 
         } catch (Exception e) {
             log.error("EWalletWithdrawal workflow failed: {}", e.getMessage());
             currentStatus = WorkflowStatus.FAILED;
-            return WorkflowResult.failed("ERR_SYS_WORKFLOW_FAILED", e.getMessage(), "REVIEW");
+            WorkflowResult failResult = WorkflowResult.failed("ERR_SYS_WORKFLOW_FAILED", e.getMessage(), "REVIEW");
+            try {
+                persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
+                        input.idempotencyKey(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null));
+            } catch (Exception ex) {
+                log.warn("Failed to persist fail result: {}", ex.getMessage());
+            }
+            return failResult;
         }
     }
 

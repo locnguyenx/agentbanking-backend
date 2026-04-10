@@ -8,6 +8,7 @@ import com.agentbanking.onboarding.domain.model.AgentTier;
 import com.agentbanking.onboarding.domain.model.UserCreationStatus;
 import com.agentbanking.onboarding.domain.port.in.CreateAgentUseCase.CreateAgentCommand;
 import com.agentbanking.onboarding.domain.port.in.UpdateAgentUseCase.UpdateAgentCommand;
+import com.agentbanking.onboarding.domain.port.out.AgentEventPort;
 import com.agentbanking.onboarding.domain.port.out.AgentRepository;
 import com.agentbanking.onboarding.domain.port.out.AuthUserCreationPort;
 import org.junit.jupiter.api.BeforeEach;
@@ -35,11 +36,14 @@ class AgentServiceTest {
     @Mock
     private AuthUserCreationPort authUserCreationPort;
 
+    @Mock
+    private AgentEventPort agentEventPort;
+
     private AgentService agentService;
 
     @BeforeEach
     void setUp() {
-        agentService = new AgentService(agentRepository, authUserCreationPort);
+        agentService = new AgentService(agentRepository, authUserCreationPort, agentEventPort);
     }
 
     @Test

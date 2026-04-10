@@ -28,7 +28,8 @@ class NewTransactionWorkflowInputsTest {
             "60191234567",
             new BigDecimal("3.0"),
             new BigDecimal("101.0"),
-            "TIER_1"
+            "TIER_1",
+            "target-bin-123"
         );
         
         assertNotNull(input.agentId());
@@ -46,7 +47,8 @@ class NewTransactionWorkflowInputsTest {
             "idem-124",
             new BigDecimal("3.0"),
             new BigDecimal("101.0"),
-            "TIER_1"
+            "TIER_1",
+            "target-bin-123"
         );
         
         assertNotNull(input.agentId());
@@ -64,7 +66,8 @@ class NewTransactionWorkflowInputsTest {
             "idem-125",
             new BigDecimal("3.0"),
             new BigDecimal("101.0"),
-            "TIER_1"
+            "TIER_1",
+            "target-bin-123"
         );
         
         assertNotNull(input.agentId());
@@ -82,7 +85,8 @@ class NewTransactionWorkflowInputsTest {
             "idem-126",
             new BigDecimal("3.0"),
             new BigDecimal("101.0"),
-            "TIER_1"
+            "TIER_1",
+            "target-bin-123"
         );
         
         assertNotNull(input.agentId());
@@ -98,7 +102,8 @@ class NewTransactionWorkflowInputsTest {
             "idem-127",
             new BigDecimal("3.0"),
             new BigDecimal("101.0"),
-            "TIER_1"
+            "TIER_1",
+            "target-bin-123"
         );
         
         assertNotNull(input.agentId());
@@ -116,7 +121,8 @@ class NewTransactionWorkflowInputsTest {
             "idem-128",
             new BigDecimal("3.0"),
             new BigDecimal("101.0"),
-            "TIER_1"
+            "TIER_1",
+            "target-bin-123"
         );
         
         assertNotNull(input.agentId());
@@ -136,7 +142,8 @@ class NewTransactionWorkflowInputsTest {
             "idem-129",
             new BigDecimal("3.0"),
             new BigDecimal("101.0"),
-            "TIER_1"
+            "TIER_1",
+            "target-bin-123"
         );
         
         assertNotNull(input.agentId());
@@ -155,7 +162,8 @@ class NewTransactionWorkflowInputsTest {
             "60191234567",
             new BigDecimal("3.0"),
             new BigDecimal("101.0"),
-            "TIER_1"
+            "TIER_1",
+            "target-bin-123"
         );
         
         assertNotNull(input.agentId());
@@ -175,7 +183,8 @@ class NewTransactionWorkflowInputsTest {
             "60191234567",
             new BigDecimal("3.0"),
             new BigDecimal("101.0"),
-            "TIER_1"
+            "TIER_1",
+            "target-bin-123"
         );
         
         assertNotNull(input.agentId());

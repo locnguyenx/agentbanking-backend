@@ -13,9 +13,14 @@ import com.agentbanking.orchestrator.domain.port.out.LedgerServicePort.FloatReve
 import com.agentbanking.orchestrator.domain.port.out.LedgerServicePort.FloatReverseResult;
 import com.agentbanking.orchestrator.domain.port.out.LedgerServicePort.AccountValidationInput;
 import com.agentbanking.orchestrator.domain.port.out.LedgerServicePort.AccountValidationResult;
+import com.agentbanking.orchestrator.domain.port.out.LedgerServicePort.TransactionDetailsResult;
 import org.springframework.cloud.openfeign.FeignClient;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+
+import java.util.UUID;
 
 @FeignClient(name = "ledger-service", url = "${ledger-service.url}", path = "/internal")
 public interface LedgerServiceClient {
@@ -37,4 +42,7 @@ public interface LedgerServiceClient {
 
     @PostMapping("/validate-account")
     AccountValidationResult validateAccount(@RequestBody AccountValidationInput input);
+
+    @GetMapping("/transactions/{transactionId}")
+    TransactionDetailsResult getTransaction(@PathVariable("transactionId") UUID transactionId);
 }

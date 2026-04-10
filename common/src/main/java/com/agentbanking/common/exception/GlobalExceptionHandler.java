@@ -4,6 +4,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
@@ -11,6 +13,28 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 public class GlobalExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<ErrorResponse> handleValidationException(MethodArgumentNotValidException e) {
+        String message = e.getBindingResult().getFieldErrors().stream()
+            .map(error -> error.getField() + ": " + error.getDefaultMessage())
+            .findFirst()
+            .orElse("Validation failed");
+        
+        log.error("Validation error: {}", message);
+        return ResponseEntity.badRequest().body(
+            ErrorResponse.of("ERR_VAL_INVALID_REQUEST", message, "DECLINE")
+        );
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ErrorResponse> handleMessageNotReadable(HttpMessageNotReadableException e) {
+        String message = e.getMessage() != null ? e.getMessage() : "Invalid request body";
+        log.error("Message not readable: {}", message);
+        return ResponseEntity.badRequest().body(
+            ErrorResponse.of("ERR_VAL_INVALID_REQUEST", message, "DECLINE")
+        );
+    }
 
     @ExceptionHandler(LedgerException.class)
     public ResponseEntity<ErrorResponse> handleLedgerException(LedgerException e) {

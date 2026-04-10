@@ -33,6 +33,7 @@ public class CashlessPaymentWorkflowImpl implements CashlessPaymentWorkflow {
     private final SendRequestToPayActivity sendRequestToPayActivity;
     private final WaitForRTPApprovalActivity waitForRTPApprovalActivity;
     private final CreditAgentFloatActivity creditAgentFloatActivity;
+    private final PersistWorkflowResultActivity persistWorkflowResultActivity;
 
     private WorkflowStatus currentStatus = WorkflowStatus.PENDING;
 
@@ -50,6 +51,7 @@ public class CashlessPaymentWorkflowImpl implements CashlessPaymentWorkflow {
         this.sendRequestToPayActivity = Workflow.newActivityStub(SendRequestToPayActivity.class, defaultOptions);
         this.waitForRTPApprovalActivity = Workflow.newActivityStub(WaitForRTPApprovalActivity.class, defaultOptions);
         this.creditAgentFloatActivity = Workflow.newActivityStub(CreditAgentFloatActivity.class, defaultOptions);
+        this.persistWorkflowResultActivity = Workflow.newActivityStub(PersistWorkflowResultActivity.class, defaultOptions);
     }
 
     @Override
@@ -61,15 +63,33 @@ public class CashlessPaymentWorkflowImpl implements CashlessPaymentWorkflow {
             FloatCapacityResult capacityResult = validateFloatCapacityActivity.validate(input.agentId(), input.amount());
             if (!capacityResult.sufficient()) {
                 currentStatus = WorkflowStatus.FAILED;
-                return WorkflowResult.failed("ERR_INSUFFICIENT_FLOAT", "Insufficient float", "DECLINE");
+                WorkflowResult failResult = WorkflowResult.failed("ERR_INSUFFICIENT_FLOAT", "Insufficient float", "DECLINE");
+                persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
+                        input.idempotencyKey(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null));
+                return failResult;
             }
 
             FloatBlockResult blockResult = blockFloatActivity.blockFloat(
                     new FloatBlockInput(
-                            input.agentId(), input.amount(), input.idempotencyKey()));
+                            input.agentId(),
+                            input.amount(),
+                            BigDecimal.ZERO,
+                            BigDecimal.ZERO,
+                            BigDecimal.ZERO,
+                            input.idempotencyKey(),
+                            null,
+                            input.geofenceLat(),
+                            input.geofenceLng(),
+                            input.agentTier(),
+                            input.targetBin()
+                    )
+            );
             if (!blockResult.success()) {
                 currentStatus = WorkflowStatus.FAILED;
-                return WorkflowResult.failed(blockResult.errorCode(), "Float block failed", "DECLINE");
+                WorkflowResult failResult = WorkflowResult.failed(blockResult.errorCode(), "Float block failed", "DECLINE");
+                persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
+                        input.idempotencyKey(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null));
+                return failResult;
             }
             UUID transactionId = blockResult.transactionId();
 
@@ -81,7 +101,10 @@ public class CashlessPaymentWorkflowImpl implements CashlessPaymentWorkflow {
                             new com.agentbanking.orchestrator.domain.port.out.LedgerServicePort.FloatReleaseInput(
                                     input.agentId(), input.amount(), transactionId));
                     currentStatus = WorkflowStatus.FAILED;
-                    return WorkflowResult.failed("ERR_QR_GENERATION_FAILED", "QR generation failed", "DECLINE");
+                    WorkflowResult failResult = WorkflowResult.failed("ERR_QR_GENERATION_FAILED", "QR generation failed", "DECLINE");
+                    persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
+                            input.idempotencyKey(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null));
+                    return failResult;
                 }
                 reference = qrResult.qrReference();
                 var paymentStatus = waitForQRPaymentActivity.waitForPayment(reference, 300);
@@ -90,7 +113,10 @@ public class CashlessPaymentWorkflowImpl implements CashlessPaymentWorkflow {
                             new com.agentbanking.orchestrator.domain.port.out.LedgerServicePort.FloatReleaseInput(
                                     input.agentId(), input.amount(), transactionId));
                     currentStatus = WorkflowStatus.FAILED;
-                    return WorkflowResult.failed("ERR_QR_PAYMENT_TIMEOUT", "QR payment timeout", "DECLINE");
+                    WorkflowResult failResult = WorkflowResult.failed("ERR_QR_PAYMENT_TIMEOUT", "QR payment timeout", "DECLINE");
+                    persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
+                            input.idempotencyKey(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null));
+                    return failResult;
                 }
             } else if ("RTP".equalsIgnoreCase(input.paymentMethod())) {
                 var rtpResult = sendRequestToPayActivity.send(input.customerProxy(), input.amount(), input.idempotencyKey());
@@ -99,7 +125,10 @@ public class CashlessPaymentWorkflowImpl implements CashlessPaymentWorkflow {
                             new com.agentbanking.orchestrator.domain.port.out.LedgerServicePort.FloatReleaseInput(
                                     input.agentId(), input.amount(), transactionId));
                     currentStatus = WorkflowStatus.FAILED;
-                    return WorkflowResult.failed("ERR_RTP_SEND_FAILED", "RTP send failed", "DECLINE");
+                    WorkflowResult failResult = WorkflowResult.failed("ERR_RTP_SEND_FAILED", "RTP send failed", "DECLINE");
+                    persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
+                            input.idempotencyKey(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null));
+                    return failResult;
                 }
                 reference = rtpResult.rtpReference();
                 var rtpStatus = waitForRTPApprovalActivity.waitForApproval(reference, 300);
@@ -108,7 +137,10 @@ public class CashlessPaymentWorkflowImpl implements CashlessPaymentWorkflow {
                             new com.agentbanking.orchestrator.domain.port.out.LedgerServicePort.FloatReleaseInput(
                                     input.agentId(), input.amount(), transactionId));
                     currentStatus = WorkflowStatus.FAILED;
-                    return WorkflowResult.failed("ERR_RTP_DECLINED", "RTP declined", "DECLINE");
+                    WorkflowResult failResult = WorkflowResult.failed("ERR_RTP_DECLINED", "RTP declined", "DECLINE");
+                    persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
+                            input.idempotencyKey(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null));
+                    return failResult;
                 }
             }
 
@@ -117,12 +149,22 @@ public class CashlessPaymentWorkflowImpl implements CashlessPaymentWorkflow {
                             input.agentId(), input.amount(), transactionId));
 
             currentStatus = WorkflowStatus.COMPLETED;
-            return WorkflowResult.completed(transactionId, reference, input.amount(), BigDecimal.ZERO);
+            WorkflowResult completedResult = WorkflowResult.completed(transactionId, reference, input.amount(), BigDecimal.ZERO);
+            persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
+                    input.idempotencyKey(), "COMPLETED", null, null, reference, BigDecimal.ZERO, reference));
+            return completedResult;
 
         } catch (Exception e) {
             log.error("CashlessPayment workflow failed: {}", e.getMessage());
             currentStatus = WorkflowStatus.FAILED;
-            return WorkflowResult.failed("ERR_SYS_WORKFLOW_FAILED", e.getMessage(), "REVIEW");
+            WorkflowResult failResult = WorkflowResult.failed("ERR_SYS_WORKFLOW_FAILED", e.getMessage(), "REVIEW");
+            try {
+                persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
+                        input.idempotencyKey(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null));
+            } catch (Exception ex) {
+                log.warn("Failed to persist fail result: {}", ex.getMessage());
+            }
+            return failResult;
         }
     }
 

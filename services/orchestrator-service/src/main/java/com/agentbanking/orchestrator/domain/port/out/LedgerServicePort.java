@@ -17,10 +17,20 @@ public interface LedgerServicePort {
 
     AccountValidationResult validateAccount(AccountValidationInput input);
 
+    TransactionDetailsResult getTransactionDetails(UUID transactionId);
+
     record FloatBlockInput(
         UUID agentId,
         BigDecimal amount,
-        String idempotencyKey
+        BigDecimal customerFee,
+        BigDecimal agentCommission,
+        BigDecimal bankShare,
+        String idempotencyKey,
+        String customerCardMasked,
+        BigDecimal geofenceLat,
+        BigDecimal geofenceLng,
+        String agentTier,
+        String targetBin
     ) {}
 
     record FloatBlockResult(
@@ -53,12 +63,23 @@ public interface LedgerServicePort {
 
     record FloatCreditInput(
         UUID agentId,
-        BigDecimal amount
+        BigDecimal amount,
+        BigDecimal customerFee,
+        BigDecimal agentCommission,
+        BigDecimal bankShare,
+        String idempotencyKey,
+        String destinationAccount,
+        String agentTier,
+        String targetBin,
+        String referenceNumber,
+        BigDecimal geofenceLat,
+        BigDecimal geofenceLng
     ) {}
 
     record FloatCreditResult(
         boolean success,
         BigDecimal newBalance,
+        UUID transactionId,
         String errorCode
     ) {}
 
@@ -80,5 +101,29 @@ public interface LedgerServicePort {
         boolean valid,
         String accountName,
         String errorCode
+    ) {}
+
+    record TransactionDetailsResult(
+        UUID transactionId,
+        UUID agentId,
+        String transactionType,
+        BigDecimal amount,
+        BigDecimal customerFee,
+        BigDecimal agentCommission,
+        BigDecimal bankShare,
+        String status,
+        String errorCode,
+        String customerCardMasked,
+        String referenceNumber,
+        BigDecimal geofenceLat,
+        BigDecimal geofenceLng,
+        String agentTier,
+        String targetBin,
+        String billerCode,
+        String ref1,
+        String ref2,
+        String destinationAccount,
+        String createdAt,
+        String completedAt
     ) {}
 }

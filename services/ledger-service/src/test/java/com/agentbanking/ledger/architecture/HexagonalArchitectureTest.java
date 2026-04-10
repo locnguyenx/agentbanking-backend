@@ -54,7 +54,7 @@ class HexagonalArchitectureTest {
             .classes().that().resideInAnyPackage("..domain.service..")
             .and().areNotAnnotatedWith(org.junit.jupiter.api.Test.class)
             .should().onlyDependOnClassesThat()
-            .resideInAnyPackage("..domain..", "java..", "jakarta..", "org.junit..", "org.mockito..", "com.agentbanking.common..", "com.fasterxml.jackson..");
+            .resideInAnyPackage("..domain..", "java..", "jakarta..", "org.junit..", "org.mockito..", "com.agentbanking.common..", "com.fasterxml.jackson..", "org.slf4j..");
         rule.check(classes);
     }
 }

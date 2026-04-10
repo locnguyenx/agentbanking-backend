@@ -1,8 +1,6 @@
 package com.agentbanking.ledger.infrastructure.persistence.mapper;
 
-import com.agentbanking.common.transaction.TransactionStatus;
 import com.agentbanking.ledger.domain.model.TransactionRecord;
-import com.agentbanking.ledger.domain.model.TransactionType;
 import com.agentbanking.ledger.infrastructure.persistence.entity.TransactionEntity;
 
 public class TransactionMapper {
@@ -23,10 +21,17 @@ public class TransactionMapper {
             entity.getCustomerMykad(),
             entity.getCustomerCardMasked(),
             entity.getSwitchReference(),
+            entity.getReferenceNumber(),
             entity.getGeofenceLat(),
             entity.getGeofenceLng(),
             entity.getCreatedAt(),
-            entity.getCompletedAt()
+            entity.getCompletedAt(),
+            entity.getAgentTier(),
+            entity.getTargetBin(),
+            entity.getBillerCode(),
+            entity.getRef1(),
+            entity.getRef2(),
+            entity.getDestinationAccount()
         );
     }
     
@@ -46,10 +51,17 @@ public class TransactionMapper {
         entity.setCustomerMykad(record.customerMykad());
         entity.setCustomerCardMasked(record.customerCardMasked());
         entity.setSwitchReference(record.switchReference());
+        entity.setReferenceNumber(record.referenceNumber());
         entity.setGeofenceLat(record.geofenceLat());
         entity.setGeofenceLng(record.geofenceLng());
         entity.setCreatedAt(record.createdAt());
         entity.setCompletedAt(record.completedAt());
+        entity.setAgentTier(record.agentTier());
+        entity.setTargetBin(record.targetBin());
+        entity.setBillerCode(record.billerCode());
+        entity.setRef1(record.ref1());
+        entity.setRef2(record.ref2());
+        entity.setDestinationAccount(record.destinationAccount());
         return entity;
     }
 }

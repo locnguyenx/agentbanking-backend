@@ -140,7 +140,7 @@ class ResolutionServiceTest {
         when(repository.findByWorkflowId(workflowId)).thenReturn(Optional.empty());
 
         var ex = assertThrows(IllegalArgumentException.class,
-            () -> service.makerPropose(workflowId, ResolutionAction.COMMIT, "user", "CODE", "reason", null));
+            () -> service.checkerApprove(workflowId, "user", "reason"));
 
         assertTrue(ex.getMessage().contains(workflowId.toString()));
     }

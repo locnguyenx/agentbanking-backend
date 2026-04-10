@@ -11,17 +11,23 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class HealthAggregationService {
 
     private static final Logger log = LoggerFactory.getLogger(HealthAggregationService.class);
-    private static final int TIMEOUT_SECONDS = 5;
+    private static final int TIMEOUT_SECONDS = 3;
+    private static final int PARALLEL_TIMEOUT_SECONDS = 5;
 
     private final Map<String, String> serviceUrls;
     private final CircuitBreakerRegistry circuitBreakerRegistry;
+    private final ExecutorService executor;
 
     public HealthAggregationService(Map<String, String> serviceUrls) {
         this.serviceUrls = serviceUrls;
+        this.executor = Executors.newFixedThreadPool(Math.min(serviceUrls.size(), 10));
         this.circuitBreakerRegistry = CircuitBreakerRegistry.of(
             CircuitBreakerConfig.custom()
                 .failureRateThreshold(50)
@@ -32,30 +38,40 @@ public class HealthAggregationService {
     }
 
     public Map<String, Object> aggregateHealth() {
-        List<Map<String, Object>> services = new ArrayList<>();
-        int healthy = 0;
-        int unhealthy = 0;
+        List<CompletableFuture<Map<String, Object>>> futures = new ArrayList<>();
 
         for (Map.Entry<String, String> entry : serviceUrls.entrySet()) {
             String name = entry.getKey();
             String url = entry.getValue();
             CircuitBreaker cb = circuitBreakerRegistry.circuitBreaker(name);
 
-            Map<String, Object> healthInfo;
+            CompletableFuture<Map<String, Object>> future = CompletableFuture
+                .supplyAsync(() -> checkServiceHealth(name, url, cb), executor)
+                .exceptionally(e -> {
+                    log.warn("Health check failed for {}: {}", name, e.getMessage());
+                    return Map.of(
+                        "name", name, "status", "DOWN",
+                        "lastChecked", Instant.now().toString(),
+                        "error", e.getMessage()
+                    );
+                });
+            futures.add(future);
+        }
+
+        List<Map<String, Object>> services = new ArrayList<>();
+        int healthy = 0;
+        int unhealthy = 0;
+
+        for (CompletableFuture<Map<String, Object>> future : futures) {
             try {
-                healthInfo = checkServiceHealth(name, url, cb);
+                Map<String, Object> healthInfo = future.get(PARALLEL_TIMEOUT_SECONDS, java.util.concurrent.TimeUnit.SECONDS);
                 String status = (String) healthInfo.get("status");
                 if ("UP".equals(status)) healthy++; else unhealthy++;
+                services.add(healthInfo);
             } catch (Exception e) {
-                log.warn("Health check failed for {}: {}", name, e.getMessage());
-                healthInfo = Map.of(
-                    "name", name, "status", "DOWN",
-                    "lastChecked", Instant.now().toString(),
-                    "error", e.getMessage()
-                );
+                log.warn("Timeout or error waiting for health result: {}", e.getMessage());
                 unhealthy++;
             }
-            services.add(healthInfo);
         }
 
         return Map.of(

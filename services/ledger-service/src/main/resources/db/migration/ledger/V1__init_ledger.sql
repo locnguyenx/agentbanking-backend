@@ -24,6 +24,7 @@ CREATE TABLE ledger_transaction (
     customer_mykad VARCHAR(12),
     customer_card_masked VARCHAR(19),
     switch_reference VARCHAR(50),
+    reference_number VARCHAR(50),
     geofence_lat DECIMAL(9,6),
     geofence_lng DECIMAL(9,6),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

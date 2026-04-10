@@ -12,20 +12,15 @@ import java.util.UUID;
 @Repository
 public interface JpaAuditLogRepository extends JpaRepository<JpaAuditLogEntity, UUID> {
 
-    @Query("SELECT e FROM JpaAuditLogEntity e WHERE " +
-           "(:serviceName IS NULL OR e.serviceName = :serviceName) AND " +
-           "(:action IS NULL OR e.action = :action) AND " +
-           "(:performedBy IS NULL OR e.performedBy = :performedBy) AND " +
-           "(:outcome IS NULL OR e.outcome = :outcome) AND " +
-           "(:from IS NULL OR e.timestamp >= :from) AND " +
-           "(:to IS NULL OR e.timestamp <= :to)")
-    Page<JpaAuditLogEntity> findByFilters(
-        @Param("serviceName") String serviceName,
-        @Param("action") String action,
-        @Param("performedBy") String performedBy,
-        @Param("outcome") String outcome,
-        @Param("from") LocalDateTime from,
-        @Param("to") LocalDateTime to,
-        Pageable pageable
-    );
+    Page<JpaAuditLogEntity> findByServiceName(String serviceName, Pageable pageable);
+    
+    Page<JpaAuditLogEntity> findByAction(String action, Pageable pageable);
+    
+    Page<JpaAuditLogEntity> findByPerformedBy(String performedBy, Pageable pageable);
+    
+    Page<JpaAuditLogEntity> findByOutcome(String outcome, Pageable pageable);
+    
+    Page<JpaAuditLogEntity> findByTimestampBetween(LocalDateTime from, LocalDateTime to, Pageable pageable);
+    
+    Page<JpaAuditLogEntity> findAll(Pageable pageable);
 }

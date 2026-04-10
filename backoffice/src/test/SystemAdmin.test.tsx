@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
 import { SystemAdmin } from '../pages/SystemAdmin'
@@ -49,6 +49,10 @@ describe('SystemAdmin', () => {
 
   it('should show metrics panel with service selector', async () => {
     renderWithProviders(<SystemAdmin />)
+    await waitFor(() => {
+      expect(screen.getByText('Health Dashboard')).toBeInTheDocument()
+    })
+    fireEvent.click(screen.getByText('Metrics Panel'))
     await waitFor(() => {
       expect(screen.getByText('Service Metrics')).toBeInTheDocument()
       expect(screen.getByRole('combobox')).toBeInTheDocument()

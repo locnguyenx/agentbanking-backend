@@ -1,11 +1,72 @@
 package com.agentbanking.common.audit;
 
 public enum AuditAction {
+    // User management
+    USER_CREATED,
+    USER_UPDATED,
+    USER_DELETED,
+    USER_LOCKED,
+    USER_UNLOCKED,
+    USER_PASSWORD_RESET,
+    USER_PASSWORD_CHANGED,
+    
+    // Authentication
+    LOGIN_SUCCESS,
+    LOGIN_FAILURE,
+    LOGOUT,
+    TOKEN_ISSUED,
+    TOKEN_REFRESHED,
+    TOKEN_REVOKED,
+    
+    // Role/Permission
+    ROLE_CREATED,
+    ROLE_UPDATED,
+    ROLE_DELETED,
+    ROLE_ASSIGNED,
+    ROLE_REMOVED,
+    PERMISSION_ASSIGNED,
+    PERMISSION_REMOVED,
+    
+    // Agent (onboarding)
     AGENT_CREATED,
     AGENT_UPDATED,
+    AGENT_DELETED,
+    AGENT_ACTIVATED,
     AGENT_DEACTIVATED,
-    WITHDRAWAL,
+    AGENT_KYC_SUBMITTED,
+    AGENT_KYC_APPROVED,
+    AGENT_KYC_REJECTED,
+    
+    // Transactions (ledger)
+    TRANSACTION_CREATED,
+    TRANSACTION_COMPLETED,
+    TRANSACTION_FAILED,
+    TRANSACTION_REVERSED,
+    TRANSACTION_VOIDED,
     DEPOSIT,
+    WITHDRAWAL,
+    
+    // Bill payment (biller)
+    PAYMENT_INITIATED,
+    PAYMENT_COMPLETED,
+    PAYMENT_FAILED,
+    PAYMENT_REFUNDED,
+    TOPUP_INITIATED,
+    TOPUP_COMPLETED,
+    TOPUP_FAILED,
+    
+    // Switch
+    SWITCH_INQUIRY,
+    SWITCH_TRANSFER,
+    SWITCH_REVERSAL,
+    
+    // Orchestrator
+    SAGA_STARTED,
+    SAGA_COMPLETED,
+    SAGA_FAILED,
+    SAGA_COMPENSATED,
+    
+    // Additional financial actions
     BILL_PAYMENT,
     TRANSACTION_COMMITTED,
     TRANSACTION_ROLLED_BACK

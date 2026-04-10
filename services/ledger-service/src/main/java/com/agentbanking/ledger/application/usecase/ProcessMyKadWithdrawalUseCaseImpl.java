@@ -39,14 +39,16 @@ public class ProcessMyKadWithdrawalUseCaseImpl implements ProcessMyKadWithdrawal
                 BigDecimal.ZERO,
                 BigDecimal.ZERO,
                 idempotencyKey,
-                null,
+                command.customerMykad(),
                 command.geofenceLat(),
-                command.geofenceLng()
+                command.geofenceLng(),
+                command.agentTier(),
+                command.targetBin()
         );
 
         TransactionResult response = new TransactionResult(
                 (String) result.get("status"),
-                UUID.fromString((String) result.get("transactionId")),
+                result.get("transactionId") instanceof UUID ? (UUID) result.get("transactionId") : UUID.fromString((String) result.get("transactionId")),
                 (BigDecimal) result.get("amount"),
                 BigDecimal.ZERO,
                 null

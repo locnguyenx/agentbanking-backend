@@ -34,7 +34,7 @@ public class TransactionQuoteUseCaseImpl implements TransactionQuoteUseCase {
 
             FeeCalculationService.FeeCalculationResult feeResult = feeCalculationService.calculate(
                 amountDecimal, 
-                com.agentbanking.rules.domain.model.TransactionType.valueOf(serviceCode),
+                com.agentbanking.rules.domain.model.TransactionType.fromFrontend(serviceCode),
                 com.agentbanking.rules.domain.model.AgentTier.valueOf(agentTier)
             );
 

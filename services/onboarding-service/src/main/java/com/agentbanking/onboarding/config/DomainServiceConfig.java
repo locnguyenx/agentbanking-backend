@@ -4,6 +4,7 @@ import com.agentbanking.onboarding.application.usecase.ComplianceStatusUseCaseIm
 import com.agentbanking.onboarding.domain.service.AgentService;
 import com.agentbanking.onboarding.domain.service.AgentOnboardingService;
 import com.agentbanking.onboarding.domain.service.KycDecisionService;
+import com.agentbanking.onboarding.domain.port.out.AgentEventPort;
 import com.agentbanking.onboarding.domain.port.out.AgentOnboardingRepository;
 import com.agentbanking.onboarding.domain.port.out.AgentRepository;
 import com.agentbanking.onboarding.domain.port.out.AmlScreeningPort;
@@ -23,8 +24,8 @@ public class DomainServiceConfig {
     }
 
     @Bean
-    public AgentService agentService(AgentRepository agentRepository, AuthUserCreationPort authUserCreationPort) {
-        return new AgentService(agentRepository, authUserCreationPort);
+    public AgentService agentService(AgentRepository agentRepository, AuthUserCreationPort authUserCreationPort, AgentEventPort agentEventPort) {
+        return new AgentService(agentRepository, authUserCreationPort, agentEventPort);
     }
 
     @Bean

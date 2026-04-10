@@ -1,7 +1,8 @@
 package com.agentbanking.ledger.application.usecase;
 
 import com.agentbanking.ledger.domain.model.TransactionRecord;
-import com.agentbanking.common.transaction.TransactionStatus;
+import com.agentbanking.ledger.domain.model.TransactionStatus;
+import com.agentbanking.ledger.domain.model.TransactionType;
 import com.agentbanking.ledger.domain.port.in.TransactionQueryUseCase;
 import com.agentbanking.ledger.domain.port.out.TransactionRepository;
 import org.springframework.stereotype.Service;
@@ -22,6 +23,12 @@ public class TransactionQueryUseCaseImpl implements TransactionQueryUseCase {
 
     @Override
     @Transactional(readOnly = true)
+    public TransactionRecord findById(UUID transactionId) {
+        return transactionRepository.findById(transactionId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public List<TransactionRecord> findRecentTransactions() {
         return transactionRepository.findRecentTransactions();
     }
@@ -29,6 +36,12 @@ public class TransactionQueryUseCaseImpl implements TransactionQueryUseCase {
     @Transactional(readOnly = true)
     public BigDecimal sumSuccessfulTransactionAmount() {
         return transactionRepository.sumSuccessfulTransactionAmount();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public BigDecimal sumSuccessfulTransactionAmountByType(TransactionType type) {
+        return transactionRepository.sumSuccessfulTransactionAmountByType(type);
     }
 
     @Transactional(readOnly = true)

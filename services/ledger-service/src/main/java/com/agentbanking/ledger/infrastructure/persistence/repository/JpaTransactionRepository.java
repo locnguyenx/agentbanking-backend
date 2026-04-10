@@ -1,7 +1,8 @@
 package com.agentbanking.ledger.infrastructure.persistence.repository;
 
-import com.agentbanking.common.transaction.TransactionStatus;
 import com.agentbanking.ledger.domain.model.TransactionRecord;
+import com.agentbanking.ledger.domain.model.TransactionStatus;
+import com.agentbanking.ledger.domain.model.TransactionType;
 import com.agentbanking.ledger.domain.port.out.TransactionRepository;
 import com.agentbanking.ledger.infrastructure.persistence.entity.TransactionEntity;
 import com.agentbanking.ledger.infrastructure.persistence.mapper.TransactionMapper;
@@ -11,11 +12,13 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 @Repository
+@org.springframework.context.annotation.Primary
 public class JpaTransactionRepository implements TransactionRepository {
     
     private final TransactionJpaRepository jpaRepository;
@@ -48,11 +51,20 @@ public class JpaTransactionRepository implements TransactionRepository {
     
     @Override
     public List<TransactionRecord> findRecentTransactions() {
-        return jpaRepository.findRecentTransactions().stream()
-                .map(TransactionMapper::toRecord)
-                .toList();
+        List<TransactionEntity> entities = jpaRepository.findRecentTransactions();
+        List<TransactionRecord> records = new ArrayList<>();
+        for (TransactionEntity entity : entities) {
+            records.add(TransactionMapper.toRecord(entity));
+        }
+        return records;
     }
     
+    @Override
+    public BigDecimal sumSuccessfulTransactionAmountByType(TransactionType type) {
+        BigDecimal sum = jpaRepository.sumSuccessfulTransactionAmountByType(type);
+        return sum != null ? sum : BigDecimal.ZERO;
+    }
+
     @Override
     public BigDecimal sumSuccessfulTransactionAmount() {
         return jpaRepository.sumSuccessfulTransactionAmount();
@@ -89,9 +101,31 @@ public class JpaTransactionRepository implements TransactionRepository {
     public List<TransactionRecord> findByAgentIdAndCompletedDate(UUID agentId, LocalDate date) {
         LocalDateTime startOfDay = date.atStartOfDay();
         LocalDateTime endOfDay = date.atTime(LocalTime.MAX);
-        return jpaRepository.findByAgentIdAndCompletedAtBetween(agentId, startOfDay, endOfDay)
-                .stream()
-                .map(TransactionMapper::toRecord)
-                .toList();
+        List<TransactionEntity> entities = jpaRepository.findByAgentIdAndCompletedAtBetween(agentId, startOfDay, endOfDay);
+        List<TransactionRecord> records = new ArrayList<>();
+        for (TransactionEntity entity : entities) {
+            records.add(TransactionMapper.toRecord(entity));
+        }
+        return records;
+    }
+
+    @Override
+    public List<TransactionRecord> findByAgentId(UUID agentId) {
+        List<TransactionEntity> entities = jpaRepository.findByAgentIdOrderByCreatedAtDesc(agentId);
+        List<TransactionRecord> records = new ArrayList<>();
+        for (TransactionEntity entity : entities) {
+            records.add(TransactionMapper.toRecord(entity));
+        }
+        return records;
+    }
+
+    @Override
+    public List<TransactionRecord> findByAgentIdAndStatus(UUID agentId, TransactionStatus status) {
+        List<TransactionEntity> entities = jpaRepository.findByAgentIdAndStatus(agentId, status);
+        List<TransactionRecord> records = new ArrayList<>();
+        for (TransactionEntity entity : entities) {
+            records.add(TransactionMapper.toRecord(entity));
+        }
+        return records;
     }
 }

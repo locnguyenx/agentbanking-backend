@@ -141,4 +141,44 @@ class AuthControllerIntegrationTest extends AbstractIntegrationTest {
                 .andExpect(status().is4xxClientError())
                 .andExpect(jsonPath("$.status").value("FAILED"));
     }
+
+    @Test
+    void authenticate_withMissingPassword_shouldReturn400() throws Exception {
+        String requestBody = """
+            {
+                "username": "admin"
+            }
+            """;
+
+        mockMvc.perform(post("/auth/token")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value("FAILED"));
+    }
+
+    @Test
+    void authenticate_withShortPassword_shouldReturn400() throws Exception {
+        String requestBody = """
+            {
+                "username": "admin",
+                "password": "123"
+            }
+            """;
+
+        mockMvc.perform(post("/auth/token")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value("FAILED"));
+    }
+
+    @Test
+    void authenticate_withEmptyBody_shouldReturn400() throws Exception {
+        mockMvc.perform(post("/auth/token")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(""))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value("FAILED"));
+    }
 }

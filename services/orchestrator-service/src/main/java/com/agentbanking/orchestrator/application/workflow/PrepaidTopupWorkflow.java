@@ -26,6 +26,7 @@ public interface PrepaidTopupWorkflow {
         String idempotencyKey,
         BigDecimal geofenceLat,
         BigDecimal geofenceLng,
-        String agentTier
+        String agentTier,
+        String targetBin
     ) {}
 }

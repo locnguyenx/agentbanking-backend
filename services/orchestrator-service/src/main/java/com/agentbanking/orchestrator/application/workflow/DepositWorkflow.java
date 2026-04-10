@@ -32,6 +32,7 @@ public interface DepositWorkflow {
         BigDecimal geofenceLat,
         BigDecimal geofenceLng,
         boolean requiresBiometric,
-        String agentTier
+        String agentTier,
+        String targetBin
     ) {}
 }

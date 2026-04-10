@@ -19,7 +19,7 @@ public class AuditLogServiceImpl implements AuditLogService {
 
     @Override
     public AuditLogRecord log(AuditLogRecord record) {
-        if (record.timestamp() == null) {
+        if (record.auditId() == null) {
             record = new AuditLogRecord(
                 record.auditId() != null ? record.auditId() : UUID.randomUUID(),
                 record.entityType(),
@@ -27,8 +27,15 @@ public class AuditLogServiceImpl implements AuditLogService {
                 record.action(),
                 record.performedBy(),
                 record.changes(),
-                record.ipAddress(),
-                LocalDateTime.now()
+                record.ipAddress() != null ? record.ipAddress() : "unknown",
+                record.timestamp() != null ? record.timestamp() : LocalDateTime.now(),
+                record.outcome(),
+                record.failureReason(),
+                record.traceId(),
+                record.sessionId(),
+                record.serviceName() != null ? record.serviceName() : "onboarding-service",
+                record.deviceInfo(),
+                record.geographicLocation()
             );
         }
         return auditLogRepository.save(record);

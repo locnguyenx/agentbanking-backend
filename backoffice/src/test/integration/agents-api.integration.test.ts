@@ -69,7 +69,7 @@ describe('Agents API Integration Tests (Real Backend)', () => {
     expect(response.ok).toBe(true)
     const data = await response.json()
     
-    const validTiers = ['MICRO', 'STANDARD', 'PREMIER']
+    const validTiers = ['MICRO', 'STANDARD', 'PREMIUM']
     data.forEach((agent: any) => {
       expect(validTiers).toContain(agent.tier)
     })

@@ -61,7 +61,14 @@ public class AuditLogRepositoryImpl implements AuditLogRepository {
             entity.getPerformedBy(),
             entity.getChanges(),
             entity.getIpAddress(),
-            entity.getTimestamp()
+            entity.getTimestamp(),
+            entity.getOutcome(),
+            entity.getFailureReason(),
+            entity.getTraceId(),
+            entity.getSessionId(),
+            entity.getServiceName(),
+            entity.getDeviceInfo(),
+            entity.getGeographicLocation()
         );
     }
 }

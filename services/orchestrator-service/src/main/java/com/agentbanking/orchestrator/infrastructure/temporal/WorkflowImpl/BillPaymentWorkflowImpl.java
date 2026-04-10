@@ -33,6 +33,8 @@ public class BillPaymentWorkflowImpl implements BillPaymentWorkflow {
     private final PayBillerActivity payBillerActivity;
     private final NotifyBillerActivity notifyBillerActivity;
     private final PublishKafkaEventActivity publishKafkaEventActivity;
+    private final SaveResolutionCaseActivity saveResolutionCaseActivity;
+    private final PersistWorkflowResultActivity persistWorkflowResultActivity;
 
     private WorkflowStatus currentStatus = WorkflowStatus.PENDING;
 
@@ -70,6 +72,8 @@ public class BillPaymentWorkflowImpl implements BillPaymentWorkflow {
         this.payBillerActivity = Workflow.newActivityStub(PayBillerActivity.class, payBillerOptions);
         this.notifyBillerActivity = Workflow.newActivityStub(NotifyBillerActivity.class, defaultOptions);
         this.publishKafkaEventActivity = Workflow.newActivityStub(PublishKafkaEventActivity.class, defaultOptions);
+        this.saveResolutionCaseActivity = Workflow.newActivityStub(SaveResolutionCaseActivity.class, defaultOptions);
+        this.persistWorkflowResultActivity = Workflow.newActivityStub(PersistWorkflowResultActivity.class, defaultOptions);
     }
 
     @Override
@@ -105,7 +109,20 @@ public class BillPaymentWorkflowImpl implements BillPaymentWorkflow {
 
             // Step 4: Block float
             FloatBlockResult blockResult = blockFloatActivity.blockFloat(
-                    new FloatBlockInput(input.agentId(), totalAmount, input.idempotencyKey()));
+                    new FloatBlockInput(
+                            input.agentId(),
+                            input.amount(),
+                            fees.customerFee(),
+                            fees.agentCommission(),
+                            fees.bankShare(),
+                            input.idempotencyKey(),
+                            null,
+                            input.geofenceLat(),
+                            input.geofenceLng(),
+                            input.agentTier(),
+                            input.targetBin()
+                    )
+            );
             if (!blockResult.success()) {
                 currentStatus = WorkflowStatus.FAILED;
                 return WorkflowResult.failed(blockResult.errorCode(), "Float block failed", "DECLINE");
@@ -162,13 +179,24 @@ public class BillPaymentWorkflowImpl implements BillPaymentWorkflow {
             }
 
             currentStatus = WorkflowStatus.COMPLETED;
-            return WorkflowResult.completed(transactionId, paymentResult.billerReference(),
+            WorkflowResult completedResult = WorkflowResult.completed(transactionId, paymentResult.billerReference(),
                     input.amount(), fees.customerFee());
+            persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
+                    input.idempotencyKey(), "COMPLETED", null, null,
+                    paymentResult.billerReference(), fees.customerFee(), paymentResult.billerReference()));
+            return completedResult;
 
         } catch (Exception e) {
             log.error("Workflow failed with exception: {}", e.getMessage());
             currentStatus = WorkflowStatus.FAILED;
-            return WorkflowResult.failed("ERR_SYS_WORKFLOW_FAILED", e.getMessage(), "REVIEW");
+            WorkflowResult sysFailResult = WorkflowResult.failed("ERR_SYS_WORKFLOW_FAILED", e.getMessage(), "REVIEW");
+            try {
+                persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
+                        input.idempotencyKey(), "FAILED", sysFailResult.errorCode(), sysFailResult.errorMessage(), null, null, null));
+            } catch (Exception ex) {
+                log.warn("Failed to persist workflow failure result: {}", ex.getMessage());
+            }
+            return sysFailResult;
         }
     }
 

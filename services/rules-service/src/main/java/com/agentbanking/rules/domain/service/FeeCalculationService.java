@@ -1,6 +1,5 @@
 package com.agentbanking.rules.domain.service;
 
-import com.agentbanking.common.security.ErrorCodes;
 import com.agentbanking.rules.domain.model.AgentTier;
 import com.agentbanking.rules.domain.model.FeeConfigRecord;
 import com.agentbanking.rules.domain.model.FeeType;
@@ -12,6 +11,8 @@ import java.time.LocalDate;
 
 public class FeeCalculationService {
 
+    public static final FeeCalculationResult ZERO = new FeeCalculationResult(BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO);
+
     private final FeeConfigRepository feeConfigRepository;
 
     public FeeCalculationService(FeeConfigRepository feeConfigRepository) {
@@ -19,14 +20,14 @@ public class FeeCalculationService {
     }
 
     public FeeCalculationResult calculate(BigDecimal amount, TransactionType transactionType, AgentTier agentTier) {
-        FeeConfigRecord config = feeConfigRepository.findByTransactionTypeAndAgentTier(
+        return feeConfigRepository.findByTransactionTypeAndAgentTier(
             transactionType, agentTier, LocalDate.now()
-        ).orElseThrow(() -> new IllegalArgumentException(ErrorCodes.ERR_FEE_CONFIG_NOT_FOUND));
-
-        BigDecimal customerFee = calculateComponent(amount, config.customerFeeValue(), config.feeType());
-        BigDecimal agentCommission = calculateComponent(amount, config.agentCommissionValue(), config.feeType());
-        BigDecimal bankShare = calculateComponent(amount, config.bankShareValue(), config.feeType());
-        return new FeeCalculationResult(customerFee, agentCommission, bankShare);
+        ).map(config -> {
+            BigDecimal customerFee = calculateComponent(amount, config.customerFeeValue(), config.feeType());
+            BigDecimal agentCommission = calculateComponent(amount, config.agentCommissionValue(), config.feeType());
+            BigDecimal bankShare = calculateComponent(amount, config.bankShareValue(), config.feeType());
+            return new FeeCalculationResult(customerFee, agentCommission, bankShare);
+        }).orElse(ZERO);
     }
 
     private BigDecimal calculateComponent(BigDecimal amount, BigDecimal value, FeeType feeType) {

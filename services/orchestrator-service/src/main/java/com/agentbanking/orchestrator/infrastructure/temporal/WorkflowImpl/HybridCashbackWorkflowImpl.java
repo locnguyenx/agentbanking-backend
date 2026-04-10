@@ -41,6 +41,7 @@ public class HybridCashbackWorkflowImpl implements HybridCashbackWorkflow {
     private final CommitFloatActivity commitFloatActivity;
     private final ReleaseFloatActivity releaseFloatActivity;
     private final CreditAgentFloatActivity creditAgentFloatActivity;
+    private final PersistWorkflowResultActivity persistWorkflowResultActivity;
 
     private WorkflowStatus currentStatus = WorkflowStatus.PENDING;
 
@@ -60,6 +61,7 @@ public class HybridCashbackWorkflowImpl implements HybridCashbackWorkflow {
         this.commitFloatActivity = Workflow.newActivityStub(CommitFloatActivity.class, defaultOptions);
         this.releaseFloatActivity = Workflow.newActivityStub(ReleaseFloatActivity.class, defaultOptions);
         this.creditAgentFloatActivity = Workflow.newActivityStub(CreditAgentFloatActivity.class, defaultOptions);
+        this.persistWorkflowResultActivity = Workflow.newActivityStub(PersistWorkflowResultActivity.class, defaultOptions);
     }
 
     @Override
@@ -73,16 +75,34 @@ public class HybridCashbackWorkflowImpl implements HybridCashbackWorkflow {
             var capacityResult = validateFloatCapacityActivity.validate(input.agentId(), totalAmount);
             if (!capacityResult.sufficient()) {
                 currentStatus = WorkflowStatus.FAILED;
-                return WorkflowResult.failed("ERR_INSUFFICIENT_FLOAT", "Insufficient float for cashback", "DECLINE");
+                WorkflowResult failResult = WorkflowResult.failed("ERR_INSUFFICIENT_FLOAT", "Insufficient float for cashback", "DECLINE");
+                persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
+                        input.idempotencyKey(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null));
+                return failResult;
             }
 
             var mdrResult = calculateMDRActivity.calculate("HYBRID_CASHBACK", input.paymentMethod(), input.purchaseAmount());
             
             FloatBlockResult blockResult = blockFloatActivity.blockFloat(
-                    new FloatBlockInput(input.agentId(), totalAmount, input.idempotencyKey()));
+                    new FloatBlockInput(
+                        input.agentId(), 
+                        totalAmount, 
+                        BigDecimal.ZERO,
+                        mdrResult.mdrAmount(),
+                        BigDecimal.ZERO,
+                        input.idempotencyKey(),
+                        null,
+                        input.geofenceLat(),
+                        input.geofenceLng(),
+                        input.agentTier(),
+                        input.targetBin()
+                    ));
             if (!blockResult.success()) {
                 currentStatus = WorkflowStatus.FAILED;
-                return WorkflowResult.failed(blockResult.errorCode(), "Float block failed", "DECLINE");
+                WorkflowResult failResult = WorkflowResult.failed(blockResult.errorCode(), "Float block failed", "DECLINE");
+                persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
+                        input.idempotencyKey(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null));
+                return failResult;
             }
             UUID transactionId = blockResult.transactionId();
 
@@ -92,28 +112,40 @@ public class HybridCashbackWorkflowImpl implements HybridCashbackWorkflow {
                 if (qrResult.qrReference() == null) {
                     releaseFloatActivity.releaseFloat(new FloatReleaseInput(input.agentId(), totalAmount, transactionId));
                     currentStatus = WorkflowStatus.FAILED;
-                    return WorkflowResult.failed("ERR_QR_GENERATION_FAILED", "QR generation failed", "DECLINE");
+                    WorkflowResult failResult = WorkflowResult.failed("ERR_QR_GENERATION_FAILED", "QR generation failed", "DECLINE");
+                    persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
+                            input.idempotencyKey(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null));
+                    return failResult;
                 }
                 reference = qrResult.qrReference();
                 var paymentStatus = waitForQRPaymentActivity.waitForPayment(reference, 300);
                 if (!"PAID".equals(paymentStatus.status())) {
                     releaseFloatActivity.releaseFloat(new FloatReleaseInput(input.agentId(), totalAmount, transactionId));
                     currentStatus = WorkflowStatus.FAILED;
-                    return WorkflowResult.failed("ERR_QR_PAYMENT_TIMEOUT", "QR payment timeout", "DECLINE");
+                    WorkflowResult failResult = WorkflowResult.failed("ERR_QR_PAYMENT_TIMEOUT", "QR payment timeout", "DECLINE");
+                    persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
+                            input.idempotencyKey(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null));
+                    return failResult;
                 }
             } else if ("RTP".equalsIgnoreCase(input.paymentMethod())) {
                 var rtpResult = sendRequestToPayActivity.send(input.customerProxy(), input.purchaseAmount(), input.idempotencyKey());
                 if (rtpResult.rtpReference() == null) {
                     releaseFloatActivity.releaseFloat(new FloatReleaseInput(input.agentId(), totalAmount, transactionId));
                     currentStatus = WorkflowStatus.FAILED;
-                    return WorkflowResult.failed("ERR_RTP_SEND_FAILED", "RTP send failed", "DECLINE");
+                    WorkflowResult failResult = WorkflowResult.failed("ERR_RTP_SEND_FAILED", "RTP send failed", "DECLINE");
+                    persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
+                            input.idempotencyKey(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null));
+                    return failResult;
                 }
                 reference = rtpResult.rtpReference();
                 var rtpStatus = waitForRTPApprovalActivity.waitForApproval(reference, 300);
                 if (!"APPROVED".equals(rtpStatus.status())) {
                     releaseFloatActivity.releaseFloat(new FloatReleaseInput(input.agentId(), totalAmount, transactionId));
                     currentStatus = WorkflowStatus.FAILED;
-                    return WorkflowResult.failed("ERR_RTP_DECLINED", "RTP declined", "DECLINE");
+                    WorkflowResult failResult = WorkflowResult.failed("ERR_RTP_DECLINED", "RTP declined", "DECLINE");
+                    persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
+                            input.idempotencyKey(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null));
+                    return failResult;
                 }
             }
 
@@ -122,15 +154,38 @@ public class HybridCashbackWorkflowImpl implements HybridCashbackWorkflow {
                     mdrResult.mdrAmount(), mdrResult.netAmount(), "CASHBACK_RECEIPT");
 
             commitFloatActivity.commitFloat(new FloatCommitInput(input.agentId(), mdrResult.netAmount(), transactionId));
-            creditAgentFloatActivity.creditAgentFloat(new FloatCreditInput(input.agentId(), input.cashbackAmount()));
+            creditAgentFloatActivity.creditAgentFloat(new FloatCreditInput(
+                    input.agentId(), 
+                    input.cashbackAmount(),
+                    BigDecimal.ZERO,
+                    BigDecimal.ZERO,
+                    BigDecimal.ZERO,
+                    input.idempotencyKey(),
+                    input.customerProxy(),
+                    input.agentTier(),
+                    input.targetBin(),
+                    null,
+                    input.geofenceLat(),
+                    input.geofenceLng()
+            ));
 
             currentStatus = WorkflowStatus.COMPLETED;
-            return WorkflowResult.completed(transactionId, reference, input.purchaseAmount(), mdrResult.mdrAmount());
+            WorkflowResult completedResult = WorkflowResult.completed(transactionId, reference, input.purchaseAmount(), mdrResult.mdrAmount());
+            persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
+                    input.idempotencyKey(), "COMPLETED", null, null, reference, mdrResult.mdrAmount(), reference));
+            return completedResult;
 
         } catch (Exception e) {
             log.error("HybridCashback workflow failed: {}", e.getMessage());
             currentStatus = WorkflowStatus.FAILED;
-            return WorkflowResult.failed("ERR_SYS_WORKFLOW_FAILED", e.getMessage(), "REVIEW");
+            WorkflowResult failResult = WorkflowResult.failed("ERR_SYS_WORKFLOW_FAILED", e.getMessage(), "REVIEW");
+            try {
+                persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
+                        input.idempotencyKey(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null));
+            } catch (Exception ex) {
+                log.warn("Failed to persist fail result: {}", ex.getMessage());
+            }
+            return failResult;
         }
     }
 

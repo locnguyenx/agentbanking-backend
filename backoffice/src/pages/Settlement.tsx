@@ -55,8 +55,9 @@ export function Settlement() {
     }
   }
 
-  const formatAmount = (amount: number) => {
-    return 'RM ' + amount.toLocaleString('en-MY', { minimumFractionDigits: 2 })
+  const formatAmount = (amount: number | null | undefined) => {
+    if (amount == null) return 'RM 0.00'
+    return 'RM ' + Number(amount).toLocaleString('en-MY', { minimumFractionDigits: 2 })
   }
 
   const stats = settlement ? [

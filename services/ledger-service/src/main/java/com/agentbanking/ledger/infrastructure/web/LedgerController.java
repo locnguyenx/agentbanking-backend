@@ -1,8 +1,8 @@
 package com.agentbanking.ledger.infrastructure.web;
 
-import com.agentbanking.ledger.application.usecase.TransactionQueryUseCaseImpl;
 import com.agentbanking.ledger.domain.model.TransactionRecord;
-import com.agentbanking.common.transaction.TransactionStatus;
+import com.agentbanking.ledger.domain.model.TransactionStatus;
+import com.agentbanking.ledger.domain.model.TransactionType;
 import com.agentbanking.ledger.domain.port.in.*;
 import com.agentbanking.ledger.infrastructure.web.dto.BalanceInquiryRequest;
 import com.agentbanking.ledger.infrastructure.web.dto.DepositRequest;
@@ -29,14 +29,15 @@ public class LedgerController {
     private final ProcessDepositUseCase processDepositUseCase;
     private final GetBalanceUseCase getBalanceUseCase;
     private final ReverseTransactionUseCase reverseTransactionUseCase;
-    private final TransactionQueryUseCaseImpl transactionQueryUseCase;
+    private final TransactionQueryUseCase transactionQueryUseCase;
     private final CustomerBalanceInquiryUseCase customerBalanceInquiryUseCase;
 
-    public LedgerController(ProcessWithdrawalUseCase processWithdrawalUseCase,
-                            ProcessDepositUseCase processDepositUseCase,
+    @org.springframework.beans.factory.annotation.Autowired
+    public LedgerController(@org.springframework.beans.factory.annotation.Qualifier("processWithdrawalUseCaseImpl") ProcessWithdrawalUseCase processWithdrawalUseCase,
+                            @org.springframework.beans.factory.annotation.Qualifier("processDepositUseCaseImpl") ProcessDepositUseCase processDepositUseCase,
                             GetBalanceUseCase getBalanceUseCase,
                             ReverseTransactionUseCase reverseTransactionUseCase,
-                            TransactionQueryUseCaseImpl transactionQueryUseCase,
+                            TransactionQueryUseCase transactionQueryUseCase,
                             CustomerBalanceInquiryUseCase customerBalanceInquiryUseCase) {
         this.processWithdrawalUseCase = processWithdrawalUseCase;
         this.processDepositUseCase = processDepositUseCase;
@@ -47,7 +48,7 @@ public class LedgerController {
     }
 
     @PostMapping("/debit")
-    public ResponseEntity<Map<String, Object>> debit(@RequestBody WithdrawalRequest request) {
+    public ResponseEntity<Map<String, Object>> debit(@Valid @RequestBody WithdrawalRequest request) {
         try {
             Map<String, Object> result = new HashMap<>(processWithdrawalUseCase.processWithdrawal(
                 request.agentId(),
@@ -58,7 +59,9 @@ public class LedgerController {
                 request.idempotencyKey(),
                 request.customerCardMasked(),
                 request.geofenceLat(),
-                request.geofenceLng()
+                request.geofenceLng(),
+                request.agentTier(),
+                request.targetBin()
             ));
 
             result.put("balance", getBalanceUseCase.getBalance(request.agentId()));
@@ -73,11 +76,20 @@ public class LedgerController {
                 "status", "FAILED",
                 "error", Map.of("code", "ERR_BIZ_INSUFFICIENT_FLOAT", "message", e.getMessage())
             ));
+        } catch (com.agentbanking.common.exception.LedgerException e) {
+            return ResponseEntity.badRequest().body(Map.of(
+                "status", "FAILED",
+                "error", Map.of(
+                    "code", e.getErrorCode() != null ? e.getErrorCode() : "ERR_BIZ_LEDGER_ERROR",
+                    "message", e.getMessage() != null ? e.getMessage() : "Business error occurred",
+                    "action_code", e.getActionCode() != null ? e.getActionCode() : "DECLINE"
+                )
+            ));
         }
     }
 
     @PostMapping("/credit")
-    public ResponseEntity<Map<String, Object>> credit(@RequestBody DepositRequest request) {
+    public ResponseEntity<Map<String, Object>> credit(@Valid @RequestBody DepositRequest request) {
         try {
             Map<String, Object> result = new HashMap<>(processDepositUseCase.processDeposit(
                 request.agentId(),
@@ -86,7 +98,12 @@ public class LedgerController {
                 request.agentCommission(),
                 request.bankShare(),
                 request.idempotencyKey(),
-                request.destinationAccount()
+                request.destinationAccount(),
+                request.agentTier(),
+                request.targetBin(),
+                request.referenceNumber(),
+                request.geofenceLat(),
+                request.geofenceLng()
             ));
 
             result.put("balance", getBalanceUseCase.getBalance(request.agentId()));
@@ -116,6 +133,23 @@ public class LedgerController {
         }
     }
 
+    @GetMapping("/balance")
+    public ResponseEntity<Map<String, Object>> getBalanceByQuery(@RequestParam UUID agentId) {
+        try {
+            BigDecimal balance = getBalanceUseCase.getBalance(agentId);
+            return ResponseEntity.ok(Map.of(
+                "agentId", agentId.toString(),
+                "balance", balance,
+                "currency", "MYR"
+            ));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of(
+                "status", "FAILED",
+                "error", Map.of("code", "ERR_SYS_AGENT_FLOAT_NOT_FOUND", "message", e.getMessage())
+            ));
+        }
+    }
+
     @PostMapping("/reverse/{transactionId}")
     public ResponseEntity<Map<String, Object>> reverse(@PathVariable UUID transactionId) {
         return ResponseEntity.ok(reverseTransactionUseCase.reverseTransaction(transactionId));
@@ -127,11 +161,16 @@ public class LedgerController {
         BigDecimal totalVolume = transactionQueryUseCase.sumSuccessfulTransactionAmount();
         long activeAgents = transactionQueryUseCase.countDistinctAgents();
         
+        BigDecimal totalDebits = transactionQueryUseCase.sumSuccessfulTransactionAmountByType(TransactionType.CASH_WITHDRAWAL);
+        BigDecimal totalCredits = transactionQueryUseCase.sumSuccessfulTransactionAmountByType(TransactionType.CASH_DEPOSIT);
+        
         return ResponseEntity.ok(Map.of(
             "totalAgents", activeAgents,
             "activeAgents", activeAgents,
             "totalTransactions", totalTransactions,
             "totalVolume", totalVolume,
+            "totalDebits", totalDebits,
+            "totalCredits", totalCredits,
             "pendingKyc", 0
         ));
     }
@@ -173,17 +212,7 @@ public class LedgerController {
         List<Map<String, Object>> content = transactions.stream()
             .skip((long) page * size)
             .limit(size)
-            .map(t -> {
-                Map<String, Object> item = new HashMap<>();
-                item.put("transactionId", t.transactionId().toString());
-                item.put("agentId", t.agentId().toString());
-                item.put("transactionType", t.transactionType());
-                item.put("amount", t.amount());
-                item.put("status", t.status());
-                item.put("customerCardMasked", t.customerCardMasked());
-                item.put("createdAt", t.createdAt().toString());
-                return item;
-            })
+            .map(this::mapToTransactionResponse)
             .toList();
         
         return ResponseEntity.ok(Map.of(
@@ -193,6 +222,40 @@ public class LedgerController {
             "page", page,
             "size", size
         ));
+    }
+
+    @GetMapping("/internal/transactions/{transactionId}")
+    public ResponseEntity<Map<String, Object>> getTransaction(@PathVariable UUID transactionId) {
+        TransactionRecord t = transactionQueryUseCase.findById(transactionId);
+        if (t == null) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok(mapToTransactionResponse(t));
+    }
+
+    private Map<String, Object> mapToTransactionResponse(TransactionRecord t) {
+        Map<String, Object> item = new HashMap<>();
+        item.put("transactionId", t.transactionId() != null ? t.transactionId().toString() : null);
+        item.put("agentId", t.agentId() != null ? t.agentId().toString() : null);
+        item.put("transactionType", t.transactionType() != null ? t.transactionType().name() : null);
+        item.put("amount", t.amount());
+        item.put("customerFee", t.customerFee());
+        item.put("status", t.status() != null ? t.status().name() : null);
+        item.put("customerCardMasked", t.customerCardMasked());
+        item.put("referenceNumber", t.referenceNumber());
+        item.put("geofenceLat", t.geofenceLat());
+        item.put("geofenceLng", t.geofenceLng());
+        item.put("agentTier", t.agentTier());
+        item.put("targetBin", t.targetBin());
+        item.put("billerCode", t.billerCode());
+        item.put("ref1", t.ref1());
+        item.put("ref2", t.ref2());
+        item.put("destinationAccount", t.destinationAccount());
+        item.put("createdAt", t.createdAt() != null ? t.createdAt().toString() : null);
+        if (t.completedAt() != null) {
+            item.put("completedAt", t.completedAt().toString());
+        }
+        return item;
     }
 
     @GetMapping("/backoffice/settlement")
@@ -206,21 +269,21 @@ public class LedgerController {
         List<TransactionRecord> transactions = transactionQueryUseCase.findRecentTransactions();
         
         BigDecimal totalDeposits = transactions.stream()
-            .filter(t -> "DEPOSIT".equals(t.transactionType()))
-            .filter(t -> t.createdAt().isAfter(startOfDay) && t.createdAt().isBefore(endOfDay))
+            .filter(t -> TransactionType.CASH_DEPOSIT.equals(t.transactionType()))
+            .filter(t -> t.createdAt() != null && t.createdAt().isAfter(startOfDay) && t.createdAt().isBefore(endOfDay))
             .map(TransactionRecord::amount)
             .reduce(BigDecimal.ZERO, BigDecimal::add);
         
         BigDecimal totalWithdrawals = transactions.stream()
-            .filter(t -> "WITHDRAWAL".equals(t.transactionType()))
-            .filter(t -> t.createdAt().isAfter(startOfDay) && t.createdAt().isBefore(endOfDay))
+            .filter(t -> TransactionType.CASH_WITHDRAWAL.equals(t.transactionType()))
+            .filter(t -> t.createdAt() != null && t.createdAt().isAfter(startOfDay) && t.createdAt().isBefore(endOfDay))
             .map(TransactionRecord::amount)
             .reduce(BigDecimal.ZERO, BigDecimal::add);
         
         return ResponseEntity.ok(Map.of(
             "date", date,
-            "totalDeposits", totalDeposits,
-            "totalWithdrawals", totalWithdrawals,
+            "totalCredits", totalDeposits,
+            "totalDebits", totalWithdrawals,
             "totalCommissions", BigDecimal.ZERO,
             "netAmount", totalDeposits.subtract(totalWithdrawals),
             "transactions", transactions.stream()
@@ -239,26 +302,24 @@ public class LedgerController {
     }
 
     @GetMapping("/transactions/has-pending")
-    public ResponseEntity<Boolean> hasPendingTransactions(@RequestParam UUID agentId) {
-        List<TransactionStatus> pendingStatuses = List.of(TransactionStatus.PENDING, TransactionStatus.COMPLETED);
+    public ResponseEntity<Map<String, Object>> hasPendingTransactions(@RequestParam UUID agentId) {
+        List<TransactionStatus> pendingStatuses = List.of(TransactionStatus.PENDING);
         boolean hasPending = transactionQueryUseCase.existsByAgentIdAndStatusIn(agentId, pendingStatuses);
-        return ResponseEntity.ok(hasPending);
+        return ResponseEntity.ok(Map.of("hasPending", hasPending));
     }
 
     @GetMapping("/transactions/count-by-status")
-    public ResponseEntity<Long> countByAgentIdAndStatus(
-            @RequestParam UUID agentId,
-            @RequestParam TransactionStatus status) {
+    public ResponseEntity<Map<String, Object>> getTransactionsCount(@RequestParam UUID agentId, @RequestParam TransactionStatus status) {
         long count = transactionQueryUseCase.countByAgentIdAndStatus(agentId, status);
-        return ResponseEntity.ok(count);
+        return ResponseEntity.ok(Map.of("count", count));
     }
 
     @GetMapping("/transactions/exists-by-status")
-    public ResponseEntity<Boolean> existsByAgentIdAndStatusIn(
+    public ResponseEntity<Map<String, Object>> existsByAgentIdAndStatusIn(
             @RequestParam UUID agentId,
             @RequestParam List<TransactionStatus> statuses) {
         boolean exists = transactionQueryUseCase.existsByAgentIdAndStatusIn(agentId, statuses);
-        return ResponseEntity.ok(exists);
+        return ResponseEntity.ok(Map.of("exists", exists));
     }
 
     @GetMapping("/backoffice/settlement/export")

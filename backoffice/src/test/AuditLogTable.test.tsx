@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { AuditLogTable } from '../components/AuditLogTable'
 import React from 'react'
 
@@ -41,8 +41,13 @@ describe('AuditLogTable', () => {
     expect(screen.getByText('FAILURE')).toHaveClass('badge-error')
   })
 
-  it('should show failure reason for failed operations', () => {
+  it('should show failure reason for failed operations', async () => {
     render(<AuditLogTable logs={mockLogs} />)
+    const viewButton = screen.getAllByText('View')[1]
+    fireEvent.click(viewButton)
+    await waitFor(() => {
+      expect(screen.getByText('Audit Log Details')).toBeInTheDocument()
+    })
     expect(screen.getByText('Duplicate agent ID')).toBeInTheDocument()
   })
 

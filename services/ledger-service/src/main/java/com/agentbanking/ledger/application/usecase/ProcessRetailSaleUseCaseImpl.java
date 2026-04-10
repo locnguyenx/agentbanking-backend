@@ -41,7 +41,16 @@ public class ProcessRetailSaleUseCaseImpl implements ProcessRetailSaleUseCase {
                 command.amount(),
                 command.cardData(),
                 command.pinBlock(),
-                idempotencyKey
+                idempotencyKey,
+                command.agentId(),
+                command.description(),
+                command.referenceNumber(),
+                command.agentTier(),
+                command.billerCode(),
+                command.targetBin(),
+                command.destinationAccount(),
+                command.ref1(),
+                command.ref2()
         );
 
         RetailSaleResponse response = new RetailSaleResponse(

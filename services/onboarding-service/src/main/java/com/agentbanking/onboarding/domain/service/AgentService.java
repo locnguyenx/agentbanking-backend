@@ -1,5 +1,6 @@
 package com.agentbanking.onboarding.domain.service;
 
+import com.agentbanking.common.event.AgentCreatedEvent;
 import com.agentbanking.common.exception.AgentException;
 import com.agentbanking.common.security.ErrorCodes;
 import com.agentbanking.onboarding.domain.model.AgentRecord;
@@ -8,6 +9,7 @@ import com.agentbanking.onboarding.domain.model.CreateAgentUserRequest;
 import com.agentbanking.onboarding.domain.model.UserCreationStatus;
 import com.agentbanking.onboarding.domain.port.in.CreateAgentUseCase.CreateAgentCommand;
 import com.agentbanking.onboarding.domain.port.in.UpdateAgentUseCase.UpdateAgentCommand;
+import com.agentbanking.onboarding.domain.port.out.AgentEventPort;
 import com.agentbanking.onboarding.domain.port.out.AgentRepository;
 import com.agentbanking.onboarding.domain.port.out.AuthUserCreationPort;
 
@@ -20,10 +22,12 @@ public class AgentService {
 
     private final AgentRepository agentRepository;
     private final AuthUserCreationPort authUserCreationPort;
+    private final AgentEventPort agentEventPort;
 
-    public AgentService(AgentRepository agentRepository, AuthUserCreationPort authUserCreationPort) {
+    public AgentService(AgentRepository agentRepository, AuthUserCreationPort authUserCreationPort, AgentEventPort agentEventPort) {
         this.agentRepository = agentRepository;
         this.authUserCreationPort = authUserCreationPort;
+        this.agentEventPort = agentEventPort;
     }
 
     public AgentRecord createAgent(CreateAgentCommand command) {
@@ -78,7 +82,9 @@ public class AgentService {
                     savedAgent.createdAt(),
                     LocalDateTime.now()
                 );
-                return agentRepository.save(successAgent);
+                AgentRecord finalAgent = agentRepository.save(successAgent);
+                publishAgentCreatedEvent(finalAgent);
+                return finalAgent;
             } else {
                 return updateUserCreationStatus(savedAgent, UserCreationStatus.FAILED, "Auth service returned non-success status");
             }
@@ -162,5 +168,22 @@ public class AgentService {
 
     public Optional<AgentRecord> findById(UUID agentId) {
         return agentRepository.findById(agentId);
+    }
+
+    private void publishAgentCreatedEvent(AgentRecord agent) {
+        try {
+            AgentCreatedEvent event = AgentCreatedEvent.create(
+                agent.agentId(),
+                agent.agentCode(),
+                agent.phoneNumber(),
+                null,
+                agent.businessName(),
+                agent.tier().name(),
+                agent.merchantGpsLat() != null ? agent.merchantGpsLat().doubleValue() : null,
+                agent.merchantGpsLng() != null ? agent.merchantGpsLng().doubleValue() : null
+            );
+            agentEventPort.publishAgentCreated(event);
+        } catch (Exception e) {
+        }
     }
 }

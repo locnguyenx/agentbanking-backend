@@ -53,24 +53,19 @@ class ProcessWithdrawalUseCaseImplTest {
         );
 
         when(ledgerService.processWithdrawal(
-            any(), any(), any(), any(), any(), any(), any(), any(), any()
+            any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()
         )).thenReturn(ledgerResponse);
 
         useCase.processWithdrawal(
-            agentId,
-            new BigDecimal("1000.00"),
-            new BigDecimal("10.00"),
-            new BigDecimal("5.00"),
-            new BigDecimal("2.00"),
-            "idem-key-123",
-            "411111******1111",
-            new BigDecimal("3.1390"),
-            new BigDecimal("101.6869")
+            agentId, new BigDecimal("1000.00"), new BigDecimal("10.00"), new BigDecimal("5.00"),
+            new BigDecimal("2.00"), "idem-key-123", "411111******1111",
+            new BigDecimal("3.1390"), new BigDecimal("101.6869"),
+            "BRONZE", "123456"
         );
 
         verify(rulesServiceFeignClient).checkVelocity(any());
         verify(ledgerService).processWithdrawal(
-            any(), any(), any(), any(), any(), any(), any(), any(), any()
+            any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()
         );
     }
 
@@ -90,11 +85,13 @@ class ProcessWithdrawalUseCaseImplTest {
                 "idem-key-123",
                 "411111******1111",
                 new BigDecimal("3.1390"),
-                new BigDecimal("101.6869")
+                new BigDecimal("101.6869"),
+                "BRONZE",
+                "123456"
             )
         );
 
-        verify(ledgerService, never()).processWithdrawal(any(), any(), any(), any(), any(), any(), any(), any(), any());
+        verify(ledgerService, never()).processWithdrawal(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any());
     }
 
     @Test
@@ -109,7 +106,7 @@ class ProcessWithdrawalUseCaseImplTest {
         );
 
         when(ledgerService.processWithdrawal(
-            any(), any(), any(), any(), any(), any(), any(), any(), any()
+            any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()
         )).thenReturn(ledgerResponse);
 
         Map<String, Object> result = useCase.processWithdrawal(
@@ -121,7 +118,9 @@ class ProcessWithdrawalUseCaseImplTest {
             "idem-key-123",
             "411111******1111",
             new BigDecimal("3.1390"),
-            new BigDecimal("101.6869")
+            new BigDecimal("101.6869"),
+            "BRONZE",
+            "123456"
         );
 
         assertEquals("COMPLETED", result.get("status"));
@@ -144,7 +143,7 @@ class ProcessWithdrawalUseCaseImplTest {
         when(rulesServiceFeignClient.checkVelocity(any())).thenReturn(Map.of("passed", true));
 
         when(ledgerService.processWithdrawal(
-            any(), any(), any(), any(), any(), any(), any(), any(), any()
+            any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()
         )).thenThrow(new com.agentbanking.common.exception.LedgerException(
             com.agentbanking.common.security.ErrorCodes.ERR_INSUFFICIENT_FLOAT, "DECLINE"
         ));
@@ -159,7 +158,9 @@ class ProcessWithdrawalUseCaseImplTest {
                 "idem-key-123",
                 "411111******1111",
                 new BigDecimal("3.1390"),
-                new BigDecimal("101.6869")
+                new BigDecimal("101.6869"),
+                "BRONZE",
+                "123456"
             )
         );
 
@@ -178,7 +179,7 @@ class ProcessWithdrawalUseCaseImplTest {
         when(rulesServiceFeignClient.checkVelocity(any())).thenReturn(Map.of("passed", true));
 
         when(ledgerService.processWithdrawal(
-            any(), any(), any(), any(), any(), any(), any(), any(), any()
+            any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()
         )).thenReturn(null);
 
         Map<String, Object> result = useCase.processWithdrawal(
@@ -190,7 +191,9 @@ class ProcessWithdrawalUseCaseImplTest {
             "idem-key-123",
             "411111******1111",
             new BigDecimal("3.1390"),
-            new BigDecimal("101.6869")
+            new BigDecimal("101.6869"),
+            "BRONZE",
+            "123456"
         );
 
         assertNull(result);

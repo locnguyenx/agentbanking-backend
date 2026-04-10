@@ -11,7 +11,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Settings,
-  AlertTriangle
+  AlertTriangle,
+  GitBranch
 } from 'lucide-react'
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
@@ -21,10 +22,11 @@ const navItems = [
   { path: '/', icon: LayoutDashboard, label: 'Dashboard' },
   { path: '/agents', icon: Users, label: 'Agents' },
   { path: '/users', icon: UserCog, label: 'User Management' },
-  { path: '/transactions', icon: ArrowLeftRight, label: 'Transactions' },
+  { path: '/ledger-transactions', icon: ArrowLeftRight, label: 'Ledger Transactions' },
   { path: '/settlement', icon: FileText, label: 'Settlement' },
   { path: '/kyc-review', icon: FileCheck, label: 'KYC Review' },
-  { path: '/transaction-resolution', icon: AlertTriangle, label: 'Transaction Resolution' },
+  { path: '/orchestrator-workflows', icon: GitBranch, label: 'Orchestrator Workflows' },
+  { path: '/transaction-resolution', icon: AlertTriangle, label: 'Transaction Resolution', id: 'transaction-resolution-nav' },
   { path: '/system-admin', icon: Settings, label: 'System Admin' },
 ]
 

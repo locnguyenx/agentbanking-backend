@@ -79,4 +79,55 @@ class SwitchControllerIntegrationTest extends AbstractIntegrationTest {
                         .content(requestBody))
                 .andExpect(jsonPath("$").exists());
     }
+
+    @Test
+    void cardAuth_withInvalidPan_shouldReturn400() throws Exception {
+        String requestBody = """
+            {
+                "internalTransactionId": "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
+                "pan": "123",
+                "amount": 100.00
+            }
+            """;
+
+        mockMvc.perform(post("/internal/auth")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value("FAILED"));
+    }
+
+    @Test
+    void cardAuth_withMissingAmount_shouldReturn400() throws Exception {
+        String requestBody = """
+            {
+                "internalTransactionId": "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
+                "pan": "4111111111111111"
+            }
+            """;
+
+        mockMvc.perform(post("/internal/auth")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value("FAILED"));
+    }
+
+    @Test
+    void duitNowTransfer_withInvalidProxyValue_shouldReturnError() throws Exception {
+        String requestBody = """
+            {
+                "internalTransactionId": "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
+                "proxyType": "PHONE",
+                "proxyValue": "",
+                "amount": 50.00
+            }
+            """;
+
+        mockMvc.perform(post("/internal/duitnow")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value("FAILED"));
+    }
 }

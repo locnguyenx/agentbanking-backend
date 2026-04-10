@@ -86,4 +86,52 @@ class BillerControllerIntegrationTest extends AbstractIntegrationTest {
                         .content(requestBody))
                 .andExpect(jsonPath("$").exists());
     }
+
+    @Test
+    void validateRef_withMissingBillerCode_shouldReturn400() throws Exception {
+        String requestBody = """
+            {
+                "ref1": "1234567890"
+            }
+            """;
+
+        mockMvc.perform(post("/internal/validate-ref")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value("FAILED"));
+    }
+
+    @Test
+    void payBill_withMissingAmount_shouldReturn400() throws Exception {
+        String requestBody = """
+            {
+                "billerCode": "TEST123",
+                "ref1": "1234567890"
+            }
+            """;
+
+        mockMvc.perform(post("/internal/pay-bill")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value("FAILED"));
+    }
+
+    @Test
+    void topup_withInvalidTelco_shouldReturn400() throws Exception {
+        String requestBody = """
+            {
+                "telco": "INVALID_TELCO",
+                "phoneNumber": "0123456789",
+                "amount": "50.00"
+            }
+            """;
+
+        mockMvc.perform(post("/internal/topup")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value("FAILED"));
+    }
 }

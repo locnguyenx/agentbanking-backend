@@ -43,7 +43,7 @@ public class RulesController {
             @RequestParam String transactionType,
             @RequestParam String agentTier,
             @RequestParam BigDecimal amount) {
-        TransactionType txType = TransactionType.valueOf(transactionType);
+        TransactionType txType = TransactionType.fromFrontend(transactionType);
         AgentTier tier = AgentTier.valueOf(agentTier);
 
         FeeQueryResult result = feeQueryUseCase.calculate(amount, txType, tier);
@@ -76,7 +76,7 @@ public class RulesController {
     @PostMapping("/fees")
     public ResponseEntity<Map<String, Object>> createFeeConfig(@RequestBody Map<String, Object> request) {
         try {
-            TransactionType transactionType = TransactionType.valueOf((String) request.get("transactionType"));
+            TransactionType transactionType = TransactionType.fromFrontend((String) request.get("transactionType"));
             AgentTier agentTier = AgentTier.valueOf((String) request.get("agentTier"));
             FeeType feeType = FeeType.valueOf((String) request.get("feeType"));
             BigDecimal customerFeeValue = new BigDecimal(request.get("customerFeeValue").toString());

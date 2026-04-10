@@ -33,6 +33,7 @@ public interface WithdrawalWorkflow {
         BigDecimal geofenceLat,
         BigDecimal geofenceLng,
         String customerMykad,
-        String agentTier
+        String agentTier,
+        String targetBin
     ) {}
 }

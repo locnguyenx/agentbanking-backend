@@ -1,7 +1,7 @@
 # Agent Banking Backoffice — User Guide
 
-**Version:** 1.0  
-**Last Updated:** 2026-04-04  
+**Version:** 1.1  
+**Last Updated:** 2026-04-10  
 **Audience:** Bank Administrators, Bank Operators, Tellers, Auditors
 
 ---
@@ -15,9 +15,11 @@
 5. [Transaction History](#5-transaction-history)
 6. [Settlement Reports](#6-settlement-reports)
 7. [KYC Review Queue](#7-kyc-review-queue)
-8. [My Profile](#8-my-profile)
-9. [Keyboard Shortcuts & Tips](#9-keyboard-shortcuts--tips)
-10. [Troubleshooting](#10-troubleshooting)
+8. [Orchestrator Workflows](#8-orchestrator-workflows)
+9. [Transaction Resolution](#9-transaction-resolution)
+10. [My Profile](#10-my-profile)
+11. [Keyboard Shortcuts & Tips](#11-keyboard-shortcuts--tips)
+12. [Troubleshooting](#12-troubleshooting)
 
 ---
 
@@ -36,9 +38,12 @@
 
 **Demo Credentials (Development Only):**
 - Admin: `admin` / `password`
-- Agent users: `AGT-E2E-001`, `AGT-002`, etc. / `12345678`
+- Agent users: `NEW-AGT-001`, `AGT-E2E-001`, etc. / `12345678`
 - Staff users: `operator001`, `teller001`, etc. / `12345678`
-
+- Agent user for testing:
+  - Agent ID: 20a8c8b4-8fa2-4f9b-9acb-86c68bcb9215
+  - Agent Code: `NEW-AGT-001`
+  - username: `NEW-AGT-001`, password: `12345678`
 ### 1.2 First Login — Password Change
 
 If you are logging in with a temporary password for the first time, you will be required to change your password before accessing any features.
@@ -55,6 +60,17 @@ If you are logging in with a temporary password for the first time, you will be 
 - Minimum 8 characters
 - Must match the confirmation password
 
+****NOTES: ****
+For External Apps, You can use `/api/v1/auth/me` which now returns your profile including agentId:
+```bash
+# 1. Login
+POST /api/v1/auth/token
+{"username": "NEW-AGT-001", "password": "12345678"}
+# 2. Get profile with agentId
+GET /api/v1/auth/me
+Authorization: Bearer
+```
+
 ### 1.3 Navigation
 
 The backoffice uses a **collapsible sidebar** on the left:
@@ -64,9 +80,12 @@ The backoffice uses a **collapsible sidebar** on the left:
 | **Dashboard** | System overview and key metrics |
 | **Agents** | Manage registered agents |
 | **User Management** | Manage system users (admins, staff, agents) |
-| **Transactions** | View and search all financial transactions |
+| **Transactions** | Legacy ledger transactions |
+| **Orchestrator Workflows** | Monitor transaction workflows and create resolution cases |
+| **Transaction Resolution** | Four-eyes approval for transaction dispute resolution |
 | **Settlement** | Daily settlement reports |
 | **KYC Review** | Review pending KYC verifications |
+| **My Profile** | View profile and change password |
 
 **To collapse/expand the sidebar:** Click the collapse arrow at the bottom of the sidebar.
 
@@ -477,13 +496,175 @@ Click **View** on any card to see full details:
 
 ---
 
-## 8. My Profile
+## 8. Orchestrator Workflows
 
-### 8.1 Accessing Your Profile
+### 8.1 Overview
+
+The Orchestrator Workflows page provides real-time visibility into all transaction workflows managed by the Temporal orchestration engine. This is the central hub for monitoring transaction processing, troubleshooting stuck transactions, and initiating resolution cases for failed transactions.
+
+### 8.2 Stats Cards
+
+| Card | Description |
+|------|-------------|
+| **Total Workflows** | All workflows in the selected time period |
+| **Completed** | Workflows with COMPLETED status |
+| **Pending** | Workflows with PENDING or RUNNING status |
+| **Failed** | Workflows with FAILED status |
+
+### 8.3 Searching and Filtering
+
+| Control | Description |
+|---------|-------------|
+| **Search** | Filter by workflow ID or transaction ID |
+| **Date Range** | Filter by: Last 7 days, Last 30 days, Last 3 months |
+| **Status Filter** | Filter by: All Status, Pending, Completed, Failed, Compensating, Pending Review |
+| **Transaction Type** | Filter by: Cash Withdrawal, Retail Sale, Prepaid Topup, Bill Payment, DuitNow Transfer, Deposit |
+
+### 8.4 Workflow Table
+
+| Column | Description |
+|--------|-------------|
+| Workflow ID | Unique workflow identifier (monospace font) |
+| Transaction ID | Associated transaction UUID |
+| Type | Transaction type badge |
+| Amount | Transaction amount in RM |
+| Status | Status badge (Completed, Failed, Pending, Compensating, Pending Review) |
+| Case Status | Resolution case status if applicable (Pending Maker, Pending Checker, Approved, Rejected, or "No case") |
+| Created At | Workflow creation timestamp |
+| Actions | View Details, Create Case |
+
+### 8.5 Viewing Workflow Details
+
+Click **View Details** on any workflow to see:
+- Transaction type and amount
+- Workflow ID and Transaction ID
+- Status with visual indicator
+- **Pending Reason** (displayed in yellow when status is PENDING or RUNNING)
+- Agent ID
+- Created At timestamp
+- Customer Fee
+- Reference Number
+- Completed At timestamp (if applicable)
+- Error code and message (if status is FAILED)
+
+### 8.6 Pending Reason Display
+
+When a workflow has PENDING or RUNNING status, a yellow pending reason box displays at the bottom of the details showing:
+- **Awaiting Switch Response**: Waiting for response from payment switch
+- **Awaiting Biller Response**: Waiting for response from biller
+- **Awaiting Review**: Requires manual review
+
+### 8.7 Creating a Resolution Case
+
+For failed workflows without an existing resolution case:
+
+1. Click **Create Case** in the Actions column.
+2. A resolution case is created and the workflow appears in the Transaction Resolution page.
+3. Click **View Case** to navigate directly to the resolution details.
+
+---
+
+## 9. Transaction Resolution
+
+### 9.1 Overview
+
+The Transaction Resolution page handles manual resolution of failed or stuck transactions. It implements a four-eyes approval workflow where:
+- **Maker** proposes a resolution action (Commit or Reverse)
+- **Checker** reviews and approves or rejects the proposed action
+
+### 9.2 Stats Cards
+
+| Card | Description |
+|------|-------------|
+| **Total Cases** | All resolution cases |
+| **Pending Maker** | Cases awaiting maker proposal |
+| **Pending Checker** | Cases awaiting checker approval |
+| **Approved Today** | Cases approved today |
+
+### 9.3 Searching and Filtering
+
+| Control | Description |
+|---------|-------------|
+| **Search** | Filter by workflow ID |
+| **Status Filter** | Filter by: All Status, Pending Maker, Pending Checker, Approved, Rejected |
+
+### 9.4 Resolution Table
+
+| Column | Description |
+|--------|-------------|
+| Workflow | Workflow ID (monospace) |
+| Transaction | Transaction ID |
+| Type | Transaction type |
+| Amount | Transaction amount in RM |
+| Status | Status badge |
+| Actions | View Details, Propose, Approve, Reject, Force Resolve |
+
+### 9.5 Viewing Resolution Details
+
+Click **View Details** to see:
+- Transaction type and amount
+- Workflow ID and Transaction ID
+- Status with visual indicator
+- **Maker Pending Reason** (for PENDING_MAKER status) or **Checker Pending Reason** (for PENDING_CHECKER status)
+- Agent ID
+- Created At timestamp
+- Reference Number
+- Customer Fee
+- Completed At timestamp
+- Error code and message (if applicable)
+- Maker proposed action and reason (if proposed)
+- Checker decision and reason (if decided)
+
+### 9.6 Proposing a Resolution (Maker Role)
+
+For cases in PENDING_MAKER status:
+
+1. Click **Propose** in the Actions column.
+2. Fill in the form:
+   - **Action**: Commit (confirm transaction) or Reverse (rollback transaction)
+   - **Reason Code**: Select from predefined codes (SYSTEM_ERROR, TIMEOUT, DUPLICATE, INVALID_DATA, INSUFFICIENT_FUNDS, etc.)
+   - **Reason**: Detailed explanation
+   - **Evidence URL**: Optional link to supporting documentation
+3. Click **Submit Proposal**.
+4. The status changes to PENDING_CHECKER.
+
+### 9.7 Approving a Resolution (Checker Role)
+
+For cases in PENDING_CHECKER status:
+
+1. Click **Approve** in the Actions column.
+2. Enter an optional approval reason.
+3. Click **Confirm Approval**.
+4. The resolution action is executed.
+
+### 9.8 Rejecting a Resolution (Checker Role)
+
+For cases in PENDING_CHECKER status:
+
+1. Click **Reject** in the Actions column.
+2. Enter a rejection reason.
+3. Click **Confirm Rejection**.
+4. The case is marked as REJECTED.
+
+### 9.9 Force Resolve (Admin Only)
+
+For resolving cases bypassing the four-eyes workflow:
+
+1. Click **Force Resolve** in the Actions column.
+2. Select the action: Commit or Reverse.
+3. Enter a reason for force resolution.
+4. Click **Confirm**.
+5. The resolution is executed immediately.
+
+---
+
+## 10. My Profile
+
+### 10.1 Accessing Your Profile
 
 Click your **avatar** in the top-right header → **Profile**, or navigate directly to `/profile`.
 
-### 8.2 Viewing Your Profile
+### 10.2 Viewing Your Profile
 
 The Profile Information card displays:
 
@@ -497,7 +678,7 @@ The Profile Information card displays:
 | Status | Your account status |
 | Last Login | Date and time of your last successful login |
 
-### 8.3 Changing Your Password
+### 10.3 Changing Your Password
 
 1. In the **Change Password** section:
 2. Enter your **Current Password**.
@@ -511,13 +692,13 @@ The Profile Information card displays:
 **On success:** A green toast notification appears confirming the password change.
 **On failure:** A red toast notification shows the error message.
 
-### 8.4 Password Visibility Toggle
+### 10.4 Password Visibility Toggle
 
 Each password field has an **eye icon** to show/hide the password text. Click the icon to toggle visibility.
 
 ---
 
-## 9. Keyboard Shortcuts & Tips
+## 11. Keyboard Shortcuts & Tips
 
 | Action | Shortcut / Tip |
 |--------|---------------|
@@ -529,9 +710,9 @@ Each password field has an **eye icon** to show/hide the password text. Click th
 
 ---
 
-## 10. Troubleshooting
+## 12. Troubleshooting
 
-### 10.1 Login Issues
+### 12.1 Login Issues
 
 | Problem | Solution |
 |---------|----------|
@@ -539,7 +720,7 @@ Each password field has an **eye icon** to show/hide the password text. Click th
 | Account locked | Contact your administrator to unlock your account. |
 | Temporary password expired | Request a password reset from your administrator. |
 
-### 10.2 User Account Issues
+### 12.2 User Account Issues
 
 | Problem | Solution |
 |---------|----------|
@@ -547,7 +728,7 @@ Each password field has an **eye icon** to show/hide the password text. Click th
 | Cannot create user (duplicate email) | Emails must be unique. Try a different email. |
 | User creation failed for agent | Check the View Agent modal for the error message. Click **Retry User Creation**. |
 
-### 10.3 Agent Issues
+### 12.3 Agent Issues
 
 | Problem | Solution |
 |---------|----------|
@@ -555,7 +736,7 @@ Each password field has an **eye icon** to show/hide the password text. Click th
 | Agent user account shows "Pending" | User creation is in progress. Wait a moment and refresh the page. |
 | Cannot deactivate agent with pending transactions | Ensure all transactions for the agent are completed or cancelled first. |
 
-### 10.4 General Issues
+### 12.4 General Issues
 
 | Problem | Solution |
 |---------|----------|
@@ -601,6 +782,36 @@ Each password field has an **eye icon** to show/hide the password text. Click th
 | COMPLETED | Transaction completed successfully |
 | PENDING | Transaction is being processed |
 | FAILED | Transaction failed |
+
+### Workflow Status (Orchestrator)
+
+| Status | Description |
+|--------|-------------|
+| PENDING | Workflow is waiting for processing |
+| RUNNING | Workflow is actively being processed |
+| COMPLETED | Workflow completed successfully |
+| FAILED | Workflow failed |
+| COMPENSATING | Workflow is compensating (rolling back) |
+| PENDING_REVIEW | Workflow is pending manual review |
+
+### Resolution Case Status
+
+| Status | Description |
+|--------|-------------|
+| PENDING_MAKER | Case awaiting maker to propose resolution |
+| PENDING_CHECKER | Case awaiting checker to approve/reject |
+| APPROVED | Resolution was approved and executed |
+| REJECTED | Resolution was rejected by checker |
+
+### Pending Reason Values
+
+| Reason | Description |
+|--------|-------------|
+| AWAITING_SWITCH_RESPONSE | Waiting for response from payment switch |
+| AWAITING_BILLER_RESPONSE | Waiting for response from biller |
+| AWAITING_REVIEW | Requires manual review |
+| AWAITING_AGENT_CONFIRMATION | Waiting for agent confirmation |
+| AWAITING_CUSTOMER_VERIFICATION | Waiting for customer verification |
 
 ---
 
