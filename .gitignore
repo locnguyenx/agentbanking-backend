@@ -39,3 +39,8 @@ secrets/
 .worktrees/
 gradle/
 .grepai/
+
+# Build artifacts
+build.log
+dependencies.log
+classmap.log
