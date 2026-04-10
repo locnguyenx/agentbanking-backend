@@ -142,108 +142,48 @@ public class LedgerService {
             
             if ("00".equals(switchResponse.get("responseCode"))) {
                 agentFloatRepository.updateBalance(agentId, amount.negate());
-                
+
                 var journalEntries = new ArrayList<JournalEntryRecord>();
                 journalEntries.add(new JournalEntryRecord(null, transaction.transactionId(), EntryType.DEBIT, "AGENT_FLOAT", amount.negate(), "Withdrawal debit", LocalDateTime.now()));
                 journalEntries.add(new JournalEntryRecord(null, transaction.transactionId(), EntryType.CREDIT, "CASH_SETTLEMENT", amount, "Withdrawal credit", LocalDateTime.now()));
                 journalEntryRepository.saveAll(journalEntries);
-                
-                transaction = new TransactionRecord(
-                    transaction.transactionId(),
-                    transaction.idempotencyKey(),
-                    transaction.agentId(),
-                    transaction.transactionType(),
-                    transaction.amount(),
-                    transaction.customerFee(),
-                    transaction.agentCommission(),
-                    transaction.bankShare(),
+
+                transaction = updateTransactionStatus(
+                    transaction,
                     TransactionStatus.COMPLETED,
                     null,
-                    null,
-                    transaction.customerCardMasked(),
                     String.valueOf(switchResponse.get("switchReference")),
-                    String.valueOf(switchResponse.get("referenceNumber")),
-                    transaction.geofenceLat(),
-                    transaction.geofenceLng(),
-                    transaction.createdAt(),
-                    LocalDateTime.now(),
-                    transaction.agentTier(),
-                    transaction.targetBin(),
-                    transaction.billerCode(),
-                    transaction.ref1(),
-                    transaction.ref2(),
-                    transaction.destinationAccount()
+                    String.valueOf(switchResponse.get("referenceNumber"))
                 );
-                transaction = transactionRepository.save(transaction);
-                
+
                 Map<String, Object> result = new HashMap<>();
                 result.put("status", "COMPLETED");
                 result.put("transactionId", transaction.transactionId());
                 result.put("referenceNumber", transaction.referenceNumber());
-                
+
                 idempotencyCache.save(idempotencyKey, result, IDEMPOTENCY_TTL);
                 return result;
             } else {
-                transaction = new TransactionRecord(
-                    transaction.transactionId(),
-                    transaction.idempotencyKey(),
-                    transaction.agentId(),
-                    transaction.transactionType(),
-                    transaction.amount(),
-                    transaction.customerFee(),
-                    transaction.agentCommission(),
-                    transaction.bankShare(),
+                transaction = updateTransactionStatus(
+                    transaction,
                     TransactionStatus.FAILED,
                     (String) switchResponse.get("responseCode"),
-                    null,
-                    transaction.customerCardMasked(),
                     (String) switchResponse.get("switchReference"),
-                    null,
-                    transaction.geofenceLat(),
-                    transaction.geofenceLng(),
-                    transaction.createdAt(),
-                    LocalDateTime.now(),
-                    transaction.agentTier(),
-                    transaction.targetBin(),
-                    transaction.billerCode(),
-                    transaction.ref1(),
-                    transaction.ref2(),
-                    transaction.destinationAccount()
+                    null
                 );
-                transactionRepository.save(transaction);
-                
+
                 throw new LedgerException(String.valueOf(switchResponse.get("responseCode")), "DECLINE", "Withdrawal failed at switch");
             }
         } catch (Exception e) {
             log.error("Withdrawal error for workflow {}: {}", idempotencyKey, e.getMessage());
             if (!(e instanceof LedgerException)) {
-                transaction = new TransactionRecord(
-                    transaction.transactionId(),
-                    transaction.idempotencyKey(),
-                    transaction.agentId(),
-                    transaction.transactionType(),
-                    transaction.amount(),
-                    transaction.customerFee(),
-                    transaction.agentCommission(),
-                    transaction.bankShare(),
+                updateTransactionStatus(
+                    transaction,
                     TransactionStatus.FAILED,
                     "ERR_SYS_SWITCH_ERROR",
                     null,
-                    transaction.customerCardMasked(),
-                    null,
-                    null,
-                    transaction.geofenceLat(),
-                    transaction.geofenceLng(),
-                    transaction.createdAt(),
-                    LocalDateTime.now(),
-                    transaction.agentTier(),
-                    transaction.targetBin(),
-                    transaction.billerCode(),
-                    transaction.ref1(),
-                    transaction.ref2(),
-                    transaction.destinationAccount()
+                    null
                 );
-                transactionRepository.save(transaction);
             }
             throw e;
         }
@@ -313,112 +253,86 @@ public class LedgerService {
             
             if ("00".equals(switchResponse.get("responseCode"))) {
                 agentFloatRepository.updateBalance(agentId, amount);
-                
+
                 var journalEntries = new ArrayList<JournalEntryRecord>();
                 journalEntries.add(new JournalEntryRecord(null, transaction.transactionId(), EntryType.CREDIT, "AGENT_FLOAT", amount, "Deposit credit", LocalDateTime.now()));
                 journalEntries.add(new JournalEntryRecord(null, transaction.transactionId(), EntryType.DEBIT, "CASH_SETTLEMENT", amount.negate(), "Deposit debit", LocalDateTime.now()));
                 journalEntryRepository.saveAll(journalEntries);
-                
-                transaction = new TransactionRecord(
-                    transaction.transactionId(),
-                    transaction.idempotencyKey(),
-                    transaction.agentId(),
-                    transaction.transactionType(),
-                    transaction.amount(),
-                    transaction.customerFee(),
-                    transaction.agentCommission(),
-                    transaction.bankShare(),
+
+                transaction = updateTransactionStatus(
+                    transaction,
                     TransactionStatus.COMPLETED,
                     String.valueOf(switchResponse.get("responseCode")),
-                    transaction.customerMykad(),
-                    null,
                     String.valueOf(switchResponse.get("switchReference")),
-                    String.valueOf(switchResponse.get("referenceNumber")),
-                    transaction.geofenceLat(),
-                    transaction.geofenceLng(),
-                    transaction.createdAt(),
-                    LocalDateTime.now(),
-                    transaction.agentTier(),
-                    transaction.targetBin(),
-                    transaction.billerCode(),
-                    transaction.ref1(),
-                    transaction.ref2(),
-                    transaction.destinationAccount()
+                    String.valueOf(switchResponse.get("referenceNumber"))
                 );
-                transaction = transactionRepository.save(transaction);
-                
+
                 Map<String, Object> result = new HashMap<>();
                 result.put("status", "COMPLETED");
                 result.put("transactionId", transaction.transactionId());
                 result.put("referenceNumber", transaction.referenceNumber());
-                
+
                 idempotencyCache.save(idempotencyKey, result, IDEMPOTENCY_TTL);
                 return result;
             } else {
-                transaction = new TransactionRecord(
-                    transaction.transactionId(),
-                    transaction.idempotencyKey(),
-                    transaction.agentId(),
-                    transaction.transactionType(),
-                    transaction.amount(),
-                    transaction.customerFee(),
-                    transaction.agentCommission(),
-                    transaction.bankShare(),
+                transaction = updateTransactionStatus(
+                    transaction,
                     TransactionStatus.FAILED,
                     String.valueOf(switchResponse.get("responseCode")),
-                    transaction.customerMykad(),
-                    null,
                     String.valueOf(switchResponse.get("switchReference")),
-                    null,
-                    transaction.geofenceLat(),
-                    transaction.geofenceLng(),
-                    transaction.createdAt(),
-                    LocalDateTime.now(),
-                    transaction.agentTier(),
-                    transaction.targetBin(),
-                    transaction.billerCode(),
-                    transaction.ref1(),
-                    transaction.ref2(),
-                    transaction.destinationAccount()
+                    null
                 );
-                transactionRepository.save(transaction);
-                
+
                 throw new LedgerException(String.valueOf(switchResponse.get("responseCode")), "DECLINE", "Deposit failed at switch");
             }
         } catch (Exception e) {
             if (!(e instanceof LedgerException)) {
-                transaction = new TransactionRecord(
-                    transaction.transactionId(),
-                    transaction.idempotencyKey(),
-                    transaction.agentId(),
-                    transaction.transactionType(),
-                    transaction.amount(),
-                    transaction.customerFee(),
-                    transaction.agentCommission(),
-                    transaction.bankShare(),
+                updateTransactionStatus(
+                    transaction,
                     TransactionStatus.FAILED,
                     "ERR_SYS_SWITCH_ERROR",
-                    transaction.customerMykad(),
                     null,
-                    null,
-                    null,
-                    transaction.geofenceLat(),
-                    transaction.geofenceLng(),
-                    transaction.createdAt(),
-                    LocalDateTime.now(),
-                    transaction.agentTier(),
-                    transaction.targetBin(),
-                    transaction.billerCode(),
-                    transaction.ref1(),
-                    transaction.ref2(),
-                    transaction.destinationAccount()
+                    null
                 );
-                transactionRepository.save(transaction);
             }
             throw e;
         }
     }
-    
+
+    private TransactionRecord updateTransactionStatus(
+            TransactionRecord transaction, String newStatus,
+            String errorCode, String switchReference, String referenceNumber) {
+
+        TransactionRecord updated = new TransactionRecord(
+            transaction.transactionId(),
+            transaction.idempotencyKey(),
+            transaction.agentId(),
+            transaction.transactionType(),
+            transaction.amount(),
+            transaction.customerFee(),
+            transaction.agentCommission(),
+            transaction.bankShare(),
+            newStatus,
+            errorCode,
+            transaction.customerMykad(),
+            transaction.customerCardMasked(),
+            switchReference,
+            referenceNumber,
+            transaction.geofenceLat(),
+            transaction.geofenceLng(),
+            transaction.createdAt(),
+            LocalDateTime.now(),
+            transaction.agentTier(),
+            transaction.targetBin(),
+            transaction.billerCode(),
+            transaction.ref1(),
+            transaction.ref2(),
+            transaction.destinationAccount()
+        );
+
+        return transactionRepository.save(updated);
+    }
+
     public void provisionAgentFloat(UUID agentId, String tier, double lat, double lng,
                                    String description, String referenceNumber, 
                                    String billerCode, String targetBin, 
