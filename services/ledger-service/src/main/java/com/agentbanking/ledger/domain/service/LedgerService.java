@@ -23,9 +23,14 @@ import java.util.UUID;
 
 public class LedgerService {
      
-     private static final Duration IDEMPOTENCY_TTL = Duration.ofHours(24);
-     private static final String MYR_CURRENCY = "MYR";
-     private static final Logger log = LoggerFactory.getLogger(LedgerService.class);
+      private static final Duration IDEMPOTENCY_TTL = Duration.ofHours(24);
+      private static final String MYR_CURRENCY = "MYR";
+      private static final Logger log = LoggerFactory.getLogger(LedgerService.class);
+      
+      private static String safeGetString(Map<String, Object> map, String key) {
+          Object value = map.get(key);
+          return value != null ? value.toString() : null;
+      }
      
       private final AgentFloatRepository agentFloatRepository;
       private final TransactionRepository transactionRepository;
@@ -152,8 +157,8 @@ public class LedgerService {
                     transaction,
                     TransactionStatus.COMPLETED,
                     null,
-                    String.valueOf(switchResponse.get("switchReference")),
-                    String.valueOf(switchResponse.get("referenceNumber"))
+                    safeGetString(switchResponse, "switchReference"),
+                    safeGetString(switchResponse, "referenceNumber")
                 );
 
                 Map<String, Object> result = new HashMap<>();
@@ -164,15 +169,16 @@ public class LedgerService {
                 idempotencyCache.save(idempotencyKey, result, IDEMPOTENCY_TTL);
                 return result;
             } else {
+                String respCode = safeGetString(switchResponse, "responseCode");
                 transaction = updateTransactionStatus(
                     transaction,
                     TransactionStatus.FAILED,
-                    (String) switchResponse.get("responseCode"),
-                    (String) switchResponse.get("switchReference"),
+                    respCode,
+                    safeGetString(switchResponse, "switchReference"),
                     null
                 );
 
-                throw new LedgerException(String.valueOf(switchResponse.get("responseCode")), "DECLINE", "Withdrawal failed at switch");
+                throw new LedgerException(respCode != null ? respCode : "ERR_SWITCH_NO_RESPONSE", "DECLINE", "Withdrawal failed at switch");
             }
         } catch (Exception e) {
             log.error("Withdrawal error for workflow {}: {}", idempotencyKey, e.getMessage());
@@ -262,9 +268,9 @@ public class LedgerService {
                 transaction = updateTransactionStatus(
                     transaction,
                     TransactionStatus.COMPLETED,
-                    String.valueOf(switchResponse.get("responseCode")),
-                    String.valueOf(switchResponse.get("switchReference")),
-                    String.valueOf(switchResponse.get("referenceNumber"))
+                    safeGetString(switchResponse, "responseCode"),
+                    safeGetString(switchResponse, "switchReference"),
+                    safeGetString(switchResponse, "referenceNumber")
                 );
 
                 Map<String, Object> result = new HashMap<>();
@@ -275,15 +281,16 @@ public class LedgerService {
                 idempotencyCache.save(idempotencyKey, result, IDEMPOTENCY_TTL);
                 return result;
             } else {
+                String respCode = safeGetString(switchResponse, "responseCode");
                 transaction = updateTransactionStatus(
                     transaction,
                     TransactionStatus.FAILED,
-                    String.valueOf(switchResponse.get("responseCode")),
-                    String.valueOf(switchResponse.get("switchReference")),
+                    respCode,
+                    safeGetString(switchResponse, "switchReference"),
                     null
                 );
 
-                throw new LedgerException(String.valueOf(switchResponse.get("responseCode")), "DECLINE", "Deposit failed at switch");
+                throw new LedgerException(respCode != null ? respCode : "ERR_SWITCH_NO_RESPONSE", "DECLINE", "Deposit failed at switch");
             }
         } catch (Exception e) {
             if (!(e instanceof LedgerException)) {
