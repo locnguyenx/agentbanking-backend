@@ -20,23 +20,15 @@ interface WorkflowItem {
   workflowId: string
   transactionId: string
   transactionType: string
-  agentId: string
-  amount: number
+  amount: number | null
   status: string
   createdAt: string
-  completedAt: string
-  agentTier?: string
-  billerCode?: string
-  targetBin?: string
-  ref1?: string
-  ref2?: string
-  destinationAccount?: string
   pendingReason?: string
 }
 
 interface WorkflowStatus {
   status: string
-  pendingReason: string | null
+  pendingReason?: string
   workflowId: string
   transactionId: string | null
   amount: number | null
@@ -497,6 +489,8 @@ function WorkflowDetailModal({ workflow, onClose }: { workflow: WorkflowItem; on
     }} onClick={onClose}>
       <div style={{ 
         width: 600, 
+        maxHeight: '85vh',
+        overflow: 'auto',
         background: 'white',
         borderRadius: 16,
         boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
@@ -518,6 +512,24 @@ function WorkflowDetailModal({ workflow, onClose }: { workflow: WorkflowItem; on
           <div style={{ padding: 40, textAlign: 'center' }}>Loading...</div>
         ) : (
           <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 16 }}>
+            {workflow.status === 'PENDING' && (
+              <button
+                onClick={() => createCaseMutation.mutate(workflow.workflowId)}
+                disabled={createCaseMutation.isPending}
+                style={{
+                  padding: '12px 20px',
+                  background: '#2563eb',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: 8,
+                  fontWeight: 600,
+                  cursor: createCaseMutation.isPending ? 'not-allowed' : 'pointer',
+                  opacity: createCaseMutation.isPending ? 0.7 : 1,
+                }}
+              >
+                Create Resolution Case
+              </button>
+            )}
             <div style={{ display: 'flex', alignItems: 'center', gap: 16, padding: 20, background: '#f8fafc', borderRadius: 12 }}>
               <div style={{
                 width: 56,
@@ -537,7 +549,7 @@ function WorkflowDetailModal({ workflow, onClose }: { workflow: WorkflowItem; on
               </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
               <div style={{ background: '#f8fafc', padding: 16, borderRadius: 12 }}>
                 <label style={{ fontSize: 11, color: '#64748b', textTransform: 'uppercase', letterSpacing: 0.5, fontWeight: 600 }}>Workflow ID</label>
                 <p style={{ fontWeight: 500, margin: '8px 0 0 0', fontSize: 13, fontFamily: 'monospace' }}>{workflow.workflowId}</p>
@@ -559,10 +571,10 @@ function WorkflowDetailModal({ workflow, onClose }: { workflow: WorkflowItem; on
                   <span style={{ marginLeft: 8, fontWeight: 500 }}>{status?.status || workflow.status}</span>
                 </p>
               </div>
-              {(status?.status === 'PENDING' || status?.status === 'RUNNING') && status?.pendingReason && (
+              {(status?.status === 'PENDING' || status?.status === 'RUNNING') && (
                 <div style={{ background: '#fef3c7', padding: 16, borderRadius: 12, border: '1px solid #fcd34d', gridColumn: '1 / -1' }}>
                   <label style={{ fontSize: 11, color: '#b45309', textTransform: 'uppercase', letterSpacing: 0.5, fontWeight: 600 }}>Pending Reason</label>
-                  <p style={{ fontWeight: 500, margin: '8px 0 0 0', fontSize: 14, color: '#92400e' }}>{status.pendingReason}</p>
+                  <p style={{ fontWeight: 500, margin: '8px 0 0 0', fontSize: 14, color: '#92400e' }}>{status?.pendingReason || workflow.pendingReason || '-'}</p>
                 </div>
               )}
               <div style={{ background: '#f8fafc', padding: 16, borderRadius: 12 }}>
@@ -621,6 +633,28 @@ function WorkflowDetailModal({ workflow, onClose }: { workflow: WorkflowItem; on
             )}
           </div>
         )}
+        <div style={{ 
+          padding: 16, 
+          borderTop: '1px solid #e2e8f0',
+          display: 'flex',
+          justifyContent: 'flex-end',
+          gap: 12
+        }}>
+          <button
+            onClick={onClose}
+            style={{
+              padding: '10px 16px',
+              background: '#f1f5f9',
+              color: '#475569',
+              border: 'none',
+              borderRadius: 8,
+              fontWeight: 500,
+              cursor: 'pointer',
+            }}
+          >
+            Close
+          </button>
+        </div>
       </div>
 
       

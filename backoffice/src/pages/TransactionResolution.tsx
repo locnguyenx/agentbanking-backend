@@ -598,6 +598,8 @@ toast.success('Resolution rejected successfully!')
         }} onClick={() => setSelectedItem(null)}>
           <div style={{ 
             width: 520, 
+            maxHeight: '85vh',
+            overflow: 'auto',
             background: 'white',
             borderRadius: 16,
             boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
@@ -642,7 +644,7 @@ toast.success('Resolution rejected successfully!')
                   <p style={{ fontSize: 13, color: '#64748b', margin: '4px 0 0 0', fontFamily: 'monospace' }}>{selectedItem.workflowId}</p>
                 </div>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
                 <div style={{ background: '#f8fafc', padding: 16, borderRadius: 12 }}>
                   <label style={{ fontSize: 11, color: '#64748b', textTransform: 'uppercase', letterSpacing: 0.5, fontWeight: 600 }}>Transaction ID</label>
                   <p style={{ fontWeight: 500, margin: '8px 0 0 0', fontSize: 14, fontFamily: 'monospace' }}>{selectedItem.transactionId}</p>
@@ -667,16 +669,16 @@ toast.success('Resolution rejected successfully!')
                   <label style={{ fontSize: 11, color: '#64748b', textTransform: 'uppercase', letterSpacing: 0.5, fontWeight: 600 }}>Status</label>
                   <p style={{ margin: '8px 0 0 0' }}>{getStatusBadge(selectedItem.status)}</p>
                 </div>
-                {selectedItem.status === 'PENDING_MAKER' && selectedItem.makerPendingReason && (
+                {selectedItem.status === 'PENDING_MAKER' && (
                   <div style={{ background: '#fef3c7', padding: 16, borderRadius: 12, border: '1px solid #fcd34d', gridColumn: '1 / -1' }}>
                     <label style={{ fontSize: 11, color: '#b45309', textTransform: 'uppercase', letterSpacing: 0.5, fontWeight: 600 }}>Maker Pending Reason</label>
-                    <p style={{ fontWeight: 500, margin: '8px 0 0 0', fontSize: 14, color: '#92400e' }}>{selectedItem.makerPendingReason}</p>
+                    <p style={{ fontWeight: 500, margin: '8px 0 0 0', fontSize: 14, color: '#92400e' }}>{selectedItem.makerPendingReason || '-'}</p>
                   </div>
                 )}
-                {selectedItem.status === 'PENDING_CHECKER' && selectedItem.checkerPendingReason && (
+                {selectedItem.status === 'PENDING_CHECKER' && (
                   <div style={{ background: '#fef3c7', padding: 16, borderRadius: 12, border: '1px solid #fcd34d', gridColumn: '1 / -1' }}>
                     <label style={{ fontSize: 11, color: '#b45309', textTransform: 'uppercase', letterSpacing: 0.5, fontWeight: 600 }}>Checker Pending Reason</label>
-                    <p style={{ fontWeight: 500, margin: '8px 0 0 0', fontSize: 14, color: '#92400e' }}>{selectedItem.checkerPendingReason}</p>
+                    <p style={{ fontWeight: 500, margin: '8px 0 0 0', fontSize: 14, color: '#92400e' }}>{selectedItem.checkerPendingReason || '-'}</p>
                   </div>
                 )}
                 <div style={{ background: '#f8fafc', padding: 16, borderRadius: 12 }}>
@@ -767,6 +769,8 @@ toast.success('Resolution rejected successfully!')
         }} onClick={() => setShowProposalModal(false)}>
           <div style={{ 
             width: 480, 
+            maxHeight: '85vh',
+            overflow: 'auto',
             background: 'white',
             borderRadius: 16,
             boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
@@ -898,6 +902,8 @@ toast.success('Resolution rejected successfully!')
         }} onClick={() => setShowForceResolveModal(false)}>
           <div style={{ 
             width: 480, 
+            maxHeight: '85vh',
+            overflow: 'auto',
             background: 'white',
             borderRadius: 16,
             boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'

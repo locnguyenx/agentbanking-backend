@@ -714,7 +714,7 @@ const filteredAgents = agents.filter(agent => {
                 <X size={20} color="#64748b" />
               </button>
             </div>
-            <div style={{ padding: 24, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+            <div style={{ padding: 24, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 20 }}>
               <div style={{ background: '#f8fafc', padding: 16, borderRadius: 12 }}>
                 <label style={{ fontSize: 11, color: '#64748b', textTransform: 'uppercase', letterSpacing: 0.5, fontWeight: 600 }}>Agent Code</label>
                 <p style={{ fontWeight: 500, margin: '8px 0 0 0', fontSize: 15, fontFamily: 'monospace' }}>{viewAgent.agentCode}</p>
