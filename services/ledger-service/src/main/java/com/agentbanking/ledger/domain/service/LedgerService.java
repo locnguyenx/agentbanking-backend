@@ -100,7 +100,7 @@ public class LedgerService {
         if (agentFloat.merchantGpsLat() != null && agentFloat.merchantGpsLng() != null) {
             if (!GeofenceChecker.isWithinGeofence(
                     agentFloat.merchantGpsLat(), agentFloat.merchantGpsLng(),
-                    geofenceLat, geofenceLng, 1.0)) {
+                    geofenceLat, geofenceLng, 10.0)) {
                 efmEventPublisher.publishFraudAlert("GEOFENCE_VIOLATION", null, agentId,
                     "Withdrawal initiated outside merchant geofence");
                 throw new LedgerException(ErrorCodes.ERR_GEOFENCE_VIOLATION, "DECLINE", 
