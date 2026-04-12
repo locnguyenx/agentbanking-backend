@@ -6,7 +6,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 
 import java.math.BigDecimal;
 
-@FeignClient(name = "essp-service", url = "${essp-service.url}")
+@FeignClient(name = "essp-service", url = "${essp-service.url}", fallbackFactory = ESSPServiceClientFallbackFactory.class)
 public interface ESSPServiceClient {
 
     @PostMapping("/internal/validate-purchase")

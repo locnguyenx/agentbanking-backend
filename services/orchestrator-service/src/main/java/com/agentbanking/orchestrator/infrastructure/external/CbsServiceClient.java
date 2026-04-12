@@ -9,7 +9,7 @@ import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 
-@FeignClient(name = "cbs-service", url = "${cbs-connector.url}")
+@FeignClient(name = "cbs-service", url = "${cbs-connector.url}", fallbackFactory = CbsServiceClientFallbackFactory.class)
 public interface CbsServiceClient {
 
     @PostMapping("/internal/authorize")

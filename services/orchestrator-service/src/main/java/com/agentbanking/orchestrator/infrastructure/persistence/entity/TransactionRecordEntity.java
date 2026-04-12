@@ -45,6 +45,9 @@ public class TransactionRecordEntity {
     @Column(name = "pending_reason", length = 100)
     private String pendingReason;
 
+    @Column(name = "error_details", columnDefinition = "TEXT")
+    private String errorDetails;
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
@@ -148,6 +151,14 @@ public class TransactionRecordEntity {
 
     public void setPendingReason(String pendingReason) {
         this.pendingReason = pendingReason;
+    }
+
+    public String getErrorDetails() {
+        return errorDetails;
+    }
+
+    public void setErrorDetails(String errorDetails) {
+        this.errorDetails = errorDetails;
     }
 
     public Instant getCreatedAt() {

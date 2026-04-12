@@ -54,6 +54,7 @@ public class QueryWorkflowStatusUseCaseImpl implements QueryWorkflowStatusUseCas
                     WorkflowResult result = new WorkflowResult(
                             record.status(),
                             record.pendingReason(),
+                            record.errorDetails(),
                             record.id(),
                             record.errorCode(),
                             record.errorMessage(),

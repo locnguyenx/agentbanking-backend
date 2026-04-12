@@ -107,6 +107,10 @@ export const api = {
   getAdminMetrics: (service: string) => client.get(`/admin/metrics/${service}`).then((r) => r.data),
   getAdminAuditLogs: (params?: { service?: string; page?: number; size?: number }) =>
     client.get('/admin/audit-logs', { params }).then((r) => r.data),
+
+  // Workflow Execution Details (Enhanced)
+  getWorkflowExecutionDetails: (workflowId: string) => 
+    client.get(`/backoffice/transactions/${workflowId}/execution-details`).then((r) => r.data),
 }
 
 export default api

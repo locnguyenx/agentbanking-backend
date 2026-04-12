@@ -1,6 +1,6 @@
 package com.agentbanking.orchestrator.integration;
 
-import com.agentbanking.orchestrator.integration.AbstractOrchestratorIntegrationTest;
+import com.agentbanking.orchestrator.integration.AbstractOrchestratorRealInfraIntegrationTest;
 import com.agentbanking.orchestrator.domain.model.TransactionType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -21,7 +21,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @AutoConfigureMockMvc
 @DisplayName("Orchestrator API Integration Tests")
-class OrchestratorControllerIntegrationTest extends AbstractOrchestratorIntegrationTest {
+class OrchestratorControllerIntegrationTest extends AbstractOrchestratorRealInfraIntegrationTest {
 
     @Autowired
     private MockMvc mockMvc;

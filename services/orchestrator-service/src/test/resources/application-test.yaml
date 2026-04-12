@@ -7,12 +7,13 @@ spring:
     password: postgres
   jpa:
     hibernate:
-      ddl-auto: none
+      ddl-auto: create-drop
   flyway:
-    enabled: true
-    locations: filesystem:src/main/resources/db/migration
-  autoconfigure:
-    exclude:
-      - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
-      - org.springframework.boot.autoconfigure.data.redis.RedisReactiveAutoConfiguration
-      - org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration
+    enabled: false
+  data:
+    redis:
+      host: localhost
+      port: 6379
+  temporal:
+    connection:
+      target: localhost:7233

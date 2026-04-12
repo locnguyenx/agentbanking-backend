@@ -9,6 +9,7 @@ import com.agentbanking.orchestrator.domain.port.out.EventPublisherPort.Transact
 import com.agentbanking.orchestrator.domain.port.out.LedgerServicePort.*;
 import com.agentbanking.orchestrator.domain.port.out.RulesServicePort.*;
 import com.agentbanking.orchestrator.domain.port.out.SwitchAdapterPort.*;
+
 import io.temporal.activity.ActivityOptions;
 import io.temporal.spring.boot.WorkflowImpl;
 import io.temporal.workflow.Workflow;
@@ -18,70 +19,85 @@ import java.math.BigDecimal;
 import java.time.Duration;
 import java.util.UUID;
 
-@WorkflowImpl(workers = "agent-banking-tasks")
+@WorkflowImpl(taskQueues = "agent-banking-tasks")
 public class WithdrawalWorkflowImpl implements WithdrawalWorkflow {
 
     private static final Logger log = Workflow.getLogger(WithdrawalWorkflowImpl.class);
 
-    private final CheckVelocityActivity checkVelocityActivity;
-    private final EvaluateStpActivity evaluateStpActivity;
-    private final CalculateFeesActivity calculateFeesActivity;
-    private final BlockFloatActivity blockFloatActivity;
-    private final CommitFloatActivity commitFloatActivity;
-    private final ReleaseFloatActivity releaseFloatActivity;
-    private final AuthorizeAtSwitchActivity authorizeAtSwitchActivity;
-    private final SendReversalToSwitchActivity sendReversalToSwitchActivity;
-    private final PublishKafkaEventActivity publishKafkaEventActivity;
-    private final SaveResolutionCaseActivity saveResolutionCaseActivity;
-    private final PersistWorkflowResultActivity persistWorkflowResultActivity;
+    private CheckVelocityActivity checkVelocityActivity;
+    private EvaluateStpActivity evaluateStpActivity;
+    private CalculateFeesActivity calculateFeesActivity;
+    private BlockFloatActivity blockFloatActivity;
+    private CommitFloatActivity commitFloatActivity;
+    private ReleaseFloatActivity releaseFloatActivity;
+    private AuthorizeAtSwitchActivity authorizeAtSwitchActivity;
+    private SendReversalToSwitchActivity sendReversalToSwitchActivity;
+    private PublishKafkaEventActivity publishKafkaEventActivity;
+    private SaveResolutionCaseActivity saveResolutionCaseActivity;
+    private PersistWorkflowResultActivity persistWorkflowResultActivity;
 
     private WorkflowStatus currentStatus = WorkflowStatus.PENDING;
 
+    public WithdrawalWorkflowImpl(
+            CheckVelocityActivity checkVelocityActivity,
+            EvaluateStpActivity evaluateStpActivity,
+            CalculateFeesActivity calculateFeesActivity,
+            BlockFloatActivity blockFloatActivity,
+            CommitFloatActivity commitFloatActivity,
+            ReleaseFloatActivity releaseFloatActivity,
+            AuthorizeAtSwitchActivity authorizeAtSwitchActivity,
+            SendReversalToSwitchActivity sendReversalToSwitchActivity,
+            PublishKafkaEventActivity publishKafkaEventActivity,
+            SaveResolutionCaseActivity saveResolutionCaseActivity,
+            PersistWorkflowResultActivity persistWorkflowResultActivity) {
+        this.checkVelocityActivity = checkVelocityActivity;
+        this.evaluateStpActivity = evaluateStpActivity;
+        this.calculateFeesActivity = calculateFeesActivity;
+        this.blockFloatActivity = blockFloatActivity;
+        this.commitFloatActivity = commitFloatActivity;
+        this.releaseFloatActivity = releaseFloatActivity;
+        this.authorizeAtSwitchActivity = authorizeAtSwitchActivity;
+        this.sendReversalToSwitchActivity = sendReversalToSwitchActivity;
+        this.publishKafkaEventActivity = publishKafkaEventActivity;
+        this.saveResolutionCaseActivity = saveResolutionCaseActivity;
+        this.persistWorkflowResultActivity = persistWorkflowResultActivity;
+    }
+
+    @SuppressWarnings("SpringJavaAutowiredMembersInspection")
     public WithdrawalWorkflowImpl() {
-        ActivityOptions defaultOptions = ActivityOptions.newBuilder()
-                .setStartToCloseTimeout(Duration.ofSeconds(10))
-                .setRetryOptions(io.temporal.common.RetryOptions.newBuilder()
-                        .setMaximumAttempts(3)
-                        .setInitialInterval(Duration.ofSeconds(1))
-                        .setMaximumInterval(Duration.ofSeconds(4))
-                        .build())
-                .build();
-
-        ActivityOptions noRetryOptions = ActivityOptions.newBuilder()
-                .setStartToCloseTimeout(Duration.ofSeconds(10))
-                .setRetryOptions(io.temporal.common.RetryOptions.newBuilder()
-                        .setMaximumAttempts(1)
-                        .build())
-                .build();
-
-        ActivityOptions switchAuthOptions = ActivityOptions.newBuilder()
-                .setStartToCloseTimeout(Duration.ofSeconds(25))
-                .setRetryOptions(io.temporal.common.RetryOptions.newBuilder()
-                        .setMaximumAttempts(1)
-                        .build())
-                .build();
-
-        ActivityOptions reversalOptions = ActivityOptions.newBuilder()
-                .setStartToCloseTimeout(Duration.ofSeconds(10))
-                .setScheduleToCloseTimeout(Duration.ofSeconds(60))
-                .setRetryOptions(io.temporal.common.RetryOptions.newBuilder()
-                        .setMaximumAttempts(Integer.MAX_VALUE)
-                        .setInitialInterval(Duration.ofSeconds(60))
-                        .setMaximumInterval(Duration.ofSeconds(60))
-                        .build())
-                .build();
-
-        this.checkVelocityActivity = Workflow.newActivityStub(CheckVelocityActivity.class, defaultOptions);
-        this.evaluateStpActivity = Workflow.newActivityStub(EvaluateStpActivity.class, defaultOptions);
-        this.calculateFeesActivity = Workflow.newActivityStub(CalculateFeesActivity.class, defaultOptions);
-        this.blockFloatActivity = Workflow.newActivityStub(BlockFloatActivity.class, noRetryOptions);
-        this.commitFloatActivity = Workflow.newActivityStub(CommitFloatActivity.class, defaultOptions);
-        this.releaseFloatActivity = Workflow.newActivityStub(ReleaseFloatActivity.class, defaultOptions);
-        this.authorizeAtSwitchActivity = Workflow.newActivityStub(AuthorizeAtSwitchActivity.class, switchAuthOptions);
-        this.sendReversalToSwitchActivity = Workflow.newActivityStub(SendReversalToSwitchActivity.class, reversalOptions);
-        this.saveResolutionCaseActivity = Workflow.newActivityStub(SaveResolutionCaseActivity.class, defaultOptions);
-        this.publishKafkaEventActivity = Workflow.newActivityStub(PublishKafkaEventActivity.class, defaultOptions);
-        this.persistWorkflowResultActivity = Workflow.newActivityStub(PersistWorkflowResultActivity.class, defaultOptions);
+        this.checkVelocityActivity = Workflow.newActivityStub(CheckVelocityActivity.class, ActivityOptions.newBuilder()
+                .setStartToCloseTimeout(Duration.ofMinutes(5))
+                .build());
+        this.evaluateStpActivity = Workflow.newActivityStub(EvaluateStpActivity.class, ActivityOptions.newBuilder()
+                .setStartToCloseTimeout(Duration.ofMinutes(3))
+                .build());
+        this.calculateFeesActivity = Workflow.newActivityStub(CalculateFeesActivity.class, ActivityOptions.newBuilder()
+                .setStartToCloseTimeout(Duration.ofMinutes(1))
+                .build());
+        this.blockFloatActivity = Workflow.newActivityStub(BlockFloatActivity.class, ActivityOptions.newBuilder()
+                .setStartToCloseTimeout(Duration.ofMinutes(2))
+                .build());
+        this.commitFloatActivity = Workflow.newActivityStub(CommitFloatActivity.class, ActivityOptions.newBuilder()
+                .setStartToCloseTimeout(Duration.ofMinutes(2))
+                .build());
+        this.releaseFloatActivity = Workflow.newActivityStub(ReleaseFloatActivity.class, ActivityOptions.newBuilder()
+                .setStartToCloseTimeout(Duration.ofMinutes(2))
+                .build());
+        this.authorizeAtSwitchActivity = Workflow.newActivityStub(AuthorizeAtSwitchActivity.class, ActivityOptions.newBuilder()
+                .setStartToCloseTimeout(Duration.ofMinutes(3))
+                .build());
+        this.sendReversalToSwitchActivity = Workflow.newActivityStub(SendReversalToSwitchActivity.class, ActivityOptions.newBuilder()
+                .setStartToCloseTimeout(Duration.ofMinutes(3))
+                .build());
+        this.publishKafkaEventActivity = Workflow.newActivityStub(PublishKafkaEventActivity.class, ActivityOptions.newBuilder()
+                .setStartToCloseTimeout(Duration.ofMinutes(1))
+                .build());
+        this.saveResolutionCaseActivity = Workflow.newActivityStub(SaveResolutionCaseActivity.class, ActivityOptions.newBuilder()
+                .setStartToCloseTimeout(Duration.ofMinutes(2))
+                .build());
+        this.persistWorkflowResultActivity = Workflow.newActivityStub(PersistWorkflowResultActivity.class, ActivityOptions.newBuilder()
+                .setStartToCloseTimeout(Duration.ofMinutes(2))
+                .build());
     }
 
     @Override
@@ -96,15 +112,22 @@ public class WithdrawalWorkflowImpl implements WithdrawalWorkflow {
                 currentStatus = WorkflowStatus.FAILED;
                 WorkflowResult failResult = WorkflowResult.failed(velocityResult.errorCode(), "Velocity check failed", "DECLINE");
                 persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
-                        input.idempotencyKey(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null));
+                        input.idempotencyKey(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null, "Velocity check failed"));
                 return failResult;
             }
 
             StpDecision stpDecision = evaluateStpActivity.evaluateStp(
-                    "CASH_WITHDRAWAL",
-                    input.agentId().toString(),
-                    input.amount().toString(),
-                    input.customerMykad());
+                    new EvaluateStpActivity.Input(
+                            "CASH_WITHDRAWAL",
+                            input.agentId().toString(),
+                            input.amount().toString(),
+                            input.customerMykad(),
+                            input.agentTier(),
+                            0,
+                            "0",
+                            "0"
+                    )
+            );
             if (!stpDecision.approved()) {
                 // Auto-create resolution case for non-STP transactions
                 if (stpDecision.category().equals("NON_STP") || 
@@ -121,7 +144,7 @@ public class WithdrawalWorkflowImpl implements WithdrawalWorkflow {
                 currentStatus = WorkflowStatus.PENDING_REVIEW;
                 WorkflowResult stpResult = WorkflowResult.failed("ERR_STP_REVIEW", stpDecision.reason(), "REVIEW");
                 persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
-                        input.idempotencyKey(), "PENDING_REVIEW", stpResult.errorCode(), stpResult.errorMessage(), null, null, null));
+                        input.idempotencyKey(), "PENDING_REVIEW", stpResult.errorCode(), stpResult.errorMessage(), null, null, null, stpDecision.reason()));
                 return stpResult;
             }
 
@@ -149,7 +172,7 @@ public class WithdrawalWorkflowImpl implements WithdrawalWorkflow {
                 currentStatus = WorkflowStatus.FAILED;
                 WorkflowResult blockFailResult = WorkflowResult.failed(blockResult.errorCode(), "Float block failed", "DECLINE");
                 persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
-                        input.idempotencyKey(), "FAILED", blockFailResult.errorCode(), blockFailResult.errorMessage(), null, null, null));
+                        input.idempotencyKey(), "FAILED", blockFailResult.errorCode(), blockFailResult.errorMessage(), null, null, null, "Float block failed"));
                 return blockFailResult;
             }
             UUID transactionId = blockResult.transactionId();
@@ -170,7 +193,7 @@ public class WithdrawalWorkflowImpl implements WithdrawalWorkflow {
                 currentStatus = WorkflowStatus.FAILED;
                 WorkflowResult authFailResult = WorkflowResult.failed(errorCode, "Switch authorization failed", actionCode);
                 persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
-                        input.idempotencyKey(), "FAILED", authFailResult.errorCode(), authFailResult.errorMessage(), null, null, null));
+                        input.idempotencyKey(), "FAILED", authFailResult.errorCode(), authFailResult.errorMessage(), null, null, null, "Switch authorization failed"));
                 return authFailResult;
             }
 
@@ -183,7 +206,7 @@ public class WithdrawalWorkflowImpl implements WithdrawalWorkflow {
                 currentStatus = WorkflowStatus.FAILED;
                 WorkflowResult commitFailResult = WorkflowResult.failed(commitResult.errorCode(), "Float commit failed", "RETRY");
                 persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
-                        input.idempotencyKey(), "FAILED", commitFailResult.errorCode(), commitFailResult.errorMessage(), null, null, null));
+                        input.idempotencyKey(), "FAILED", commitFailResult.errorCode(), commitFailResult.errorMessage(), null, null, null, "Float commit failed"));
                 return commitFailResult;
             }
 
@@ -201,7 +224,7 @@ public class WithdrawalWorkflowImpl implements WithdrawalWorkflow {
                     input.amount(), fees.customerFee());
             persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
                     input.idempotencyKey(), "COMPLETED", null, null,
-                    authResult.referenceCode(), fees.customerFee(), authResult.referenceCode()));
+                    authResult.referenceCode(), fees.customerFee(), authResult.referenceCode(), null));
             return completedResult;
 
         } catch (Exception e) {
@@ -210,7 +233,7 @@ public class WithdrawalWorkflowImpl implements WithdrawalWorkflow {
             WorkflowResult sysFailResult = WorkflowResult.failed("ERR_SYS_WORKFLOW_FAILED", e.getMessage(), "REVIEW");
             try {
                 persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
-                        input.idempotencyKey(), "FAILED", sysFailResult.errorCode(), sysFailResult.errorMessage(), null, null, null));
+                        input.idempotencyKey(), "FAILED", sysFailResult.errorCode(), sysFailResult.errorMessage(), null, null, null, "Workflow exception: " + e.getMessage()));
             } catch (Exception ex) {
                 log.warn("Failed to persist workflow failure result: {}", ex.getMessage());
             }

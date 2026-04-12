@@ -1,8 +1,11 @@
 package com.agentbanking.orchestrator.application.activity;
 
-import io.temporal.activity.ActivityInterface;
 
+
+import io.temporal.activity.ActivityInterface;
 import java.math.BigDecimal;
+
+
 
 @ActivityInterface
 public interface PersistWorkflowResultActivity {
@@ -16,6 +19,7 @@ public interface PersistWorkflowResultActivity {
         String errorMessage,
         String externalReference,
         BigDecimal customerFee,
-        String referenceNumber
+        String referenceNumber,
+        String pendingReason
     ) {}
 }

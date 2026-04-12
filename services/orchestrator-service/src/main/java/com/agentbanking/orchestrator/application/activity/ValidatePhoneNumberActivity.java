@@ -1,7 +1,11 @@
 package com.agentbanking.orchestrator.application.activity;
 
-import com.agentbanking.orchestrator.domain.port.out.TelcoAggregatorPort.TelcoValidationResult;
 import io.temporal.activity.ActivityInterface;
+
+import com.agentbanking.orchestrator.domain.port.out.TelcoAggregatorPort.TelcoValidationResult;
+
+
+
 
 @ActivityInterface
 public interface ValidatePhoneNumberActivity {

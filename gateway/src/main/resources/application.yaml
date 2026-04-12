@@ -292,16 +292,71 @@ spring:
           metadata:
             route-order: 1
 
-        # Orchestrator Backoffice Resolution routes
+        # Orchestrator Backoffice Resolution routes - specific paths without rewrite
         - id: orchestrator-backoffice-resolution
           uri: ${orchestrator-service.url:http://orchestrator-service:8086}
           predicates:
-            - Path=/api/v1/backoffice/transactions/**
+            - Path=/api/v1/backoffice/transactions/{workflowId}/create-case
+          filters:
+            - JwtAuth
+          metadata:
+            route-order: 10
+
+        - id: orchestrator-backoffice-resolution-maker
+          uri: ${orchestrator-service.url:http://orchestrator-service:8086}
+          predicates:
+            - Path=/api/v1/backoffice/transactions/{workflowId}/maker-propose
+          filters:
+            - JwtAuth
+          metadata:
+            route-order: 10
+
+        - id: orchestrator-backoffice-resolution-checker
+          uri: ${orchestrator-service.url:http://orchestrator-service:8086}
+          predicates:
+            - Path=/api/v1/backoffice/transactions/{workflowId}/checker-approve,/api/v1/backoffice/transactions/{workflowId}/checker-reject
+          filters:
+            - JwtAuth
+          metadata:
+            route-order: 10
+
+        - id: orchestrator-backoffice-resolution-details
+          uri: ${orchestrator-service.url:http://orchestrator-service:8086}
+          predicates:
+            - Path=/api/v1/backoffice/transactions/{workflowId}/execution-details
+          filters:
+            - JwtAuth
+          metadata:
+            route-order: 10
+
+        - id: orchestrator-backoffice-resolution-force
+          uri: ${orchestrator-service.url:http://orchestrator-service:8086}
+          predicates:
+            - Path=/api/v1/backoffice/transactions/{workflowId}/force-resolve
+          filters:
+            - JwtAuth
+          metadata:
+            route-order: 10
+
+        # List all workflows - with rewrite
+        - id: orchestrator-backoffice-list
+          uri: ${orchestrator-service.url:http://orchestrator-service:8086}
+          predicates:
+            - Path=/api/v1/backoffice/transactions/workflows
+          filters:
+            - JwtAuth
+          metadata:
+            route-order: 20
+
+        - id: orchestrator-backoffice-resolutions
+          uri: ${orchestrator-service.url:http://orchestrator-service:8086}
+          predicates:
+            - Path=/api/v1/backoffice/transactions
           filters:
             - JwtAuth
             - RewritePath=/api/v1/backoffice/transactions/(?<segment>.*), /api/v1/backoffice/transactions/${segment}
           metadata:
-            route-order: 10
+            route-order: 30
 
         # Orchestrator internal endpoints (including audit-logs)
         - id: orchestrator-internal

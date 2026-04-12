@@ -14,44 +14,85 @@ import io.temporal.activity.ActivityOptions;
 import io.temporal.spring.boot.WorkflowImpl;
 import io.temporal.workflow.Workflow;
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.util.UUID;
 
-@WorkflowImpl(workers = "agent-banking-tasks")
+@WorkflowImpl(taskQueues = "agent-banking-tasks")
 public class CashlessPaymentWorkflowImpl implements CashlessPaymentWorkflow {
 
     private static final Logger log = Workflow.getLogger(CashlessPaymentWorkflowImpl.class);
 
-    private final ValidateFloatCapacityActivity validateFloatCapacityActivity;
-    private final BlockFloatActivity blockFloatActivity;
-    private final CommitFloatActivity commitFloatActivity;
-    private final ReleaseFloatActivity releaseFloatActivity;
-    private final GenerateDynamicQRActivity generateDynamicQRActivity;
-    private final WaitForQRPaymentActivity waitForQRPaymentActivity;
-    private final SendRequestToPayActivity sendRequestToPayActivity;
-    private final WaitForRTPApprovalActivity waitForRTPApprovalActivity;
-    private final CreditAgentFloatActivity creditAgentFloatActivity;
-    private final PersistWorkflowResultActivity persistWorkflowResultActivity;
+    private ValidateFloatCapacityActivity validateFloatCapacityActivity;
+    private BlockFloatActivity blockFloatActivity;
+    private CommitFloatActivity commitFloatActivity;
+    private ReleaseFloatActivity releaseFloatActivity;
+    private GenerateDynamicQRActivity generateDynamicQRActivity;
+    private WaitForQRPaymentActivity waitForQRPaymentActivity;
+    private SendRequestToPayActivity sendRequestToPayActivity;
+    private WaitForRTPApprovalActivity waitForRTPApprovalActivity;
+    private CreditAgentFloatActivity creditAgentFloatActivity;
+    private PersistWorkflowResultActivity persistWorkflowResultActivity;
 
     private WorkflowStatus currentStatus = WorkflowStatus.PENDING;
 
+    public CashlessPaymentWorkflowImpl(
+            ValidateFloatCapacityActivity validateFloatCapacityActivity,
+            BlockFloatActivity blockFloatActivity,
+            CommitFloatActivity commitFloatActivity,
+            ReleaseFloatActivity releaseFloatActivity,
+            GenerateDynamicQRActivity generateDynamicQRActivity,
+            WaitForQRPaymentActivity waitForQRPaymentActivity,
+            SendRequestToPayActivity sendRequestToPayActivity,
+            WaitForRTPApprovalActivity waitForRTPApprovalActivity,
+            CreditAgentFloatActivity creditAgentFloatActivity,
+            PersistWorkflowResultActivity persistWorkflowResultActivity) {
+        this.validateFloatCapacityActivity = validateFloatCapacityActivity;
+        this.blockFloatActivity = blockFloatActivity;
+        this.commitFloatActivity = commitFloatActivity;
+        this.releaseFloatActivity = releaseFloatActivity;
+        this.generateDynamicQRActivity = generateDynamicQRActivity;
+        this.waitForQRPaymentActivity = waitForQRPaymentActivity;
+        this.sendRequestToPayActivity = sendRequestToPayActivity;
+        this.waitForRTPApprovalActivity = waitForRTPApprovalActivity;
+        this.creditAgentFloatActivity = creditAgentFloatActivity;
+        this.persistWorkflowResultActivity = persistWorkflowResultActivity;
+    }
+
+    @SuppressWarnings("SpringJavaAutowiredMembersInspection")
     public CashlessPaymentWorkflowImpl() {
-        ActivityOptions defaultOptions = ActivityOptions.newBuilder()
-                .setStartToCloseTimeout(Duration.ofSeconds(30))
-                .build();
-        
-        this.validateFloatCapacityActivity = Workflow.newActivityStub(ValidateFloatCapacityActivity.class, defaultOptions);
-        this.blockFloatActivity = Workflow.newActivityStub(BlockFloatActivity.class, defaultOptions);
-        this.commitFloatActivity = Workflow.newActivityStub(CommitFloatActivity.class, defaultOptions);
-        this.releaseFloatActivity = Workflow.newActivityStub(ReleaseFloatActivity.class, defaultOptions);
-        this.generateDynamicQRActivity = Workflow.newActivityStub(GenerateDynamicQRActivity.class, defaultOptions);
-        this.waitForQRPaymentActivity = Workflow.newActivityStub(WaitForQRPaymentActivity.class, defaultOptions);
-        this.sendRequestToPayActivity = Workflow.newActivityStub(SendRequestToPayActivity.class, defaultOptions);
-        this.waitForRTPApprovalActivity = Workflow.newActivityStub(WaitForRTPApprovalActivity.class, defaultOptions);
-        this.creditAgentFloatActivity = Workflow.newActivityStub(CreditAgentFloatActivity.class, defaultOptions);
-        this.persistWorkflowResultActivity = Workflow.newActivityStub(PersistWorkflowResultActivity.class, defaultOptions);
+        this.validateFloatCapacityActivity = Workflow.newActivityStub(ValidateFloatCapacityActivity.class, ActivityOptions.newBuilder()
+                .setStartToCloseTimeout(Duration.ofMinutes(2))
+                .build());
+        this.blockFloatActivity = Workflow.newActivityStub(BlockFloatActivity.class, ActivityOptions.newBuilder()
+                .setStartToCloseTimeout(Duration.ofMinutes(2))
+                .build());
+        this.commitFloatActivity = Workflow.newActivityStub(CommitFloatActivity.class, ActivityOptions.newBuilder()
+                .setStartToCloseTimeout(Duration.ofMinutes(2))
+                .build());
+        this.releaseFloatActivity = Workflow.newActivityStub(ReleaseFloatActivity.class, ActivityOptions.newBuilder()
+                .setStartToCloseTimeout(Duration.ofMinutes(2))
+                .build());
+        this.generateDynamicQRActivity = Workflow.newActivityStub(GenerateDynamicQRActivity.class, ActivityOptions.newBuilder()
+                .setStartToCloseTimeout(Duration.ofMinutes(2))
+                .build());
+        this.waitForQRPaymentActivity = Workflow.newActivityStub(WaitForQRPaymentActivity.class, ActivityOptions.newBuilder()
+                .setStartToCloseTimeout(Duration.ofMinutes(10))
+                .build());
+        this.sendRequestToPayActivity = Workflow.newActivityStub(SendRequestToPayActivity.class, ActivityOptions.newBuilder()
+                .setStartToCloseTimeout(Duration.ofMinutes(2))
+                .build());
+        this.waitForRTPApprovalActivity = Workflow.newActivityStub(WaitForRTPApprovalActivity.class, ActivityOptions.newBuilder()
+                .setStartToCloseTimeout(Duration.ofMinutes(10))
+                .build());
+        this.creditAgentFloatActivity = Workflow.newActivityStub(CreditAgentFloatActivity.class, ActivityOptions.newBuilder()
+                .setStartToCloseTimeout(Duration.ofMinutes(2))
+                .build());
+        this.persistWorkflowResultActivity = Workflow.newActivityStub(PersistWorkflowResultActivity.class, ActivityOptions.newBuilder()
+                .setStartToCloseTimeout(Duration.ofMinutes(2))
+                .build());
     }
 
     @Override
@@ -65,7 +106,7 @@ public class CashlessPaymentWorkflowImpl implements CashlessPaymentWorkflow {
                 currentStatus = WorkflowStatus.FAILED;
                 WorkflowResult failResult = WorkflowResult.failed("ERR_INSUFFICIENT_FLOAT", "Insufficient float", "DECLINE");
                 persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
-                        input.idempotencyKey(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null));
+                        input.idempotencyKey(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null, "Insufficient float"));
                 return failResult;
             }
 
@@ -88,7 +129,7 @@ public class CashlessPaymentWorkflowImpl implements CashlessPaymentWorkflow {
                 currentStatus = WorkflowStatus.FAILED;
                 WorkflowResult failResult = WorkflowResult.failed(blockResult.errorCode(), "Float block failed", "DECLINE");
                 persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
-                        input.idempotencyKey(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null));
+                        input.idempotencyKey(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null, "Float block failed"));
                 return failResult;
             }
             UUID transactionId = blockResult.transactionId();
@@ -98,60 +139,55 @@ public class CashlessPaymentWorkflowImpl implements CashlessPaymentWorkflow {
                 var qrResult = generateDynamicQRActivity.generate(input.amount(), input.agentId(), input.idempotencyKey());
                 if (qrResult.qrReference() == null) {
                     releaseFloatActivity.releaseFloat(
-                            new com.agentbanking.orchestrator.domain.port.out.LedgerServicePort.FloatReleaseInput(
-                                    input.agentId(), input.amount(), transactionId));
+                            new FloatReleaseInput(input.agentId(), input.amount(), transactionId));
                     currentStatus = WorkflowStatus.FAILED;
                     WorkflowResult failResult = WorkflowResult.failed("ERR_QR_GENERATION_FAILED", "QR generation failed", "DECLINE");
                     persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
-                            input.idempotencyKey(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null));
+                            input.idempotencyKey(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null, "QR generation failed"));
                     return failResult;
                 }
                 reference = qrResult.qrReference();
                 var paymentStatus = waitForQRPaymentActivity.waitForPayment(reference, 300);
                 if (!"PAID".equals(paymentStatus.status())) {
                     releaseFloatActivity.releaseFloat(
-                            new com.agentbanking.orchestrator.domain.port.out.LedgerServicePort.FloatReleaseInput(
-                                    input.agentId(), input.amount(), transactionId));
+                            new FloatReleaseInput(input.agentId(), input.amount(), transactionId));
                     currentStatus = WorkflowStatus.FAILED;
                     WorkflowResult failResult = WorkflowResult.failed("ERR_QR_PAYMENT_TIMEOUT", "QR payment timeout", "DECLINE");
                     persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
-                            input.idempotencyKey(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null));
+                            input.idempotencyKey(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null, "QR payment timeout"));
                     return failResult;
                 }
             } else if ("RTP".equalsIgnoreCase(input.paymentMethod())) {
                 var rtpResult = sendRequestToPayActivity.send(input.customerProxy(), input.amount(), input.idempotencyKey());
                 if (rtpResult.rtpReference() == null) {
                     releaseFloatActivity.releaseFloat(
-                            new com.agentbanking.orchestrator.domain.port.out.LedgerServicePort.FloatReleaseInput(
-                                    input.agentId(), input.amount(), transactionId));
+                            new FloatReleaseInput(input.agentId(), input.amount(), transactionId));
                     currentStatus = WorkflowStatus.FAILED;
                     WorkflowResult failResult = WorkflowResult.failed("ERR_RTP_SEND_FAILED", "RTP send failed", "DECLINE");
                     persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
-                            input.idempotencyKey(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null));
+                            input.idempotencyKey(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null, "RTP send failed"));
                     return failResult;
                 }
                 reference = rtpResult.rtpReference();
                 var rtpStatus = waitForRTPApprovalActivity.waitForApproval(reference, 300);
                 if (!"APPROVED".equals(rtpStatus.status())) {
                     releaseFloatActivity.releaseFloat(
-                            new com.agentbanking.orchestrator.domain.port.out.LedgerServicePort.FloatReleaseInput(
-                                    input.agentId(), input.amount(), transactionId));
+                            new FloatReleaseInput(input.agentId(), input.amount(), transactionId));
                     currentStatus = WorkflowStatus.FAILED;
                     WorkflowResult failResult = WorkflowResult.failed("ERR_RTP_DECLINED", "RTP declined", "DECLINE");
                     persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
-                            input.idempotencyKey(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null));
+                            input.idempotencyKey(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null, "RTP declined"));
                     return failResult;
                 }
             }
 
             commitFloatActivity.commitFloat(
-                    new com.agentbanking.orchestrator.domain.port.out.LedgerServicePort.FloatCommitInput(
-                            input.agentId(), input.amount(), transactionId));
+                    new FloatCommitInput(input.agentId(), input.amount(), transactionId));
 
             currentStatus = WorkflowStatus.COMPLETED;
             WorkflowResult completedResult = WorkflowResult.completed(transactionId, reference, input.amount(), BigDecimal.ZERO);
             persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
-                    input.idempotencyKey(), "COMPLETED", null, null, reference, BigDecimal.ZERO, reference));
+                    input.idempotencyKey(), "COMPLETED", null, null, reference, BigDecimal.ZERO, reference, null));
             return completedResult;
 
         } catch (Exception e) {
@@ -160,7 +196,7 @@ public class CashlessPaymentWorkflowImpl implements CashlessPaymentWorkflow {
             WorkflowResult failResult = WorkflowResult.failed("ERR_SYS_WORKFLOW_FAILED", e.getMessage(), "REVIEW");
             try {
                 persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
-                        input.idempotencyKey(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null));
+                        input.idempotencyKey(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null, "Workflow exception: " + e.getMessage()));
             } catch (Exception ex) {
                 log.warn("Failed to persist fail result: {}", ex.getMessage());
             }

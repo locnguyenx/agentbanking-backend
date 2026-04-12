@@ -7,7 +7,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
-@FeignClient(name = "pin-inventory", url = "${pin-inventory.url}")
+@FeignClient(name = "pin-inventory", url = "${pin-inventory.url}", fallbackFactory = PINInventoryClientFallbackFactory.class)
 public interface PINInventoryClient {
 
     @PostMapping("/internal/validate-inventory")

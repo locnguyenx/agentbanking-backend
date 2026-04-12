@@ -53,6 +53,99 @@ project(':services:switch-adapter-service').tasks.named('bootJar') {
     enabled = true
 }
 
+// Task to clean all data from databases
+task cleanAllData {
+    group = 'database'
+    description = 'Clean all data from all service databases including auth system'
+    
+    doLast {
+        println "Cleaning all data from databases including auth system..."
+        
+        // Clean orchestrator database
+        exec {
+            workingDir '.'
+            commandLine 'docker', 'compose', 'exec', '-T', 'postgres-orchestrator', 'psql', '-U', 'postgres', '-d', 'orchestrator_db', '-c', 'TRUNCATE TABLE transaction_record, transaction_resolution_case, audit_logs RESTART IDENTITY CASCADE'
+            ignoreExitValue = true
+        }
+        
+        // Clean ledger database
+        exec {
+            workingDir '.'
+            commandLine 'docker', 'compose', 'exec', '-T', 'postgres-ledger', 'psql', '-U', 'postgres', '-d', 'ledger_db', '-c', 'TRUNCATE TABLE ledger_transaction, journal_entry, settlement_summary, agent_float RESTART IDENTITY CASCADE'
+            ignoreExitValue = true
+        }
+        
+        // Clean rules database
+        exec {
+            workingDir '.'
+            commandLine 'docker', 'compose', 'exec', '-T', 'postgres-rules', 'psql', '-U', 'postgres', '-d', 'rules_db', '-c', 'TRUNCATE TABLE velocity_rule, fee_config, audit_logs RESTART IDENTITY CASCADE'
+            ignoreExitValue = true
+        }
+        
+        // Clean biller database
+        exec {
+            workingDir '.'
+            commandLine 'docker', 'compose', 'exec', '-T', 'postgres-biller', 'psql', '-U', 'postgres', '-d', 'biller_db', '-c', 'TRUNCATE TABLE biller_config, bill_payment, essp_transaction, ewallet_transaction, topup_transaction, audit_logs RESTART IDENTITY CASCADE'
+            ignoreExitValue = true
+        }
+        
+        // Clean onboarding database - need to use correct user and tables
+        exec {
+            workingDir '.'
+            commandLine 'docker', 'compose', 'exec', '-T', 'postgres-onboarding', 'psql', '-U', 'postgres', '-d', 'onboarding_db', '-c', 'TRUNCATE TABLE agent, agent_onboarding, kyc_verification, onboarding_decision, backoffice_users, user_permissions, audit_log RESTART IDENTITY CASCADE'
+            ignoreExitValue = true
+        }
+        
+        // Clean audit database
+        exec {
+            workingDir '.'
+            commandLine 'docker', 'compose', 'exec', '-T', 'postgres-audit', 'psql', '-U', 'postgres', '-d', 'audit_db', '-c', 'TRUNCATE TABLE audit_logs RESTART IDENTITY CASCADE'
+            ignoreExitValue = true
+        }
+        
+        // Clean auth database - need correct user
+        exec {
+            workingDir '.'
+            commandLine 'docker', 'compose', 'exec', '-T', 'postgres-auth', 'psql', '-U', 'auth_user', '-d', 'authdb', '-c', 'TRUNCATE TABLE user_roles, role_permissions, permissions, roles, token_blacklist, sessions, users RESTART IDENTITY CASCADE'
+            ignoreExitValue = true
+        }
+        
+        println "All data cleaned successfully including auth system!"
+    }
+}
+
+// Task to load auth system seed data using Flyway migration
+task loadAuthSeedData {
+    group = 'database'
+    description = 'Load auth system seed data using Flyway migration'
+    
+    doLast {
+        println "Loading auth system seed data using Flyway migration..."
+        
+        // Apply the auth seed migration directly to the database
+        exec {
+            workingDir '.'
+            commandLine 'docker', 'compose', 'exec', '-T', 'postgres-auth', 'psql', '-U', 'auth_user', '-d', 'authdb', '-f', '/tmp/V1__auth_system_seed.sql'
+            ignoreExitValue = true
+        }
+        
+        println "Auth system seed data loaded via Flyway migration!"
+    }
+}
+
+// Task to reset system completely
+task resetSystem {
+    group = 'database'
+    description = 'Reset system completely - clean all data and load auth seed data'
+    
+    dependsOn cleanAllData
+    dependsOn loadAuthSeedData
+    
+    doLast {
+        println "System reset complete! All data cleaned, auth seed data loaded."
+    }
+}
+
 project(':services:biller-service').tasks.named('bootJar') {
     enabled = true
 }

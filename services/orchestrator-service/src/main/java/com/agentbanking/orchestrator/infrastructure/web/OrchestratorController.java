@@ -130,6 +130,7 @@ public class OrchestratorController {
         return new WorkflowStatusResponse(
             status.status() != null ? status.status().name() : "UNKNOWN",
             result != null ? result.pendingReason() : null,
+            result != null ? result.errorDetails() : null,
             workflowId,
             null, // transactionType not currently in WorkflowResult
             result != null && result.amount() != null ? result.amount() : BigDecimal.ZERO,

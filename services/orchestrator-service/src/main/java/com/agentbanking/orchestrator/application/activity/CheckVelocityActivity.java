@@ -4,6 +4,9 @@ import com.agentbanking.orchestrator.domain.port.out.RulesServicePort.VelocityCh
 import com.agentbanking.orchestrator.domain.port.out.RulesServicePort.VelocityCheckResult;
 import io.temporal.activity.ActivityInterface;
 
+
+
+
 @ActivityInterface
 public interface CheckVelocityActivity {
     VelocityCheckResult checkVelocity(VelocityCheckInput input);

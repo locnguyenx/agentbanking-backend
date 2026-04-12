@@ -11,6 +11,7 @@ import com.agentbanking.orchestrator.application.workflow.PrepaidTopupWorkflow;
 import com.agentbanking.orchestrator.domain.model.WorkflowResult;
 import com.agentbanking.orchestrator.domain.model.WorkflowStatus;
 import com.agentbanking.orchestrator.domain.port.out.LedgerServicePort.*;
+
 import io.temporal.activity.ActivityOptions;
 import io.temporal.spring.boot.WorkflowImpl;
 import io.temporal.workflow.Workflow;
@@ -20,33 +21,61 @@ import java.math.BigDecimal;
 import java.time.Duration;
 import java.util.UUID;
 
-@WorkflowImpl(workers = "agent-banking-tasks")
+@WorkflowImpl(taskQueues = "agent-banking-tasks")
 public class PrepaidTopupWorkflowImpl implements PrepaidTopupWorkflow {
 
     private static final Logger log = Workflow.getLogger(PrepaidTopupWorkflowImpl.class);
 
-    private final ValidatePhoneNumberActivity validatePhoneNumberActivity;
-    private final TopUpTelcoActivity topUpTelcoActivity;
-    private final BlockFloatActivity blockFloatActivity;
-    private final CommitFloatActivity commitFloatActivity;
-    private final ReleaseFloatActivity releaseFloatActivity;
-    private final CreditAgentFloatActivity creditAgentFloatActivity;
-    private final PersistWorkflowResultActivity persistWorkflowResultActivity;
+    private ValidatePhoneNumberActivity validatePhoneNumberActivity;
+    private TopUpTelcoActivity topUpTelcoActivity;
+    private BlockFloatActivity blockFloatActivity;
+    private CommitFloatActivity commitFloatActivity;
+    private ReleaseFloatActivity releaseFloatActivity;
+    private CreditAgentFloatActivity creditAgentFloatActivity;
+    private PersistWorkflowResultActivity persistWorkflowResultActivity;
 
     private WorkflowStatus currentStatus = WorkflowStatus.PENDING;
 
+    public PrepaidTopupWorkflowImpl(
+            ValidatePhoneNumberActivity validatePhoneNumberActivity,
+            TopUpTelcoActivity topUpTelcoActivity,
+            BlockFloatActivity blockFloatActivity,
+            CommitFloatActivity commitFloatActivity,
+            ReleaseFloatActivity releaseFloatActivity,
+            CreditAgentFloatActivity creditAgentFloatActivity,
+            PersistWorkflowResultActivity persistWorkflowResultActivity) {
+        this.validatePhoneNumberActivity = validatePhoneNumberActivity;
+        this.topUpTelcoActivity = topUpTelcoActivity;
+        this.blockFloatActivity = blockFloatActivity;
+        this.commitFloatActivity = commitFloatActivity;
+        this.releaseFloatActivity = releaseFloatActivity;
+        this.creditAgentFloatActivity = creditAgentFloatActivity;
+        this.persistWorkflowResultActivity = persistWorkflowResultActivity;
+    }
+
+    @SuppressWarnings("SpringJavaAutowiredMembersInspection")
     public PrepaidTopupWorkflowImpl() {
-        ActivityOptions defaultOptions = ActivityOptions.newBuilder()
-                .setStartToCloseTimeout(Duration.ofSeconds(30))
-                .build();
-        
-        this.validatePhoneNumberActivity = Workflow.newActivityStub(ValidatePhoneNumberActivity.class, defaultOptions);
-        this.topUpTelcoActivity = Workflow.newActivityStub(TopUpTelcoActivity.class, defaultOptions);
-        this.blockFloatActivity = Workflow.newActivityStub(BlockFloatActivity.class, defaultOptions);
-        this.commitFloatActivity = Workflow.newActivityStub(CommitFloatActivity.class, defaultOptions);
-        this.releaseFloatActivity = Workflow.newActivityStub(ReleaseFloatActivity.class, defaultOptions);
-        this.creditAgentFloatActivity = Workflow.newActivityStub(CreditAgentFloatActivity.class, defaultOptions);
-        this.persistWorkflowResultActivity = Workflow.newActivityStub(PersistWorkflowResultActivity.class, defaultOptions);
+        this.validatePhoneNumberActivity = Workflow.newActivityStub(ValidatePhoneNumberActivity.class, ActivityOptions.newBuilder()
+                .setStartToCloseTimeout(Duration.ofMinutes(2))
+                .build());
+        this.topUpTelcoActivity = Workflow.newActivityStub(TopUpTelcoActivity.class, ActivityOptions.newBuilder()
+                .setStartToCloseTimeout(Duration.ofMinutes(5))
+                .build());
+        this.blockFloatActivity = Workflow.newActivityStub(BlockFloatActivity.class, ActivityOptions.newBuilder()
+                .setStartToCloseTimeout(Duration.ofMinutes(2))
+                .build());
+        this.commitFloatActivity = Workflow.newActivityStub(CommitFloatActivity.class, ActivityOptions.newBuilder()
+                .setStartToCloseTimeout(Duration.ofMinutes(2))
+                .build());
+        this.releaseFloatActivity = Workflow.newActivityStub(ReleaseFloatActivity.class, ActivityOptions.newBuilder()
+                .setStartToCloseTimeout(Duration.ofMinutes(2))
+                .build());
+        this.creditAgentFloatActivity = Workflow.newActivityStub(CreditAgentFloatActivity.class, ActivityOptions.newBuilder()
+                .setStartToCloseTimeout(Duration.ofMinutes(2))
+                .build());
+        this.persistWorkflowResultActivity = Workflow.newActivityStub(PersistWorkflowResultActivity.class, ActivityOptions.newBuilder()
+                .setStartToCloseTimeout(Duration.ofMinutes(2))
+                .build());
     }
 
     @Override
@@ -60,7 +89,7 @@ public class PrepaidTopupWorkflowImpl implements PrepaidTopupWorkflow {
                 currentStatus = WorkflowStatus.FAILED;
                 WorkflowResult failResult = WorkflowResult.failed("ERR_INVALID_PHONE_NUMBER", "Invalid phone number", "DECLINE");
                 persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
-                        input.idempotencyKey(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null));
+                        input.idempotencyKey(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null, "Invalid phone number"));
                 return failResult;
             }
 
@@ -83,7 +112,7 @@ public class PrepaidTopupWorkflowImpl implements PrepaidTopupWorkflow {
                 currentStatus = WorkflowStatus.FAILED;
                 WorkflowResult failResult = WorkflowResult.failed(blockResult.errorCode(), "Float block failed", "DECLINE");
                 persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
-                        input.idempotencyKey(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null));
+                        input.idempotencyKey(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null, "Float block failed"));
                 return failResult;
             }
             UUID transactionId = blockResult.transactionId();
@@ -94,7 +123,7 @@ public class PrepaidTopupWorkflowImpl implements PrepaidTopupWorkflow {
                 currentStatus = WorkflowStatus.FAILED;
                 WorkflowResult failResult = WorkflowResult.failed(topupResult.errorCode(), "Topup failed", "DECLINE");
                 persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
-                        input.idempotencyKey(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null));
+                        input.idempotencyKey(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null, "Switch authorization failed"));
                 return failResult;
             }
 
@@ -119,7 +148,7 @@ public class PrepaidTopupWorkflowImpl implements PrepaidTopupWorkflow {
             currentStatus = WorkflowStatus.COMPLETED;
             WorkflowResult completedResult = WorkflowResult.completed(transactionId, topupResult.telcoReference(), input.amount(), BigDecimal.ZERO);
             persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
-                    input.idempotencyKey(), "COMPLETED", null, null, topupResult.telcoReference(), BigDecimal.ZERO, topupResult.telcoReference()));
+                    input.idempotencyKey(), "COMPLETED", null, null, topupResult.telcoReference(), BigDecimal.ZERO, topupResult.telcoReference(), null));
             return completedResult;
 
         } catch (Exception e) {
@@ -128,7 +157,7 @@ public class PrepaidTopupWorkflowImpl implements PrepaidTopupWorkflow {
             WorkflowResult failResult = WorkflowResult.failed("ERR_SYS_WORKFLOW_FAILED", e.getMessage(), "REVIEW");
             try {
                 persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
-                        input.idempotencyKey(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null));
+                        input.idempotencyKey(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null, "Workflow exception: " + e.getMessage()));
             } catch (Exception ex) {
                 log.warn("Failed to persist fail result: {}", ex.getMessage());
             }

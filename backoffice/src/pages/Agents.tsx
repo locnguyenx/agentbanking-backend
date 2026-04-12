@@ -85,7 +85,9 @@ export function Agents() {
     },
     onError: (error: any) => {
       console.error('Failed to create agent:', error)
-      toast.error(error?.response?.data?.error?.message || `Failed to create agent: ${error.message || 'Unknown error'}`)
+      const errorData = error?.response?.data
+      const errorMessage = errorData?.error?.message || errorData?.message || error?.message || 'Unknown error'
+      toast.error(errorMessage)
     }
   })
 
@@ -155,7 +157,7 @@ const filteredAgents = agents.filter(agent => {
     const form = e.currentTarget
     const formData = new FormData(form)
     createAgentMutation.mutate({
-      agentCode: `AGT-${String(agents.length + 1).padStart(3, '0')}`,
+      agentCode: formData.get('agentCode') as string,
       businessName: formData.get('name') as string,
       phoneNumber: formData.get('phone') as string,
       mykadNumber: formData.get('mykad') as string,
@@ -625,6 +627,10 @@ const filteredAgents = agents.filter(agent => {
             </div>
             <form onSubmit={handleAddAgent}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                <div>
+                  <label style={{ display: 'block', marginBottom: 6, fontWeight: 500 }}>Agent Code</label>
+                  <input type="text" name="agentCode" className="input" placeholder="e.g. AGT-001" required />
+                </div>
                 <div>
                   <label style={{ display: 'block', marginBottom: 6, fontWeight: 500 }}>Business Name</label>
                   <input type="text" name="name" className="input" placeholder="Enter business name" required />

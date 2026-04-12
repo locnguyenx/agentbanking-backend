@@ -179,6 +179,33 @@ When rebuilding Docker containers after code changes:
 - For Java services: rebuild with Gradle first, then rebuild Docker container
 - For React/Vite frontends: delete `dist/` folder before rebuild
 
+### Law XII: Temporal Transaction Saga Implementation (MANDATORY)
+
+When implementing workflows using Temporal in this project, follow the official Spring Boot pattern:
+
+**Activity/Workflow Implementation:**
+```java
+@Component
+@ActivityImpl(workers = "task-queue")   // activities
+@WorkflowImpl(taskQueues = "task-queue") // workflows
+```
+
+**application.yaml:**
+```yaml
+spring:
+  temporal:
+    connection:
+      target: ${TEMPORAL_ADDRESS:temporal:7233}  # Docker: use service name, not localhost
+```
+
+**CRITICAL:**
+- Use `@Component` NOT `@Service`
+- Use correct annotation parameters (`workers` for activities, `taskQueues` for workflows)
+- Don't mix manual WorkerFactory with auto-discovery
+- Before changing workflow code: terminate old executions in Temporal UI
+
+**Reference:** See `docs/lessons-learned/2026-04-11-temporal-worker-registration-fix.md` for detailed implementation.
+
 ## Coding Standards
 
 **Coding Reference:** Always use Context7 when you need library/API documentation, code generation, setup or configuration steps without having to explicitly ask.

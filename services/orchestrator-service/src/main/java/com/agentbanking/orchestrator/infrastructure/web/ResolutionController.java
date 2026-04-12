@@ -8,10 +8,12 @@ import com.agentbanking.orchestrator.domain.port.in.ProposeResolutionUseCase;
 import com.agentbanking.orchestrator.domain.port.in.RejectResolutionUseCase;
 import com.agentbanking.orchestrator.domain.port.out.TransactionRecordRepository;
 import com.agentbanking.orchestrator.domain.service.ResolutionService;
+import com.agentbanking.orchestrator.domain.service.WorkflowExecutionService;
 import com.agentbanking.orchestrator.infrastructure.temporal.WorkflowFactory;
 import com.agentbanking.orchestrator.infrastructure.web.dto.CheckerActionRequest;
 import com.agentbanking.orchestrator.infrastructure.web.dto.ForceResolveRequest;
 import com.agentbanking.orchestrator.infrastructure.web.dto.MakerProposalRequest;
+import com.agentbanking.orchestrator.infrastructure.web.dto.WorkflowExecutionDetailsResponse;
 import io.temporal.client.WorkflowStub;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
@@ -38,40 +40,49 @@ public class ResolutionController {
     private final ResolutionService resolutionService;
     private final TransactionRecordRepository transactionRecordRepository;
     private final WorkflowFactory workflowFactory;
+    private final WorkflowExecutionService workflowExecutionService;
 
     public ResolutionController(ProposeResolutionUseCase proposeResolutionUseCase,
                                  ApproveResolutionUseCase approveResolutionUseCase,
                                  RejectResolutionUseCase rejectResolutionUseCase,
                                  ResolutionService resolutionService,
                                  TransactionRecordRepository transactionRecordRepository,
-                                 WorkflowFactory workflowFactory) {
+                                 WorkflowFactory workflowFactory,
+                                 WorkflowExecutionService workflowExecutionService) {
         this.proposeResolutionUseCase = proposeResolutionUseCase;
         this.approveResolutionUseCase = approveResolutionUseCase;
         this.rejectResolutionUseCase = rejectResolutionUseCase;
         this.resolutionService = resolutionService;
         this.transactionRecordRepository = transactionRecordRepository;
         this.workflowFactory = workflowFactory;
+        this.workflowExecutionService = workflowExecutionService;
     }
 
     @PostMapping("/{workflowId}/create-case")
     public ResponseEntity<?> createResolutionCase(
-            @PathVariable UUID workflowId,
+            @PathVariable String workflowId,
             @RequestHeader("X-User-Id") String userId) {
         
         log.info("Creating resolution case for workflow: {}, user: {}", workflowId, userId);
         
         try {
-            var transactionRecord = transactionRecordRepository.findByWorkflowId(workflowId.toString())
-                .orElseThrow(() -> new IllegalArgumentException("Transaction not found for workflow: " + workflowId));
+            // Extract UUID portion from workflowId (format: prefix-uuid or just uuid)
+            String uuidStr = extractUuidFromWorkflowId(workflowId);
+            log.info("Extracted UUID: {}", uuidStr);
+            var workflowUuid = UUID.fromString(uuidStr);
             
-            var existingCase = resolutionService.findByWorkflowId(workflowId);
+            // Find transaction record using partial matching
+            var transactionRecord = transactionRecordRepository.findByWorkflowId(workflowId)
+                    .orElseThrow(() -> new IllegalArgumentException("Transaction not found for workflow: " + workflowId));
+            
+            var existingCase = resolutionService.findByWorkflowId(workflowUuid);
             if (existingCase.isPresent()) {
                 var case_ = existingCase.get();
                 log.info("Resolution case already exists for workflow: {}", workflowId);
                 return ResponseEntity.ok(mapToResolutionResponse(case_));
             }
             
-            var newCase = resolutionService.createPendingCase(workflowId, transactionRecord.id());
+            var newCase = resolutionService.createPendingCase(workflowUuid, transactionRecord.id());
             log.info("Created new resolution case: {} for workflow: {}", newCase.id(), workflowId);
             return ResponseEntity.ok(mapToResolutionResponse(newCase));
         } catch (IllegalArgumentException e) {
@@ -79,18 +90,43 @@ public class ResolutionController {
             return ResponseEntity.badRequest().body(buildErrorResponse("ERR_BIZ_RESOLUTION_FAILED", e.getMessage(), "RETRY"));
         }
     }
+    
+    private String extractUuidFromWorkflowId(String workflowId) {
+        // Handle formats like "e2e-stp-duitnow-ffadf650-bfeb-4a79-908f-258942074eef"
+        // Extract the UUID portion (last 36 characters after the last dash prefix)
+        if (workflowId == null || workflowId.isEmpty()) {
+            return workflowId;
+        }
+        // If it's already a valid UUID, return as-is
+        if (workflowId.matches("^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")) {
+            return workflowId;
+        }
+        // Try to extract UUID portion - look for the last occurrence of a dash followed by valid UUID chars
+        String[] parts = workflowId.split("-");
+        // If more than 5 parts, it's prefixed - join the last 5 parts to form UUID
+        if (parts.length > 5) {
+            StringBuilder sb = new StringBuilder();
+            for (int i = parts.length - 5; i < parts.length; i++) {
+                if (i > parts.length - 5) sb.append("-");
+                sb.append(parts[i]);
+            }
+            return sb.toString();
+        }
+        return workflowId;
+    }
 
     @PostMapping("/{workflowId}/maker-propose")
     public ResponseEntity<?> makerPropose(
-            @PathVariable UUID workflowId,
+            @PathVariable String workflowId,
             @Valid @RequestBody MakerProposalRequest request,
             @RequestHeader("X-User-Id") String userId) {
         
         log.info("Maker proposing resolution for workflow: {}, user: {}", workflowId, userId);
         
         try {
+            var workflowUuid = UUID.fromString(workflowId);
             var command = new ProposeResolutionUseCase.Command(
-                workflowId,
+                workflowUuid,
                 request.action(),
                 userId,
                 request.reasonCode(),
@@ -108,15 +144,16 @@ public class ResolutionController {
 
     @PostMapping("/{workflowId}/checker-approve")
     public ResponseEntity<?> checkerApprove(
-            @PathVariable UUID workflowId,
+            @PathVariable String workflowId,
             @Valid @RequestBody CheckerActionRequest request,
             @RequestHeader("X-User-Id") String userId) {
         
         log.info("Checker approving resolution for workflow: {}, user: {}", workflowId, userId);
         
         try {
+            var workflowUuid = UUID.fromString(workflowId);
             var command = new ApproveResolutionUseCase.Command(
-                workflowId,
+                workflowUuid,
                 userId,
                 request.reason()
             );
@@ -134,15 +171,16 @@ public class ResolutionController {
 
     @PostMapping("/{workflowId}/checker-reject")
     public ResponseEntity<?> checkerReject(
-            @PathVariable UUID workflowId,
+            @PathVariable String workflowId,
             @Valid @RequestBody CheckerActionRequest request,
             @RequestHeader("X-User-Id") String userId) {
         
         log.info("Checker rejecting resolution for workflow: {}, user: {}", workflowId, userId);
         
         try {
+            var workflowUuid = UUID.fromString(workflowId);
             var command = new RejectResolutionUseCase.Command(
-                workflowId,
+                workflowUuid,
                 userId,
                 request.reason()
             );
@@ -402,4 +440,21 @@ map.put("workflowId", w.workflowId());
         response.put("error", error);
         return response;
     }
-}
+
+    @GetMapping("/{workflowId}/execution-details")
+    public ResponseEntity<?> getWorkflowExecutionDetails(@PathVariable String workflowId) {
+        log.info("Retrieving execution details for workflow: {}", workflowId);
+        
+        try {
+            WorkflowExecutionDetailsResponse details = workflowExecutionService.getExecutionDetails(workflowId);
+            return ResponseEntity.ok(details);
+        } catch (Exception e) {
+            log.error("Failed to get execution details for workflow {}: {}", workflowId, e.getMessage(), e);
+            return ResponseEntity.status(500).body(buildErrorResponse(
+                "ERR_SYS_EXECUTION_DETAILS_FAILED", 
+                "Failed to retrieve workflow execution details: " + e.getMessage(), 
+                "RETRY"
+            ));
+        }
+    }
+    }

@@ -502,13 +502,20 @@ Click **View** on any card to see full details:
 
 The Orchestrator Workflows page provides real-time visibility into all transaction workflows managed by the Temporal orchestration engine. This is the central hub for monitoring transaction processing, troubleshooting stuck transactions, and initiating resolution cases for failed transactions.
 
+**Key Features:**
+- **Real-time Activity Timeline**: See exactly which workflow step is currently executing
+- **Live Status Updates**: Auto-refresh every 5 seconds for pending workflows
+- **Activity Details**: View input/output parameters, execution times, and error details
+- **External Service Monitoring**: Track health status of Rules, Ledger, Switch, and Biller services
+- **Enhanced Debugging**: Comprehensive information for troubleshooting transaction issues
+
 ### 8.2 Stats Cards
 
 | Card | Description |
 |------|-------------|
 | **Total Workflows** | All workflows in the selected time period |
 | **Completed** | Workflows with COMPLETED status |
-| **Pending** | Workflows with PENDING or RUNNING status |
+| **Pending** | Workflows awaiting processing |
 | **Failed** | Workflows with FAILED status |
 
 ### 8.3 Searching and Filtering
@@ -520,7 +527,24 @@ The Orchestrator Workflows page provides real-time visibility into all transacti
 | **Status Filter** | Filter by: All Status, Pending, Completed, Failed, Compensating, Pending Review |
 | **Transaction Type** | Filter by: Cash Withdrawal, Retail Sale, Prepaid Topup, Bill Payment, DuitNow Transfer, Deposit |
 
-### 8.4 Workflow Table
+### 8.4 Workflow Views
+
+The Orchestrator Workflows page offers three viewing modes:
+
+#### **Table View** (Default)
+Standard tabular view with workflow details.
+
+#### **Card View** 
+Card-based layout with visual workflow progress indicators:
+- **Progress Bar**: Shows completion percentage with current step highlighted
+- **Activity Timeline**: Visual indicators for each workflow step
+- **Service Status**: Color-coded indicators for external services
+- **Real-time Updates**: Live status updates for running workflows
+
+#### **Timeline View**
+Detailed chronological view of workflow execution (coming soon).
+
+### 8.5 Workflow Table
 
 | Column | Description |
 |--------|-------------|
@@ -533,34 +557,109 @@ The Orchestrator Workflows page provides real-time visibility into all transacti
 | Created At | Workflow creation timestamp |
 | Actions | View Details, Create Case |
 
-### 8.5 Viewing Workflow Details
+### 8.6 Enhanced Workflow Details (New)
 
-Click **View Details** on any workflow to see:
-- Transaction type and amount
-- Workflow ID and Transaction ID
-- Status with visual indicator
-- **Pending Reason** (displayed in yellow when status is PENDING or RUNNING)
-- Agent ID
-- Created At timestamp
-- Customer Fee
-- Reference Number
-- Completed At timestamp (if applicable)
-- Error code and message (if status is FAILED)
+Click **View Details** on any workflow to access the comprehensive workflow execution details:
 
-### 8.6 Pending Reason Display
+#### **8.6.1 Execution Summary**
+- **Current Status**: Real-time workflow status with visual indicator
+- **Progress Statistics**: Total activities, completed count, failed count
+- **Estimated Completion**: Predicted completion time for running workflows
+- **Auto-refresh Toggle**: Enable/disable automatic updates every 5 seconds
 
-When a workflow has PENDING or RUNNING status, a yellow pending reason box displays at the bottom of the details showing:
-- **Awaiting Switch Response**: Waiting for response from payment switch
-- **Awaiting Biller Response**: Waiting for response from biller
-- **Awaiting Review**: Requires manual review
+#### **8.6.2 Current Activity Panel**
+For workflows with RUNNING status:
+- **Activity Name**: Currently executing activity (e.g., "EvaluateSTPActivity", "AuthorizeAtSwitch")
+- **Execution Time**: Time elapsed since activity started
+- **Retry Information**: Current attempt number and maximum retries
+- **Input Parameters**: Activity input data (expandable)
+- **Error Details**: Any error messages or timeout information
 
-### 8.7 Creating a Resolution Case
+#### **8.6.3 Activity Timeline**
+Visual timeline showing all workflow activities:
+- **Step-by-step Progress**: Each activity with status indicator
+- **Execution Times**: Start time and duration for each activity
+- **Status Indicators**:
+  - ✅ **Completed**: Green checkmark
+  - ⚠️ **Running**: Yellow circle with pulse animation
+  - ❌ **Failed**: Red X mark
+  - ⏰ **Scheduled**: Gray clock icon
+- **Expandable Details**: Click any activity to view input/output parameters
+
+#### **8.6.4 External Service Status**
+Real-time health monitoring of external services:
+- **Rules Service**: Status of business rules engine
+- **Ledger Service**: Status of float/ledger management
+- **Switch Adapter**: Status of payment switch connection
+- **Biller Service**: Status of bill payment services
+
+**Status Indicators:**
+- 🟢 **Responding**: Service is operational and responding
+- 🟡 **Available**: Service is available but not recently tested
+- 🔴 **Timeout**: Service experienced timeout or failure
+- ⚪ **Not Required**: Service not used in this workflow
+
+#### **8.6.5 Debug Information**
+Technical details for advanced troubleshooting:
+- **Temporal Workflow ID**: Internal workflow identifier
+- **History Event Count**: Number of events in workflow history
+- **Recent Events**: Last 5 workflow events with timestamps
+- **Export Options**: Copy debug info to clipboard or export as JSON
+
+### 8.7 Pending Reason Display
+
+When a workflow has PENDING or RUNNING status, enhanced pending information shows:
+
+#### **8.7.1 Current Activity Details**
+- **Activity Name**: Exact activity being executed (e.g., "CheckVelocityActivity")
+- **Service Being Called**: External service (Rules, Ledger, Switch, Biller)
+- **Elapsed Time**: How long the activity has been running
+- **Retry Status**: Current attempt and maximum retries
+
+#### **8.7.2 Common Pending Reasons**
+- **Evaluating Business Rules**: Processing velocity checks and STP decisions
+- **Blocking Float Amount**: Reserving funds in agent's float account
+- **Authorizing at Switch**: Waiting for payment switch response
+- **Awaiting Biller Response**: Waiting for bill payment confirmation
+- **Processing Commission**: Calculating agent commission
+- **Compensating Transaction**: Rolling back due to failure
+
+### 8.8 Creating a Resolution Case
 
 For failed workflows without an existing resolution case:
 
 1. Click **Create Case** in the Actions column.
 2. A resolution case is created and the workflow appears in the Transaction Resolution page.
 3. Click **View Case** to navigate directly to the resolution details.
+
+### 8.9 Troubleshooting Workflow Issues
+
+#### **8.9.1 Identifying Stuck Workflows**
+- Look for workflows with **RUNNING** status and long elapsed times (> 2 minutes)
+- Check the **Current Activity** panel to see which step is stuck
+- Review **External Service Status** for any failed services
+
+#### **8.9.2 Common Issues and Solutions**
+
+| Issue | Symptoms | Solution |
+|-------|----------|----------|
+| **Switch Timeout** | "AuthorizeAtSwitchActivity" stuck, Switch Adapter shows "Timeout" | Check switch connectivity, may need manual intervention |
+| **Rules Engine Down** | "EvaluateSTPActivity" failing, Rules Service shows "Failed" | Contact technical team to restart rules service |
+| **Float Insufficient** | "BlockFloatActivity" failing with insufficient funds error | Agent needs to top up their float account |
+| **Biller Service Down** | "PayBillActivity" timing out, Biller Service shows "Timeout" | Check biller service status, may need to retry later |
+
+#### **8.9.3 Debug Steps**
+1. **Check Activity Timeline**: Look for failed activities in red
+2. **Review Error Messages**: Click failed activities to see detailed error information
+3. **Verify Service Status**: Check external service health indicators
+4. **Export Debug Info**: Use the export function to share technical details with support team
+
+### 8.10 Performance Tips
+
+- **Auto-refresh**: Enable for real-time monitoring of active workflows
+- **Date Range**: Use shorter ranges (7 days) for faster loading
+- **Status Filter**: Filter by "Pending" to focus on active issues
+- **Search**: Use workflow ID or transaction ID for quick lookup
 
 ---
 

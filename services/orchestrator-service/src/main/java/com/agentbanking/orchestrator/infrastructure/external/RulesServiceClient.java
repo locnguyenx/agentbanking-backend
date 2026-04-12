@@ -9,12 +9,8 @@ import com.agentbanking.orchestrator.domain.port.out.RulesServicePort.StpDecisio
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestParam;
 
-import java.math.BigDecimal;
-import java.util.UUID;
-
-@FeignClient(name = "rules-service", url = "${rules-service.url}")
+@FeignClient(name = "rules-service", url = "${rules-service.url}", fallbackFactory = RulesServiceClientFallbackFactory.class)
 public interface RulesServiceClient {
 
     @PostMapping("/internal/check-velocity")
@@ -23,9 +19,17 @@ public interface RulesServiceClient {
     @PostMapping("/internal/calculate-fees")
     FeeCalculationResult calculateFees(@RequestBody FeeCalculationInput input);
 
-    @PostMapping("/internal/evaluate-stp")
-    StpDecision evaluateStp(@RequestParam("transactionType") String transactionType,
-                            @RequestParam("agentId") UUID agentId,
-                            @RequestParam("amount") BigDecimal amount,
-                            @RequestParam("customerProfile") String customerProfile);
+    @PostMapping("/internal/stp/evaluate")
+    StpDecision evaluateStp(@RequestBody StpEvaluationRequest request);
+
+    record StpEvaluationRequest(
+        String transactionType,
+        String agentId,
+        String amount,
+        String customerProfile,
+        String agentTier,
+        int transactionCountToday,
+        String amountToday,
+        String todayTotalAmount
+    ) {}
 }

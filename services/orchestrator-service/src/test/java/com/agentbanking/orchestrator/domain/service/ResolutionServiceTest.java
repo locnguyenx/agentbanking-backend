@@ -30,7 +30,7 @@ class ResolutionServiceTest {
     @DisplayName("makerPropose transitions to PENDING_CHECKER")
     void makerPropose_transitionsToPendingChecker() {
         var workflowId = UUID.randomUUID();
-        var case_ = TransactionResolutionCase.createPendingMaker(workflowId, UUID.randomUUID());
+        var case_ = TransactionResolutionCase.createPendingMaker(workflowId, UUID.randomUUID(), "AWAITING_REVIEW");
         when(repository.findByWorkflowId(workflowId)).thenReturn(Optional.of(case_));
         when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
@@ -46,7 +46,7 @@ class ResolutionServiceTest {
     @DisplayName("checkerApprove transitions to APPROVED with signal flag")
     void checkerApprove_transitionsToApprovedWithSignal() {
         var workflowId = UUID.randomUUID();
-        var case_ = TransactionResolutionCase.createPendingMaker(workflowId, UUID.randomUUID())
+        var case_ = TransactionResolutionCase.createPendingMaker(workflowId, UUID.randomUUID(), "AWAITING_REVIEW")
             .makerPropose(ResolutionAction.COMMIT, "maker-001", "PAYNET_CONFIRMED", "reason", null);
         when(repository.findByWorkflowId(workflowId)).thenReturn(Optional.of(case_));
         when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
@@ -64,7 +64,7 @@ class ResolutionServiceTest {
     @DisplayName("checkerReject returns to PENDING_MAKER")
     void checkerReject_returnsToPendingMaker() {
         var workflowId = UUID.randomUUID();
-        var case_ = TransactionResolutionCase.createPendingMaker(workflowId, UUID.randomUUID())
+        var case_ = TransactionResolutionCase.createPendingMaker(workflowId, UUID.randomUUID(), "AWAITING_REVIEW")
             .makerPropose(ResolutionAction.COMMIT, "maker-001", "PAYNET_CONFIRMED", "reason", null);
         when(repository.findByWorkflowId(workflowId)).thenReturn(Optional.of(case_));
         when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
@@ -82,7 +82,7 @@ class ResolutionServiceTest {
     @DisplayName("Four-Eyes: same user as maker and checker throws SecurityException")
     void checkerApprove_sameUserAsMaker_throwsSecurityException() {
         var workflowId = UUID.randomUUID();
-        var case_ = TransactionResolutionCase.createPendingMaker(workflowId, UUID.randomUUID())
+        var case_ = TransactionResolutionCase.createPendingMaker(workflowId, UUID.randomUUID(), "AWAITING_REVIEW")
             .makerPropose(ResolutionAction.COMMIT, "maker-001", "PAYNET_CONFIRMED", "reason", null);
         when(repository.findByWorkflowId(workflowId)).thenReturn(Optional.of(case_));
 
@@ -96,7 +96,7 @@ class ResolutionServiceTest {
     @DisplayName("Four-Eyes: checkerReject same user throws SecurityException")
     void checkerReject_sameUserAsMaker_throwsSecurityException() {
         var workflowId = UUID.randomUUID();
-        var case_ = TransactionResolutionCase.createPendingMaker(workflowId, UUID.randomUUID())
+        var case_ = TransactionResolutionCase.createPendingMaker(workflowId, UUID.randomUUID(), "AWAITING_REVIEW")
             .makerPropose(ResolutionAction.COMMIT, "maker-001", "PAYNET_CONFIRMED", "reason", null);
         when(repository.findByWorkflowId(workflowId)).thenReturn(Optional.of(case_));
 
@@ -110,7 +110,7 @@ class ResolutionServiceTest {
     @DisplayName("makerPropose on wrong status throws IllegalStateException")
     void makerPropose_wrongStatus_throwsIllegalStateException() {
         var workflowId = UUID.randomUUID();
-        var case_ = TransactionResolutionCase.createPendingMaker(workflowId, UUID.randomUUID())
+        var case_ = TransactionResolutionCase.createPendingMaker(workflowId, UUID.randomUUID(), "AWAITING_REVIEW")
             .makerPropose(ResolutionAction.COMMIT, "maker-001", "PAYNET_CONFIRMED", "reason", null);
         when(repository.findByWorkflowId(workflowId)).thenReturn(Optional.of(case_));
 
@@ -124,7 +124,7 @@ class ResolutionServiceTest {
     @DisplayName("checkerApprove on wrong status throws IllegalStateException")
     void checkerApprove_wrongStatus_throwsIllegalStateException() {
         var workflowId = UUID.randomUUID();
-        var case_ = TransactionResolutionCase.createPendingMaker(workflowId, UUID.randomUUID());
+        var case_ = TransactionResolutionCase.createPendingMaker(workflowId, UUID.randomUUID(), "AWAITING_REVIEW");
         when(repository.findByWorkflowId(workflowId)).thenReturn(Optional.of(case_));
 
         var ex = assertThrows(IllegalStateException.class,

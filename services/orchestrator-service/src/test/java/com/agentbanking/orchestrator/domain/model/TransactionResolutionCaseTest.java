@@ -43,7 +43,7 @@ class TransactionResolutionCaseTest {
             UUID workflowId = UUID.randomUUID();
             UUID transactionId = UUID.randomUUID();
 
-            var result = TransactionResolutionCase.createPendingMaker(workflowId, transactionId);
+            var result = TransactionResolutionCase.createPendingMaker(workflowId, transactionId, "AWAITING_REVIEW");
 
             assertNotNull(result.id());
             assertEquals(workflowId, result.workflowId());
@@ -138,6 +138,8 @@ class TransactionResolutionCaseTest {
             status,
             "maker",
             now,
+            null,
+            null,
             null,
             null,
             null,

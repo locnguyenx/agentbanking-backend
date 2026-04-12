@@ -4,11 +4,11 @@ import com.agentbanking.orchestrator.application.activity.AuthorizeAtSwitchActiv
 import com.agentbanking.orchestrator.domain.port.out.SwitchAdapterPort;
 import com.agentbanking.orchestrator.domain.port.out.SwitchAdapterPort.SwitchAuthorizationInput;
 import com.agentbanking.orchestrator.domain.port.out.SwitchAdapterPort.SwitchAuthorizationResult;
-import io.temporal.spring.boot.ActivityImpl;
+
+
 import org.springframework.stereotype.Component;
 
 @Component
-@ActivityImpl(workers = "agent-banking-tasks")
 public class AuthorizeAtSwitchActivityImpl implements AuthorizeAtSwitchActivity {
 
     private final SwitchAdapterPort switchAdapterPort;

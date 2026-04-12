@@ -11,6 +11,7 @@ import java.util.UUID;
 
 @Component
 @ActivityImpl(workers = "agent-banking-tasks")
+
 public class EvaluateStpActivityImpl implements EvaluateStpActivity {
 
     private final RulesServicePort rulesServicePort;
@@ -20,11 +21,18 @@ public class EvaluateStpActivityImpl implements EvaluateStpActivity {
     }
 
     @Override
-    public StpDecision evaluateStp(String transactionType, String agentId, String amount, String customerProfile) {
+    public StpDecision evaluateStp(Input input) {
         return rulesServicePort.evaluateStp(
-                transactionType,
-                UUID.fromString(agentId),
-                new BigDecimal(amount),
-                customerProfile);
+            new RulesServicePort.StpEvaluationInput(
+                input.transactionType(),
+                UUID.fromString(input.agentId()),
+                new BigDecimal(input.amount()),
+                input.customerProfile(),
+                input.agentTier(),
+                input.transactionCountToday(),
+                input.amountToday() != null ? new BigDecimal(input.amountToday()) : BigDecimal.ZERO,
+                input.todayTotalAmount() != null ? new BigDecimal(input.todayTotalAmount()) : BigDecimal.ZERO
+            )
+        );
     }
 }

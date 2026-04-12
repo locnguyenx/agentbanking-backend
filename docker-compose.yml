@@ -349,6 +349,8 @@ services:
     build:
       context: .
       dockerfile: ./services/orchestrator-service/Dockerfile
+      args:
+        JAR_PATH: services/orchestrator-service/build/libs
     profiles: [backend, all]
     ports:
       - "8086:8086"

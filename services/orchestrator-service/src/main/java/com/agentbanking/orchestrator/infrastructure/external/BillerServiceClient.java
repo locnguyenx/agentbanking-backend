@@ -12,7 +12,7 @@ import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 
-@FeignClient(name = "biller-service", url = "${biller-service.url}")
+@FeignClient(name = "biller-service", url = "${biller-service.url}", fallbackFactory = BillerServiceClientFallbackFactory.class)
 public interface BillerServiceClient {
 
     @PostMapping("/internal/validate-ref")

@@ -382,4 +382,35 @@ public class LedgerController {
             ));
         }
     }
+
+    @GetMapping("/backoffice/ledger-transactions")
+    public ResponseEntity<Map<String, Object>> getLedgerTransactions(
+            @RequestParam(required = false) String fromDate,
+            @RequestParam(required = false) String toDate,
+            @RequestParam(required = false) String agentId,
+            @RequestParam(required = false) String transactionType,
+            @RequestParam(required = false) String status,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        
+        // For now, return recent transactions with pagination support
+        List<TransactionRecord> transactions = transactionQueryUseCase.findRecentTransactions();
+        
+        // Apply pagination
+        int totalElements = transactions.size();
+        int start = page * size;
+        int end = Math.min(start + size, totalElements);
+        
+        List<Map<String, Object>> content = transactions.subList(start, end).stream()
+            .map(this::mapToTransactionResponse)
+            .collect(Collectors.toList());
+        
+        return ResponseEntity.ok(Map.of(
+            "content", content,
+            "totalElements", totalElements,
+            "totalPages", (totalElements + size - 1) / size,
+            "page", page,
+            "size", size
+        ));
+    }
 }

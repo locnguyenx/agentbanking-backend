@@ -64,6 +64,8 @@ class QueryWorkflowStatusUseCaseImplTest {
             null, // errorMessage
             null, // externalReference
             "REF123", // referenceNumber
+            null, // pendingReason
+            "", // errorDetails
             Instant.now(), // createdAt
             Instant.now()  // completedAt
         );
@@ -98,6 +100,8 @@ class QueryWorkflowStatusUseCaseImplTest {
             "Insufficient funds",
             null, // externalReference
             null, // referenceNumber
+            null, // pendingReason
+            "", // errorDetails
             Instant.now(),
             Instant.now()
         );
@@ -130,6 +134,8 @@ class QueryWorkflowStatusUseCaseImplTest {
             null,
             null, // externalReference
             null, // referenceNumber
+            null, // pendingReason
+            "", // errorDetails
             Instant.now(),
             null
         );
@@ -159,6 +165,8 @@ class QueryWorkflowStatusUseCaseImplTest {
             null,
             null, // externalReference
             null, // referenceNumber
+            null, // pendingReason
+            "", // errorDetails
             Instant.now(),
             null
         );

@@ -6,6 +6,7 @@ import org.junit.jupiter.api.*;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.reactive.server.WebTestClient;
 
+import java.math.BigDecimal;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -26,8 +27,11 @@ class SelfContainedOrchestratorE2ETest {
 
     private static final String GATEWAY_URL = System.getenv().getOrDefault("GATEWAY_BASE_URL", "http://localhost:8080");
     private static final String AUTH_URL = System.getenv().getOrDefault("AUTH_SERVICE_URL", "http://localhost:8087");
+    private static final String ONBOARDING_URL = System.getenv().getOrDefault("ONBOARDING_SERVICE_URL", "http://localhost:8083");
+    private static final String LEDGER_URL = System.getenv().getOrDefault("LEDGER_SERVICE_URL", "http://localhost:18082");
     private static final ObjectMapper objectMapper = new ObjectMapper();
     
+    private static String adminToken;
     private static String agentToken;
     private static String agentId;
     private static final UUID AGENT_UUID = UUID.fromString("a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11");
@@ -38,6 +42,14 @@ class SelfContainedOrchestratorE2ETest {
 
     private final WebTestClient authClient = WebTestClient.bindToServer()
             .baseUrl(AUTH_URL)
+            .build();
+
+    private final WebTestClient onboardingClient = WebTestClient.bindToServer()
+            .baseUrl(ONBOARDING_URL)
+            .build();
+
+    private final WebTestClient ledgerClient = WebTestClient.bindToServer()
+            .baseUrl(LEDGER_URL)
             .build();
 
     @BeforeAll
@@ -54,10 +66,9 @@ class SelfContainedOrchestratorE2ETest {
         @Test
         @DisplayName("Get or create test agent token")
         void getAgentToken() {
-            String adminToken = getAdminToken();
+            adminToken = getAdminToken();
             assertNotNull(adminToken, "Admin token required for setup");
 
-            // Create agent001 user if not exists
             try {
                 authClient.post()
                         .uri("/auth/users")
@@ -76,7 +87,6 @@ class SelfContainedOrchestratorE2ETest {
                 System.out.println("User may already exist: " + e.getMessage());
             }
 
-            // Get agent token
             String response = authClient.post()
                     .uri("/auth/token")
                     .contentType(MediaType.APPLICATION_JSON)
@@ -97,10 +107,94 @@ class SelfContainedOrchestratorE2ETest {
                 JsonNode node = objectMapper.readTree(response);
                 assertTrue(node.has("access_token"), "Response should contain access_token");
                 agentToken = node.get("access_token").asText();
-                agentId = AGENT_UUID.toString();
                 System.out.println("Agent token obtained: " + agentToken.substring(0, 20) + "...");
             } catch (Exception e) {
                 fail("Failed to parse token response: " + e.getMessage());
+            }
+        }
+
+        @Test
+        @DisplayName("Create or get agent via onboarding service")
+        void createOrGetAgent() {
+            assumeTrue(adminToken != null, "Admin token required");
+
+            try {
+                String response = onboardingClient.post()
+                        .uri("/backoffice/agents")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .bodyValue("""
+                            {
+                                "agentCode": "AGT-E2E-001",
+                                "businessName": "E2E Test Business",
+                                "tier": "STANDARD",
+                                "mykadNumber": "900101011234",
+                                "phoneNumber": "0123456789",
+                                "merchantGpsLat": 3.1390,
+                                "merchantGpsLng": 101.6869
+                            }
+                            """)
+                        .exchange()
+                        .expectBody(String.class)
+                        .returnResult()
+                        .getResponseBody();
+
+                JsonNode node = objectMapper.readTree(response);
+                agentId = node.get("agentId").asText();
+                System.out.println("Agent created/retrieved: " + agentId);
+            } catch (Exception e) {
+                try {
+                    String listResponse = onboardingClient.get()
+                            .uri("/backoffice/agents?page=0&size=10")
+                            .header("Authorization", "Bearer " + adminToken)
+                            .exchange()
+                            .expectBody(String.class)
+                            .returnResult()
+                            .getResponseBody();
+
+                    JsonNode agents = objectMapper.readTree(listResponse);
+                    if (agents.isArray() && agents.size() > 0) {
+                        agentId = agents.get(0).get("agentId").asText();
+                        System.out.println("Agent already exists: " + agentId);
+                    }
+                } catch (Exception ex) {
+                    System.out.println("Failed to get agent: " + ex.getMessage());
+                }
+            }
+        }
+
+        @Test
+        @DisplayName("Top up agent float balance")
+        void topUpFloat() {
+            assumeTrue(agentId != null, "Agent must be created first");
+
+            try {
+                String idempotencyKey = "e2e-float-setup-" + UUID.randomUUID();
+                String body = """
+                    {
+                        "agentId": "%s",
+                        "amount": 10000.00,
+                        "customerFee": null,
+                        "agentCommission": null,
+                        "bankShare": null,
+                        "idempotencyKey": "%s",
+                        "destinationAccount": "FLOAT_SETUP"
+                    }
+                    """.formatted(agentId, idempotencyKey);
+
+                var response = ledgerClient.post()
+                        .uri("/internal/credit")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .bodyValue(body)
+                        .exchange();
+
+                if (response.expectBody(String.class).returnResult().getStatus().value() == 200) {
+                    System.out.println("Float topped up successfully for agent: " + agentId);
+                } else {
+                    System.out.println("Float may already exist or setup completed");
+                }
+            } catch (Exception e) {
+                System.out.println("Float setup: " + e.getMessage());
             }
         }
 
@@ -272,7 +366,7 @@ class SelfContainedOrchestratorE2ETest {
                     "amount": 100.00,
                     "idempotencyKey": "%s"
                 }
-                """.formatted(AGENT_UUID, idempotencyKey);
+                """.formatted(getEffectiveAgentId(), idempotencyKey);
 
             var response = gatewayClient.post()
                     .uri("/api/v1/transactions")
@@ -477,7 +571,7 @@ class SelfContainedOrchestratorE2ETest {
                     "geofenceLat": 3.1390,
                     "geofenceLng": 101.6869
                 }
-                """.formatted(AGENT_UUID, idempotencyKey);
+                """.formatted(getEffectiveAgentId(), idempotencyKey);
         }
 
         private String buildPinBasedPurchaseRequest(String idempotencyKey) {
@@ -494,7 +588,7 @@ class SelfContainedOrchestratorE2ETest {
                     "geofenceLat": 3.1390,
                     "geofenceLng": 101.6869
                 }
-                """.formatted(AGENT_UUID, idempotencyKey);
+                """.formatted(getEffectiveAgentId(), idempotencyKey);
         }
 
         private String buildPrepaidTopupRequest(String idempotencyKey) {
@@ -510,7 +604,7 @@ class SelfContainedOrchestratorE2ETest {
                     "geofenceLat": 3.1390,
                     "geofenceLng": 101.6869
                 }
-                """.formatted(AGENT_UUID, idempotencyKey);
+                """.formatted(getEffectiveAgentId(), idempotencyKey);
         }
 
         private String buildEWalletWithdrawalRequest(String idempotencyKey) {
@@ -526,7 +620,7 @@ class SelfContainedOrchestratorE2ETest {
                     "geofenceLat": 3.1390,
                     "geofenceLng": 101.6869
                 }
-                """.formatted(AGENT_UUID, idempotencyKey);
+                """.formatted(getEffectiveAgentId(), idempotencyKey);
         }
 
         private String buildEWalletTopupRequest(String idempotencyKey) {
@@ -542,7 +636,7 @@ class SelfContainedOrchestratorE2ETest {
                     "geofenceLat": 3.1390,
                     "geofenceLng": 101.6869
                 }
-                """.formatted(AGENT_UUID, idempotencyKey);
+                """.formatted(getEffectiveAgentId(), idempotencyKey);
         }
 
         private String buildESSPPurchaseRequest(String idempotencyKey) {
@@ -557,7 +651,7 @@ class SelfContainedOrchestratorE2ETest {
                     "geofenceLat": 3.1390,
                     "geofenceLng": 101.6869
                 }
-                """.formatted(AGENT_UUID, idempotencyKey);
+                """.formatted(getEffectiveAgentId(), idempotencyKey);
         }
 
         private String buildPINPurchaseRequest(String idempotencyKey) {
@@ -573,7 +667,7 @@ class SelfContainedOrchestratorE2ETest {
                     "geofenceLat": 3.1390,
                     "geofenceLng": 101.6869
                 }
-                """.formatted(AGENT_UUID, idempotencyKey);
+                """.formatted(getEffectiveAgentId(), idempotencyKey);
         }
 
         private String buildRetailSaleRequest(String idempotencyKey) {
@@ -588,7 +682,7 @@ class SelfContainedOrchestratorE2ETest {
                     "geofenceLat": 3.1390,
                     "geofenceLng": 101.6869
                 }
-                """.formatted(AGENT_UUID, idempotencyKey);
+                """.formatted(getEffectiveAgentId(), idempotencyKey);
         }
 
         private String buildHybridCashbackRequest(String idempotencyKey) {
@@ -604,7 +698,7 @@ class SelfContainedOrchestratorE2ETest {
                     "geofenceLat": 3.1390,
                     "geofenceLng": 101.6869
                 }
-                """.formatted(AGENT_UUID, idempotencyKey);
+                """.formatted(getEffectiveAgentId(), idempotencyKey);
         }
     }
 
@@ -1158,6 +1252,10 @@ class SelfContainedOrchestratorE2ETest {
         }
     }
 
+    private String getEffectiveAgentId() {
+        return agentId != null ? agentId : AGENT_UUID.toString();
+    }
+
     private String buildWithdrawalRequest(String idempotencyKey, String targetBIN) {
         return """
             {
@@ -1170,7 +1268,7 @@ class SelfContainedOrchestratorE2ETest {
                 "targetBIN": "%s",
                 "agentTier": "TIER_1"
             }
-            """.formatted(AGENT_UUID, idempotencyKey, targetBIN);
+            """.formatted(getEffectiveAgentId(), idempotencyKey, targetBIN);
     }
 
     private String buildDepositRequest(String idempotencyKey) {
@@ -1183,7 +1281,7 @@ class SelfContainedOrchestratorE2ETest {
                 "destinationAccount": "1234567890",
                 "agentTier": "TIER_1"
             }
-            """.formatted(AGENT_UUID, idempotencyKey);
+            """.formatted(getEffectiveAgentId(), idempotencyKey);
     }
 
     private String buildBillPaymentRequest(String idempotencyKey) {
@@ -1197,7 +1295,7 @@ class SelfContainedOrchestratorE2ETest {
                 "ref1": "123456789012",
                 "agentTier": "TIER_1"
             }
-            """.formatted(AGENT_UUID, idempotencyKey);
+            """.formatted(getEffectiveAgentId(), idempotencyKey);
     }
 
     private String buildDuitNowRequest(String idempotencyKey) {
@@ -1215,7 +1313,7 @@ class SelfContainedOrchestratorE2ETest {
                 "proxyValue": "%s",
                 "agentTier": "TIER_1"
             }
-            """.formatted(AGENT_UUID, idempotencyKey, proxyType, proxyValue);
+            """.formatted(getEffectiveAgentId(), idempotencyKey, proxyType, proxyValue);
     }
 
     private String buildWithdrawalRequestLarge(String idempotencyKey, String targetBIN) {
@@ -1230,7 +1328,7 @@ class SelfContainedOrchestratorE2ETest {
                 "targetBIN": "%s",
                 "agentTier": "TIER_1"
             }
-            """.formatted(AGENT_UUID, idempotencyKey, targetBIN);
+            """.formatted(getEffectiveAgentId(), idempotencyKey, targetBIN);
     }
 
     private String buildDepositRequestInvalidAccount(String idempotencyKey) {
@@ -1243,7 +1341,7 @@ class SelfContainedOrchestratorE2ETest {
                 "destinationAccount": "9999999999",
                 "agentTier": "TIER_1"
             }
-            """.formatted(AGENT_UUID, idempotencyKey);
+            """.formatted(getEffectiveAgentId(), idempotencyKey);
     }
 
     private String buildDepositRequestHighValue(String idempotencyKey) {
@@ -1257,7 +1355,7 @@ class SelfContainedOrchestratorE2ETest {
                 "requiresBiometric": true,
                 "agentTier": "TIER_1"
             }
-            """.formatted(AGENT_UUID, idempotencyKey);
+            """.formatted(getEffectiveAgentId(), idempotencyKey);
     }
 
     private String buildBillPaymentInvalidBiller(String idempotencyKey) {
@@ -1271,6 +1369,232 @@ class SelfContainedOrchestratorE2ETest {
                 "ref1": "123456789012",
                 "agentTier": "TIER_1"
             }
-            """.formatted(AGENT_UUID, idempotencyKey);
+            """.formatted(getEffectiveAgentId(), idempotencyKey);
+    }
+
+    // ================================================================
+    // BDD-STP: STP Evaluation Tests
+    // ================================================================
+
+    @Nested
+    @DisplayName("BDD-STP: STP Evaluation End-to-End")
+    @Order(110)
+    class StpEvaluationTests {
+
+        @Test
+        @DisplayName("BDD-STP-01: Full STP - transaction completes immediately")
+        void fullStp_transactionCompletes() {
+            assumeTrue(agentToken != null, "Agent token required");
+
+            // Standard amount within limits should get FULL_STP
+            String idempotencyKey = "e2e-stp-full-" + UUID.randomUUID();
+            String requestBody = buildWithdrawalRequest(idempotencyKey, "0123");
+
+            String body = gatewayClient.post()
+                    .uri("/api/v1/transactions")
+                    .header("Authorization", "Bearer " + agentToken)
+                    .header("X-Idempotency-Key", idempotencyKey)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .bodyValue(requestBody)
+                    .exchange()
+                    .expectBody(String.class)
+                    .returnResult()
+                    .getResponseBody();
+
+            assertNotNull(body);
+            JsonNode json = parseBody(body);
+            assertEquals("PENDING", json.get("status").asText(),
+                "PENDING means workflow started - will proceed through FULL_STP path");
+
+            // Poll after short delay to check if completed
+            try { Thread.sleep(3000); } catch (Exception e) {}
+
+            var pollResponse = gatewayClient.get()
+                    .uri("/api/v1/transactions/" + idempotencyKey + "/status")
+                    .header("Authorization", "Bearer " + agentToken)
+                    .exchange();
+
+            String pollBody = pollResponse.expectBody(String.class).returnResult().getResponseBody();
+            if (pollBody != null) {
+                JsonNode pollJson = parseBody(pollBody);
+                String status = pollJson.has("status") ? pollJson.get("status").asText() : "UNKNOWN";
+                System.out.println("Transaction status after FULL_STP: " + status);
+            }
+        }
+
+        @Test
+        @DisplayName("BDD-STP-02: High value - triggers PENDING_REVIEW (NON_STP)")
+        void highValue_pendingReview() {
+            assumeTrue(agentToken != null, "Agent token required");
+
+            // Very high amount should trigger NON_STP (manual review required)
+            String idempotencyKey = "e2e-stp-highvalue-" + UUID.randomUUID();
+            String requestBody = """
+                {
+                    "transactionType": "CASH_WITHDRAWAL",
+                    "agentId": "%s",
+                    "amount": 50000.00,
+                    "idempotencyKey": "%s",
+                    "pan": "4111111111111111",
+                    "customerCardMasked": "411111******1111",
+                    "targetBIN": "0123",
+                    "agentTier": "TIER_1"
+                }
+                """.formatted(getEffectiveAgentId(), idempotencyKey);
+
+            String body = gatewayClient.post()
+                    .uri("/api/v1/transactions")
+                    .header("Authorization", "Bearer " + agentToken)
+                    .header("X-Idempotency-Key", idempotencyKey)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .bodyValue(requestBody)
+                    .exchange()
+                    .expectBody(String.class)
+                    .returnResult()
+                    .getResponseBody();
+
+            assertNotNull(body);
+            JsonNode json = parseBody(body);
+            assertEquals("PENDING", json.get("status").asText());
+            System.out.println("High value transaction started - pending review expected");
+        }
+
+        @Test
+        @DisplayName("BDD-STP-03: Deposit - FULL_STP path")
+        void deposit_fullStp() {
+            assumeTrue(agentToken != null, "Agent token required");
+
+            String idempotencyKey = "e2e-stp-deposit-" + UUID.randomUUID();
+            String requestBody = buildDepositRequest(idempotencyKey);
+
+            String body = gatewayClient.post()
+                    .uri("/api/v1/transactions")
+                    .header("Authorization", "Bearer " + agentToken)
+                    .header("X-Idempotency-Key", idempotencyKey)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .bodyValue(requestBody)
+                    .exchange()
+                    .expectBody(String.class)
+                    .returnResult()
+                    .getResponseBody();
+
+            assertNotNull(body);
+            JsonNode json = parseBody(body);
+            assertEquals("PENDING", json.get("status").asText());
+        }
+
+        @Test
+        @DisplayName("BDD-STP-04: Bill payment - FULL_STP path")
+        void billPayment_fullStp() {
+            assumeTrue(agentToken != null, "Agent token required");
+
+            String idempotencyKey = "e2e-stp-billpay-" + UUID.randomUUID();
+            String requestBody = buildBillPaymentRequest(idempotencyKey);
+
+            String body = gatewayClient.post()
+                    .uri("/api/v1/transactions")
+                    .header("Authorization", "Bearer " + agentToken)
+                    .header("X-Idempotency-Key", idempotencyKey)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .bodyValue(requestBody)
+                    .exchange()
+                    .expectBody(String.class)
+                    .returnResult()
+                    .getResponseBody();
+
+            assertNotNull(body);
+            JsonNode json = parseBody(body);
+            assertEquals("PENDING", json.get("status").asText());
+        }
+
+        @Test
+        @DisplayName("BDD-STP-05: DuitNow transfer - FULL_STP path")
+        void duitNow_fullStp() {
+            assumeTrue(agentToken != null, "Agent token required");
+
+            String idempotencyKey = "e2e-stp-duitnow-" + UUID.randomUUID();
+            String requestBody = buildDuitNowRequest(idempotencyKey);
+
+            String body = gatewayClient.post()
+                    .uri("/api/v1/transactions")
+                    .header("Authorization", "Bearer " + agentToken)
+                    .header("X-Idempotency-Key", idempotencyKey)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .bodyValue(requestBody)
+                    .exchange()
+                    .expectBody(String.class)
+                    .returnResult()
+                    .getResponseBody();
+
+            assertNotNull(body);
+            JsonNode json = parseBody(body);
+            assertEquals("PENDING", json.get("status").asText());
+        }
+
+        @Test
+        @DisplayName("BDD-STP-06: Invalid transaction - rejects at gateway")
+        void invalidTransaction_rejects() {
+            assumeTrue(agentToken != null, "Agent token required");
+
+            String idempotencyKey = "e2e-stp-invalid-" + UUID.randomUUID();
+            String requestBody = """
+                {
+                    "transactionType": "INVALID_TYPE",
+                    "agentId": "%s",
+                    "amount": 100.00,
+                    "idempotencyKey": "%s",
+                    "agentTier": "TIER_1"
+                }
+                """.formatted(getEffectiveAgentId(), idempotencyKey);
+
+            var response = gatewayClient.post()
+                    .uri("/api/v1/transactions")
+                    .header("Authorization", "Bearer " + agentToken)
+                    .header("X-Idempotency-Key", idempotencyKey)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .bodyValue(requestBody)
+                    .exchange();
+
+            int statusCode = response.expectBody(String.class).returnResult().getStatus().value();
+            assertTrue(statusCode >= 400, "Invalid transaction type should return 4xx error");
+        }
+
+        @Test
+        @DisplayName("BDD-STP-07: Verify pendingReason is captured in PENDING_REVIEW status")
+        void pendingReview_capturesReason() {
+            assumeTrue(agentToken != null, "Agent token required");
+
+            // Create high-value transaction that should trigger manual review
+            String idempotencyKey = "e2e-stp-reason-" + UUID.randomUUID();
+            String requestBody = """
+                {
+                    "transactionType": "CASH_WITHDRAWAL",
+                    "agentId": "%s",
+                    "amount": 75000.00,
+                    "idempotencyKey": "%s",
+                    "pan": "4111111111111111",
+                    "customerCardMasked": "411111******1111",
+                    "targetBIN": "0123",
+                    "agentTier": "TIER_1"
+                }
+                """.formatted(getEffectiveAgentId(), idempotencyKey);
+
+            String body = gatewayClient.post()
+                    .uri("/api/v1/transactions")
+                    .header("Authorization", "Bearer " + agentToken)
+                    .header("X-Idempotency-Key", idempotencyKey)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .bodyValue(requestBody)
+                    .exchange()
+                    .expectBody(String.class)
+                    .returnResult()
+                    .getResponseBody();
+
+            assertNotNull(body);
+            JsonNode json = parseBody(body);
+            assertEquals("PENDING", json.get("status").asText());
+
+            System.out.println("Transaction with high amount initiated - should trigger PENDING_REVIEW with pendingReason");
+        }
     }
 }

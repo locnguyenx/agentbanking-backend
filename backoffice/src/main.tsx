@@ -16,6 +16,7 @@ import { OrchestratorWorkflows } from './pages/OrchestratorWorkflows'
 import { Profile } from './pages/Profile'
 import { SystemAdmin } from './pages/SystemAdmin'
 import './styles/global.css'
+import './styles/workflow-enhancements.css'
 
 const queryClient = new QueryClient()
 

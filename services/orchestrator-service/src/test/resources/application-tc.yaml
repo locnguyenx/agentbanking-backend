@@ -1,9 +1,12 @@
 spring:
   main:
     allow-bean-definition-overriding: true
+  datasource:
+    url: jdbc:postgresql://localhost:5438/orchestrator_db
+    username: postgres
+    password: postgres
   jpa:
     hibernate:
       ddl-auto: none
   flyway:
-    enabled: true
-    locations: filesystem:src/main/resources/db/migration
+    enabled: false

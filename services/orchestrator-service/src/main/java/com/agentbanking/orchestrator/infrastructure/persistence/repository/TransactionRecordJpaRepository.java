@@ -18,6 +18,9 @@ import java.util.UUID;
 public interface TransactionRecordJpaRepository extends JpaRepository<TransactionRecordEntity, UUID>, JpaSpecificationExecutor<TransactionRecordEntity> {
     Optional<TransactionRecordEntity> findByWorkflowId(String workflowId);
     
+    @Query("SELECT t FROM TransactionRecordEntity t WHERE t.workflowId = :uuid OR t.workflowId LIKE %:uuid% ORDER BY t.createdAt DESC")
+    Optional<TransactionRecordEntity> findByWorkflowIdContaining(@Param("uuid") String uuid);
+    
     @Query("SELECT t FROM TransactionRecordEntity t WHERE t.status IN ('PENDING', 'COMPENSATING', 'FAILED', 'PENDING_REVIEW') ORDER BY t.createdAt DESC")
     List<TransactionRecordEntity> findStuckTransactions();
 }

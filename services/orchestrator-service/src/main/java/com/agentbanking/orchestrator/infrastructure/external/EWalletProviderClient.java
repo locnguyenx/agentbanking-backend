@@ -6,7 +6,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 
 import java.math.BigDecimal;
 
-@FeignClient(name = "ewallet-provider", url = "${ewallet-provider.url}")
+@FeignClient(name = "ewallet-provider", url = "${ewallet-provider.url}", fallbackFactory = EWalletProviderClientFallbackFactory.class)
 public interface EWalletProviderClient {
 
     @PostMapping("/internal/validate-wallet")

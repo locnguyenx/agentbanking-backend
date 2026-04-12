@@ -27,8 +27,8 @@ dependencies {
     implementation 'org.springframework.kafka:spring-kafka'
     implementation 'org.postgresql:postgresql'
     implementation 'org.flywaydb:flyway-core:9.22.3'
-    implementation 'io.temporal:temporal-sdk:1.25.1'
-    implementation 'io.temporal:temporal-spring-boot-starter:1.25.1'
+    implementation 'io.temporal:temporal-sdk:1.33.0'
+    implementation 'io.temporal:temporal-spring-boot-starter:1.33.0'
     implementation project(':common')
     
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
@@ -37,7 +37,7 @@ dependencies {
     testImplementation 'org.testcontainers:junit-jupiter:1.20.1'
     testImplementation 'org.testcontainers:postgresql:1.20.1'
     testImplementation 'org.testcontainers:kafka:1.20.1'
-    testImplementation 'io.temporal:temporal-testing:1.25.1'
+    testImplementation 'io.temporal:temporal-testing:1.33.0'
     testImplementation project(':common')
     testImplementation testFixtures(project(':common'))
 }

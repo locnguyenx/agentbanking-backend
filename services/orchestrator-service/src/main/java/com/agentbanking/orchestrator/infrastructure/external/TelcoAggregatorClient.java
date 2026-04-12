@@ -6,7 +6,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 
 import java.math.BigDecimal;
 
-@FeignClient(name = "telco-aggregator", url = "${telco-aggregator.url}")
+@FeignClient(name = "telco-aggregator", url = "${telco-aggregator.url}", fallbackFactory = TelcoAggregatorClientFallbackFactory.class)
 public interface TelcoAggregatorClient {
 
     @PostMapping("/internal/validate-phone")

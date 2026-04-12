@@ -32,7 +32,18 @@ public interface RulesServicePort {
         BigDecimal bankShare
     ) {}
 
-    StpDecision evaluateStp(String transactionType, UUID agentId, BigDecimal amount, String customerProfile);
+    StpDecision evaluateStp(StpEvaluationInput input);
+
+    record StpEvaluationInput(
+        String transactionType,
+        UUID agentId,
+        BigDecimal amount,
+        String customerProfile,
+        String agentTier,
+        int transactionCountToday,
+        BigDecimal amountToday,
+        BigDecimal todayTotalAmount
+    ) {}
 
     record StpDecision(String category, boolean approved, String reason) {}
 }

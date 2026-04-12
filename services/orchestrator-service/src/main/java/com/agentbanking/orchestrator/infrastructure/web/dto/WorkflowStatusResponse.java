@@ -6,6 +6,7 @@ import java.time.Instant;
 public record WorkflowStatusResponse(
     String status,
     String pendingReason,
+    String errorDetails,
     String workflowId,
     String transactionType,
     BigDecimal amount,

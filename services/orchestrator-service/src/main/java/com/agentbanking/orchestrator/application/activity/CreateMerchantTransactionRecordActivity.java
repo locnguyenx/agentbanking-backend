@@ -4,6 +4,7 @@ import com.agentbanking.orchestrator.domain.port.out.MerchantTransactionPort.Mer
 import io.temporal.activity.ActivityInterface;
 import java.util.UUID;
 
+
 @ActivityInterface
 public interface CreateMerchantTransactionRecordActivity {
     MerchantTransactionResult create(UUID transactionId, String merchantType, java.math.BigDecimal grossAmount, 

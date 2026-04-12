@@ -4,6 +4,8 @@ import com.agentbanking.orchestrator.domain.port.out.SwitchAdapterPort.DuitNowTr
 import com.agentbanking.orchestrator.domain.port.out.SwitchAdapterPort.DuitNowTransferResult;
 import io.temporal.activity.ActivityInterface;
 
+
+
 @ActivityInterface
 public interface SendDuitNowTransferActivity {
     DuitNowTransferResult sendDuitNowTransfer(DuitNowTransferInput input);

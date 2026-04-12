@@ -22,7 +22,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 
 import java.util.UUID;
 
-@FeignClient(name = "ledger-service", url = "${ledger-service.url}", path = "/internal")
+@FeignClient(name = "ledger-service", url = "${ledger-service.url}", path = "/internal", fallbackFactory = LedgerServiceClientFallbackFactory.class)
 public interface LedgerServiceClient {
 
     @PostMapping("/debit")

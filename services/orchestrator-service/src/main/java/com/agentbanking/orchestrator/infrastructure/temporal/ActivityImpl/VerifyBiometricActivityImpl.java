@@ -1,11 +1,11 @@
 package com.agentbanking.orchestrator.infrastructure.temporal.ActivityImpl;
 
 import com.agentbanking.orchestrator.application.activity.VerifyBiometricActivity;
-import io.temporal.spring.boot.ActivityImpl;
+
+
 import org.springframework.stereotype.Component;
 
 @Component
-@ActivityImpl(workers = "agent-banking-tasks")
 public class VerifyBiometricActivityImpl implements VerifyBiometricActivity {
 
     @Override

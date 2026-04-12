@@ -15,9 +15,12 @@ public interface TransactionRecordRepository {
 
     void updateStatus(String workflowId, String status, String errorCode,
                       String errorMessage, String externalReference,
-                      BigDecimal customerFee, String referenceNumber);
+                      BigDecimal customerFee, String referenceNumber, 
+                      String pendingReason, String errorDetails);
 
     Optional<TransactionRecordDTO> findByWorkflowId(String workflowId);
+    
+    Optional<TransactionRecordDTO> findByWorkflowIdContaining(String uuid);
 
     List<TransactionRecordDTO> findStuckTransactions();
 
@@ -45,6 +48,7 @@ public interface TransactionRecordRepository {
             String externalReference,
             String referenceNumber,
             String pendingReason,
+            String errorDetails,
             Instant createdAt,
             Instant completedAt
     ) {}

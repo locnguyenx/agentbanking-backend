@@ -554,6 +554,9 @@ spring:
 ---
 
 ## User Management
+### Seed Admin account
+**Admin Credentials (Development Only):**
+- Admin: `admin` / `password`
 
 ### Creating Admin Users
 
@@ -581,7 +584,39 @@ curl -X POST http://localhost:8080/api/v1/admin/users \
 
 ---
 
-## Backup & Recovery
+## Data Operations
+
+### Test data
+Test data is prepared in TestContext: gateway/src/test/java/com/agentbanking/gateway/integration/setup/TestContext.java
+
+### Clean up data (Development Only)
+
+✅ The procedure is complete and tested!
+To reset the system anytime:
+```bash
+./gradlew resetSystem
+```
+This gives you a fresh system with:
+- ✅ No transaction/workflow data
+- ✅ No demo users/agents
+- ✅ Only essential auth foundation (admin + roles + permissions)
+
+✅ What Happened:
+1. cleanAllData task: # ./gradlew cleanAllData
+   - ✅ Cleaned ALL transaction data (orchestrator, ledger)
+   - ✅ Cleaned ALL auth data (users, roles, permissions, sessions, etc.)
+   - ✅ Removed the test user I accidentally created
+2. loadAuthSeedData task:
+   - ✅ Loaded ONLY essential auth foundation
+   - ✅ Created 1 admin user (username: admin, password: password)
+   - ✅ Created 5 roles (IT_ADMIN, BANK_OPERATOR, AGENT, AUDITOR, TELLER)
+   - ✅ Created 11 permissions
+3. resetSystem task:
+   - ✅ Successfully ran cleanAllData → loadAuthSeedData
+   - ✅ System is now clean with fresh auth seed data
+   - ✅ No demo/garbage data - ready for testing
+
+---
 
 ### Database Backup
 

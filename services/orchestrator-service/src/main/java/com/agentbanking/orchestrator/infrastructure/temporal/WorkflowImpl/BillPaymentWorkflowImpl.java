@@ -9,6 +9,7 @@ import com.agentbanking.orchestrator.domain.port.out.BillerServicePort.*;
 import com.agentbanking.orchestrator.domain.port.out.EventPublisherPort.TransactionCompletedEvent;
 import com.agentbanking.orchestrator.domain.port.out.LedgerServicePort.*;
 import com.agentbanking.orchestrator.domain.port.out.RulesServicePort.*;
+
 import io.temporal.activity.ActivityOptions;
 import io.temporal.spring.boot.WorkflowImpl;
 import io.temporal.workflow.Workflow;
@@ -18,62 +19,91 @@ import java.math.BigDecimal;
 import java.time.Duration;
 import java.util.UUID;
 
-@WorkflowImpl(workers = "agent-banking-tasks")
+@WorkflowImpl(taskQueues = "agent-banking-tasks")
 public class BillPaymentWorkflowImpl implements BillPaymentWorkflow {
 
     private static final Logger log = Workflow.getLogger(BillPaymentWorkflowImpl.class);
 
-    private final CheckVelocityActivity checkVelocityActivity;
-    private final EvaluateStpActivity evaluateStpActivity;
-    private final CalculateFeesActivity calculateFeesActivity;
-    private final BlockFloatActivity blockFloatActivity;
-    private final CommitFloatActivity commitFloatActivity;
-    private final ReleaseFloatActivity releaseFloatActivity;
-    private final ValidateBillActivity validateBillActivity;
-    private final PayBillerActivity payBillerActivity;
-    private final NotifyBillerActivity notifyBillerActivity;
-    private final PublishKafkaEventActivity publishKafkaEventActivity;
-    private final SaveResolutionCaseActivity saveResolutionCaseActivity;
-    private final PersistWorkflowResultActivity persistWorkflowResultActivity;
+    private CheckVelocityActivity checkVelocityActivity;
+    private EvaluateStpActivity evaluateStpActivity;
+    private CalculateFeesActivity calculateFeesActivity;
+    private BlockFloatActivity blockFloatActivity;
+    private CommitFloatActivity commitFloatActivity;
+    private ReleaseFloatActivity releaseFloatActivity;
+    private ValidateBillActivity validateBillActivity;
+    private PayBillerActivity payBillerActivity;
+    private NotifyBillerActivity notifyBillerActivity;
+    private PublishKafkaEventActivity publishKafkaEventActivity;
+    private SaveResolutionCaseActivity saveResolutionCaseActivity;
+    private PersistWorkflowResultActivity persistWorkflowResultActivity;
 
     private WorkflowStatus currentStatus = WorkflowStatus.PENDING;
 
+    public BillPaymentWorkflowImpl(
+            CheckVelocityActivity checkVelocityActivity,
+            EvaluateStpActivity evaluateStpActivity,
+            CalculateFeesActivity calculateFeesActivity,
+            BlockFloatActivity blockFloatActivity,
+            CommitFloatActivity commitFloatActivity,
+            ReleaseFloatActivity releaseFloatActivity,
+            ValidateBillActivity validateBillActivity,
+            PayBillerActivity payBillerActivity,
+            NotifyBillerActivity notifyBillerActivity,
+            PublishKafkaEventActivity publishKafkaEventActivity,
+            SaveResolutionCaseActivity saveResolutionCaseActivity,
+            PersistWorkflowResultActivity persistWorkflowResultActivity) {
+        this.checkVelocityActivity = checkVelocityActivity;
+        this.evaluateStpActivity = evaluateStpActivity;
+        this.calculateFeesActivity = calculateFeesActivity;
+        this.blockFloatActivity = blockFloatActivity;
+        this.commitFloatActivity = commitFloatActivity;
+        this.releaseFloatActivity = releaseFloatActivity;
+        this.validateBillActivity = validateBillActivity;
+        this.payBillerActivity = payBillerActivity;
+        this.notifyBillerActivity = notifyBillerActivity;
+        this.publishKafkaEventActivity = publishKafkaEventActivity;
+        this.saveResolutionCaseActivity = saveResolutionCaseActivity;
+        this.persistWorkflowResultActivity = persistWorkflowResultActivity;
+    }
+
+    @SuppressWarnings("SpringJavaAutowiredMembersInspection")
     public BillPaymentWorkflowImpl() {
-        ActivityOptions defaultOptions = ActivityOptions.newBuilder()
-                .setStartToCloseTimeout(Duration.ofSeconds(10))
-                .setRetryOptions(io.temporal.common.RetryOptions.newBuilder()
-                        .setMaximumAttempts(3)
-                        .setInitialInterval(Duration.ofSeconds(1))
-                        .setMaximumInterval(Duration.ofSeconds(4))
-                        .build())
-                .build();
-
-        ActivityOptions noRetryOptions = ActivityOptions.newBuilder()
-                .setStartToCloseTimeout(Duration.ofSeconds(10))
-                .setRetryOptions(io.temporal.common.RetryOptions.newBuilder()
-                        .setMaximumAttempts(1)
-                        .build())
-                .build();
-
-        ActivityOptions payBillerOptions = ActivityOptions.newBuilder()
-                .setStartToCloseTimeout(Duration.ofSeconds(15))
-                .setRetryOptions(io.temporal.common.RetryOptions.newBuilder()
-                        .setMaximumAttempts(1)
-                        .build())
-                .build();
-
-        this.checkVelocityActivity = Workflow.newActivityStub(CheckVelocityActivity.class, defaultOptions);
-        this.evaluateStpActivity = Workflow.newActivityStub(EvaluateStpActivity.class, defaultOptions);
-        this.calculateFeesActivity = Workflow.newActivityStub(CalculateFeesActivity.class, defaultOptions);
-        this.blockFloatActivity = Workflow.newActivityStub(BlockFloatActivity.class, noRetryOptions);
-        this.commitFloatActivity = Workflow.newActivityStub(CommitFloatActivity.class, defaultOptions);
-        this.releaseFloatActivity = Workflow.newActivityStub(ReleaseFloatActivity.class, defaultOptions);
-        this.validateBillActivity = Workflow.newActivityStub(ValidateBillActivity.class, defaultOptions);
-        this.payBillerActivity = Workflow.newActivityStub(PayBillerActivity.class, payBillerOptions);
-        this.notifyBillerActivity = Workflow.newActivityStub(NotifyBillerActivity.class, defaultOptions);
-        this.publishKafkaEventActivity = Workflow.newActivityStub(PublishKafkaEventActivity.class, defaultOptions);
-        this.saveResolutionCaseActivity = Workflow.newActivityStub(SaveResolutionCaseActivity.class, defaultOptions);
-        this.persistWorkflowResultActivity = Workflow.newActivityStub(PersistWorkflowResultActivity.class, defaultOptions);
+        this.checkVelocityActivity = Workflow.newActivityStub(CheckVelocityActivity.class, ActivityOptions.newBuilder()
+                .setStartToCloseTimeout(Duration.ofMinutes(5))
+                .build());
+        this.evaluateStpActivity = Workflow.newActivityStub(EvaluateStpActivity.class, ActivityOptions.newBuilder()
+                .setStartToCloseTimeout(Duration.ofMinutes(3))
+                .build());
+        this.calculateFeesActivity = Workflow.newActivityStub(CalculateFeesActivity.class, ActivityOptions.newBuilder()
+                .setStartToCloseTimeout(Duration.ofMinutes(1))
+                .build());
+        this.blockFloatActivity = Workflow.newActivityStub(BlockFloatActivity.class, ActivityOptions.newBuilder()
+                .setStartToCloseTimeout(Duration.ofMinutes(2))
+                .build());
+        this.commitFloatActivity = Workflow.newActivityStub(CommitFloatActivity.class, ActivityOptions.newBuilder()
+                .setStartToCloseTimeout(Duration.ofMinutes(2))
+                .build());
+        this.releaseFloatActivity = Workflow.newActivityStub(ReleaseFloatActivity.class, ActivityOptions.newBuilder()
+                .setStartToCloseTimeout(Duration.ofMinutes(2))
+                .build());
+        this.validateBillActivity = Workflow.newActivityStub(ValidateBillActivity.class, ActivityOptions.newBuilder()
+                .setStartToCloseTimeout(Duration.ofMinutes(2))
+                .build());
+        this.payBillerActivity = Workflow.newActivityStub(PayBillerActivity.class, ActivityOptions.newBuilder()
+                .setStartToCloseTimeout(Duration.ofMinutes(5))
+                .build());
+        this.notifyBillerActivity = Workflow.newActivityStub(NotifyBillerActivity.class, ActivityOptions.newBuilder()
+                .setStartToCloseTimeout(Duration.ofMinutes(2))
+                .build());
+        this.publishKafkaEventActivity = Workflow.newActivityStub(PublishKafkaEventActivity.class, ActivityOptions.newBuilder()
+                .setStartToCloseTimeout(Duration.ofMinutes(1))
+                .build());
+        this.saveResolutionCaseActivity = Workflow.newActivityStub(SaveResolutionCaseActivity.class, ActivityOptions.newBuilder()
+                .setStartToCloseTimeout(Duration.ofMinutes(2))
+                .build());
+        this.persistWorkflowResultActivity = Workflow.newActivityStub(PersistWorkflowResultActivity.class, ActivityOptions.newBuilder()
+                .setStartToCloseTimeout(Duration.ofMinutes(2))
+                .build());
     }
 
     @Override
@@ -92,10 +122,17 @@ public class BillPaymentWorkflowImpl implements BillPaymentWorkflow {
 
             // Step 2: Evaluate STP
             var stpDecision = evaluateStpActivity.evaluateStp(
-                    "BILL_PAYMENT",
-                    input.agentId().toString(),
-                    input.amount().toString(),
-                    input.customerMykad());
+                    new EvaluateStpActivity.Input(
+                            "BILL_PAYMENT",
+                            input.agentId().toString(),
+                            input.amount().toString(),
+                            input.customerMykad(),
+                            input.agentTier(),
+                            0,
+                            "0",
+                            "0"
+                    )
+            );
             if (!stpDecision.approved()) {
                 currentStatus = WorkflowStatus.PENDING_REVIEW;
                 return WorkflowResult.failed("ERR_STP_REVIEW", stpDecision.reason(), "REVIEW");
@@ -183,7 +220,7 @@ public class BillPaymentWorkflowImpl implements BillPaymentWorkflow {
                     input.amount(), fees.customerFee());
             persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
                     input.idempotencyKey(), "COMPLETED", null, null,
-                    paymentResult.billerReference(), fees.customerFee(), paymentResult.billerReference()));
+                    paymentResult.billerReference(), fees.customerFee(), paymentResult.billerReference(), null));
             return completedResult;
 
         } catch (Exception e) {
@@ -192,7 +229,7 @@ public class BillPaymentWorkflowImpl implements BillPaymentWorkflow {
             WorkflowResult sysFailResult = WorkflowResult.failed("ERR_SYS_WORKFLOW_FAILED", e.getMessage(), "REVIEW");
             try {
                 persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
-                        input.idempotencyKey(), "FAILED", sysFailResult.errorCode(), sysFailResult.errorMessage(), null, null, null));
+                        input.idempotencyKey(), "FAILED", sysFailResult.errorCode(), sysFailResult.errorMessage(), null, null, null, "Workflow exception: " + e.getMessage()));
             } catch (Exception ex) {
                 log.warn("Failed to persist workflow failure result: {}", ex.getMessage());
             }

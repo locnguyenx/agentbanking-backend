@@ -72,7 +72,9 @@ task e2eTest(type: Test) {
     systemProperty 'junit.jupiter.execution.parallel.enabled', 'false'
 }
 
-// Run cleanup before E2E tests
+// Clean test data BEFORE running E2E tests (manual step required)
+// After tests, data persists for backoffice UI viewing
+// To run: ./gradlew :gateway:cleanE2eTestData :gateway:e2eTest
 e2eTest.dependsOn cleanE2eTestData
 
 tasks.named('bootJar') {
