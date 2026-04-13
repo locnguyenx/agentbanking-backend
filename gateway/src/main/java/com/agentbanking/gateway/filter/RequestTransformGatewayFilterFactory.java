@@ -197,7 +197,12 @@ public class RequestTransformGatewayFilterFactory
     /**
      * Transform external API request to internal format
      */
-    private Map<String, Object> transformRequest(Map<String, Object> input, String type, String agentId) {
+    private Map<String, Object> transformRequest(Map<String, Object> input, String configType, String agentId) {
+        if ("orchestrator".equals(configType)) {
+            return transformOrchestratorRequest(input, agentId);
+        }
+
+        String type = configType;
         return switch (type) {
             case "withdrawal" -> transformWithdrawalRequest(input, agentId);
             case "deposit" -> transformDepositRequest(input, agentId);
@@ -220,7 +225,12 @@ public class RequestTransformGatewayFilterFactory
     /**
      * Transform internal API response to external format
      */
-    private Map<String, Object> transformResponse(Map<String, Object> input, String type, String agentId) {
+    private Map<String, Object> transformResponse(Map<String, Object> input, String configType, String agentId) {
+        if ("orchestrator".equals(configType)) {
+            return input; // Pass-through for orchestrator response
+        }
+
+        String type = configType;
         return switch (type) {
             case "withdrawal" -> transformWithdrawalResponse(input);
             case "deposit" -> transformDepositResponse(input);
@@ -238,6 +248,35 @@ public class RequestTransformGatewayFilterFactory
             default -> input;
         };
     }
+
+    /**
+     * Specialized transformation for Orchestrator - preserves original payload
+     * while injecting required fields from security context.
+     */
+    private Map<String, Object> transformOrchestratorRequest(Map<String, Object> input, String agentId) {
+        Map<String, Object> output = new HashMap<>(input);
+        
+        // Defensive: Only inject agentId if it's a valid UUID string
+        // This prevents 'DEFAULT' or other non-UUID strings from breaking orchestrator deserialization
+        if (isValidUuid(agentId)) {
+            output.put("agentId", agentId);
+        } else {
+            log.warn("Skipping agentId injection: invalid UUID format '{}'", agentId);
+        }
+        
+        return output;
+    }
+
+    private boolean isValidUuid(String s) {
+        if (s == null || s.isBlank()) return false;
+        try {
+            UUID.fromString(s);
+            return true;
+        } catch (IllegalArgumentException e) {
+            return false;
+        }
+    }
+
 
     // ==================== REQUEST TRANSFORMERS ====================
 

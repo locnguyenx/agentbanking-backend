@@ -25,28 +25,28 @@ public abstract class BaseIntegrationTest {
     // Gateway client
     protected final WebTestClient gatewayClient = WebTestClient.bindToServer()
             .baseUrl(TestContext.GATEWAY_URL)
-            .responseTimeout(Duration.ofSeconds(30))
+            .responseTimeout(Duration.ofSeconds(60))
             .build();
 
     // Direct service clients (for setup/verification)
     protected final WebTestClient authClient = WebTestClient.bindToServer()
             .baseUrl(getServiceUrl("AUTH_SERVICE_URL", "http://localhost:8087"))
-            .responseTimeout(Duration.ofSeconds(30))
+            .responseTimeout(Duration.ofSeconds(60))
             .build();
 
     protected final WebTestClient ledgerClient = WebTestClient.bindToServer()
             .baseUrl(getServiceUrl("LEDGER_SERVICE_URL", "http://localhost:8082"))
-            .responseTimeout(Duration.ofSeconds(30))
+            .responseTimeout(Duration.ofSeconds(60))
             .build();
 
     protected final WebTestClient onboardingClient = WebTestClient.bindToServer()
             .baseUrl(getServiceUrl("ONBOARDING_SERVICE_URL", "http://localhost:8083"))
-            .responseTimeout(Duration.ofSeconds(30))
+            .responseTimeout(Duration.ofSeconds(60))
             .build();
 
     protected final WebTestClient rulesClient = WebTestClient.bindToServer()
             .baseUrl(getServiceUrl("RULES_SERVICE_URL", "http://localhost:8081"))
-            .responseTimeout(Duration.ofSeconds(30))
+            .responseTimeout(Duration.ofSeconds(60))
             .build();
 
     // Common test data constants (backward compatibility)

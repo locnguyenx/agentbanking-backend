@@ -1,31 +1,32 @@
 # Session Memory - Notes for Next Session
 
 **Project:** Agent Banking Platform  
-**Last Update:** 2026-04-12
+**Last Update:** 2026-04-13
 
 ## 📝 THE HANDOVER
 
-### Task Completed
-Temporal workflow activity recording issue has been FIXED. Activities are now properly recorded in workflow history.
+### Tasks Completed
+1. **E2E Stabilization**: Resolved 400 Bad Request errors in Orchestrator.
+2. **Gateway Fixes**: Implemented pass-through mode and defensive UUID validation.
+3. **Infrastructure**: Identified and documented the "stale JAR" issue in the Docker build process.
+4. **Verification**: 45/45 tests in `SelfContainedOrchestratorE2ETest` are green.
 
-### What Was Done
-1. Identified root cause: workflows were calling activities as Spring beans instead of through Temporal's activity proxy
-2. Fixed 14 workflow implementations in `orchestrator-service` to use `Workflow.newActivityStub()` pattern
-3. Rebuilt Docker container and verified activity recording works
+### Key Accomplishments
+- Fixed `transactionType` dropping in Gateway transformation.
+- Standardized `WebTestClient` response consumption pattern.
+- Restored MyKad verification routing.
 
 ### For Next Session
-- No pending work on this specific issue
-- E2E test failures (12) are pre-existing and unrelated to this fix
-- Session memory now initialized in `.agents/session-memory/`
+- The platform is currently stable and all core E2E tests are passing.
+- If any code changes are made to Gateway or Orchestrator, **MUST** run `./gradlew assemble` before `docker compose build`.
+- Monitor the `audit-service` for host-level zombie processes if `docker compose down` fails.
 
 ### Quick Verification Command
 ```bash
-# Check activity recording in Temporal
-docker exec -e TEMPORAL_ADDRESS=temporal:7233 agentbanking-backend-temporal-1 \
-  temporal --namespace default workflow show --workflow-id <WORKFLOW_ID> --detailed
+./gradlew :gateway:e2eTest --tests "com.agentbanking.gateway.integration.orchestrator.SelfContainedOrchestratorE2ETest"
 ```
 
-### Files Created
-- `.agents/session-memory/core/current-state.md`
-- `.agents/session-memory/core/progress.md`
-- `.agents/session-memory/NOTES_NEXT_SESSION.md` (this file)
+### Files Involved
+- `gateway/src/main/java/com/agentbanking/gateway/filter/RequestTransformGatewayFilterFactory.java`
+- `session-memory/core/current-state.md`
+- `session-memory/core/progress.md`

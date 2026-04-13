@@ -38,18 +38,22 @@ class SelfContainedOrchestratorE2ETest {
 
     private final WebTestClient gatewayClient = WebTestClient.bindToServer()
             .baseUrl(GATEWAY_URL)
+            .responseTimeout(java.time.Duration.ofSeconds(60))
             .build();
 
     private final WebTestClient authClient = WebTestClient.bindToServer()
             .baseUrl(AUTH_URL)
+            .responseTimeout(java.time.Duration.ofSeconds(30))
             .build();
 
     private final WebTestClient onboardingClient = WebTestClient.bindToServer()
             .baseUrl(ONBOARDING_URL)
+            .responseTimeout(java.time.Duration.ofSeconds(30))
             .build();
 
     private final WebTestClient ledgerClient = WebTestClient.bindToServer()
             .baseUrl(LEDGER_URL)
+            .responseTimeout(java.time.Duration.ofSeconds(30))
             .build();
 
     @BeforeAll
@@ -805,8 +809,7 @@ class SelfContainedOrchestratorE2ETest {
             // Note: Gateway may allow unauthenticated requests in dev mode
             // Production config should enforce JwtAuth on this endpoint
             System.out.println("Transaction without auth returned status: " + statusCode);
-            assertTrue(statusCode >= 200 && statusCode < 300, 
-                    "Transaction should be processed, got: " + statusCode);
+            assertEquals(401, statusCode, "Transaction without auth should return 401 Unauthorized");
         }
     }
 
@@ -1555,7 +1558,8 @@ class SelfContainedOrchestratorE2ETest {
                     .bodyValue(requestBody)
                     .exchange();
 
-            int statusCode = response.expectBody(String.class).returnResult().getStatus().value();
+            var result = response.expectBody(String.class).returnResult();
+            int statusCode = result.getStatus().value();
             assertTrue(statusCode >= 400, "Invalid transaction type should return 4xx error");
         }
 

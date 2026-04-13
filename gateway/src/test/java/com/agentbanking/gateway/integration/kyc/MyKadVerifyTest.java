@@ -35,11 +35,15 @@ class MyKadVerifyTest extends BaseIntegrationTest {
                 .bodyValue(body)
                 .exchange();
 
-        var status = response.expectBody(String.class).returnResult().getStatus();
-        String responseBody = response.expectBody(String.class).returnResult().getResponseBody();
+        var result = response.expectBody(String.class).returnResult();
+        var status = result.getStatus();
+        String responseBody = result.getResponseBody();
 
         System.out.println("MyKad verify status: " + (status != null ? status.value() : "null"));
         System.out.println("MyKad verify response: " + responseBody);
+
+        assertNotNull(status, "Status should not be null");
+        assertEquals(200, status.value(), "Should return 200 for valid MyKad");
 
         if (status != null && status.value() == 200) {
             try {
@@ -59,7 +63,7 @@ class MyKadVerifyTest extends BaseIntegrationTest {
     void verifyInvalidMyKad() {
         String body = """
                 {
-                    "mykadNumber": "000000000000"
+                    "mykadNumber": "INVALID123"
                 }
                 """;
 
@@ -69,8 +73,9 @@ class MyKadVerifyTest extends BaseIntegrationTest {
                 .bodyValue(body)
                 .exchange();
 
-        var status = response.expectBody(String.class).returnResult().getStatus();
-        String responseBody = response.expectBody(String.class).returnResult().getResponseBody();
+        var result = response.expectBody(String.class).returnResult();
+        var status = result.getStatus();
+        String responseBody = result.getResponseBody();
 
         System.out.println("Invalid MyKad status: " + (status != null ? status.value() : "null"));
         System.out.println("Invalid MyKad response: " + responseBody);
@@ -93,11 +98,17 @@ class MyKadVerifyTest extends BaseIntegrationTest {
 
         var response = gatewayPost("/api/v1/kyc/verify", TestContext.adminToken, body);
 
-        var status = response.expectBody(String.class).returnResult().getStatus();
-        String responseBody = response.expectBody(String.class).returnResult().getResponseBody();
+        var result = response.expectBody(String.class).returnResult();
+        var status = result.getStatus();
+        String responseBody = result.getResponseBody();
 
         System.out.println("Gateway MyKad verify status: " + (status != null ? status.value() : "null"));
         System.out.println("Gateway MyKad verify response: " + responseBody);
+
+        assertNotNull(status, "Gateway status should not be null");
+        // Use greater than 0 to avoid NPE, but we expect 200
+        assertTrue(status.value() == 200 || status.value() == 201, "Gateway Verify MyKad should return success");
+        assertNotNull(responseBody, "Gateway response body should not be null");
     }
 
     @Test
@@ -112,7 +123,9 @@ class MyKadVerifyTest extends BaseIntegrationTest {
 
         var response = gatewayPostNoAuth("/api/v1/kyc/verify", body);
 
-        var status = response.expectBody(String.class).returnResult().getStatus();
-        assertEquals(401, status != null ? status.value() : 0);
+        var result = response.expectBody(String.class).returnResult();
+        var status = result.getStatus();
+        assertNotNull(status, "Status should not be null");
+        assertEquals(401, status.value(), "Without auth should return 401");
     }
 }

@@ -11,6 +11,7 @@ import io.temporal.api.workflowservice.v1.WorkflowServiceGrpc;
 import io.temporal.client.WorkflowClient;
 import io.temporal.serviceclient.WorkflowServiceStubs;
 import io.temporal.client.WorkflowStub;
+import com.agentbanking.orchestrator.domain.port.out.TransactionRecordRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -43,13 +44,16 @@ class WorkflowExecutionServiceTest {
     @Mock
     private WorkflowServiceGrpc.WorkflowServiceBlockingStub workflowServiceBlockingStub;
 
+    @Mock
+    private TransactionRecordRepository transactionRecordRepository;
+
     private WorkflowExecutionService workflowExecutionService;
 
     @BeforeEach
     void setUp() {
         when(workflowClient.getWorkflowServiceStubs()).thenReturn(workflowServiceStubs);
         when(workflowServiceStubs.blockingStub()).thenReturn(workflowServiceBlockingStub);
-        workflowExecutionService = new WorkflowExecutionService(workflowFactory, workflowClient, "test-namespace");
+        workflowExecutionService = new WorkflowExecutionService(workflowFactory, workflowClient, "test-namespace", transactionRecordRepository);
     }
 
     @Test

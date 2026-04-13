@@ -1,7 +1,7 @@
 # Session Memory - Progress
 
 **Project:** Agent Banking Platform  
-**Last Update:** 2026-04-12
+**Last Update:** 2026-04-13
 
 ## 📊 THE HISTORY
 
@@ -10,45 +10,30 @@
 | Date | Milestone | Status |
 |------|-----------|--------|
 | 2026-04-12 | Identify root cause: workflows calling activities as Spring beans | ✅ |
-| 2026-04-12 | Fix DuitNowTransferWorkflowImpl to use Temporal proxy | ✅ |
-| 2026-04-12 | Fix WithdrawalWorkflowImpl to use Temporal proxy | ✅ |
-| 2026-04-12 | Fix DepositWorkflowImpl to use Temporal proxy | ✅ |
-| 2026-04-12 | Fix BillPaymentWorkflowImpl to use Temporal proxy | ✅ |
-| 2026-04-12 | Fix CashlessPaymentWorkflowImpl to use Temporal proxy | ✅ |
-| 2026-04-12 | Fix PinBasedPurchaseWorkflowImpl to use Temporal proxy | ✅ |
-| 2026-04-12 | Fix PrepaidTopupWorkflowImpl to use Temporal proxy | ✅ |
-| 2026-04-12 | Fix EWalletWithdrawalWorkflowImpl to use Temporal proxy | ✅ |
-| 2026-04-12 | Fix EWalletTopupWorkflowImpl to use Temporal proxy | ✅ |
-| 2026-04-12 | Fix ESSPPurchaseWorkflowImpl to use Temporal proxy | ✅ |
-| 2026-04-12 | Fix PINPurchaseWorkflowImpl to use Temporal proxy | ✅ |
-| 2026-04-12 | Fix RetailSaleWorkflowImpl to use Temporal proxy | ✅ |
-| 2026-04-12 | Fix HybridCashbackWorkflowImpl to use Temporal proxy | ✅ |
-| 2026-04-12 | Fix WithdrawalOnUsWorkflowImpl to use Temporal proxy | ✅ |
-| 2026-04-12 | Rebuild orchestrator-service Docker container | ✅ |
-| 2026-04-12 | Verify activity recording works via Temporal CLI | ✅ |
+| 2026-04-12 | Fix 14 workflow implementations to use Temporal proxy | ✅ |
+| 2026-04-13 | Stabilize E2E tests: Resolve response double-consumption | ✅ |
+| 2026-04-13 | Gateway: Pass-through mode for Orchestrator payload preservation | ✅ |
+| 2026-04-13 | Gateway: Defensive UUID validation for X-Agent-Id header | ✅ |
+| 2026-04-13 | Infrastructure: Fix stale JAR issue (Gradle assemble before docker build) | ✅ |
+| 2026-04-13 | Orchestrator: Resolve 400 Bad Request in transaction flows | ✅ |
+| 2026-04-13 | Final Verification: 45/45 pass in SelfContainedOrchestratorE2ETest | ✅ |
 
 ### Key Discovery
 
-**Root Cause:** Activities were being called directly as Spring beans (`@Autowired`) instead of through Temporal's activity proxy (`Workflow.newActivityStub()`). This bypassed Temporal's activity recording entirely.
+**Root Cause 1:** Activities were being called directly as Spring beans instead of through Temporal's activity proxy.
 
-**Solution Pattern:**
-```java
-@SuppressWarnings("SpringJavaAutowiredMembersInspection")
-public WorkflowImpl() {
-    this.activity = Workflow.newActivityStub(ActivityClass.class, 
-        ActivityOptions.newBuilder()
-            .setStartToCloseTimeout(Duration.ofMinutes(X))
-            .build());
-}
-```
+**Root Cause 2:** Gateway was dropping `transactionType` and other fields for `/api/v1/transactions` because it lacked a pass-through mode for orchestrated requests.
+
+**Root Cause 3:** `docker compose build` does not run Gradle `assemble`, leading to stale JARs in containers.
 
 ### Verification
 
-- Used `temporal workflow show --detailed` to confirm `ActivityTaskScheduled` events now appear in workflow history
-- Before fix: Only 5 events (workflow completed in one task)
-- After fix: Activity events properly recorded with scheduling and execution
+- Verified 45/45 tests passing in `SelfContainedOrchestratorE2ETest`.
+- Verified `X-Agent-Id` validation prevents `DataConverterException` in Orchestrator.
 
 ## 📈 Test Results
 
-- E2E Tests: 117 tests, 12 failed (pre-existing failures unrelated to this fix)
-- Activity recording: Verified working via Temporal CLI
+- **SelfContainedOrchestratorE2ETest**: 45 tests, 0 failed (100% success)
+- **TransactionResolutionTest**: PASSED
+- **MyKadVerifyTest**: PASSED
+- **Gateway Stability**: Standardized 60s timeouts for WebTestClient

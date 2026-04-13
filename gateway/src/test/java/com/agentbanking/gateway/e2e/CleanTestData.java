@@ -76,7 +76,9 @@ public class CleanTestData {
 
     private static String getAdminToken() {
         try {
-            WebTestClient client = WebTestClient.bindToServer().baseUrl(AUTH_URL).build();
+            WebTestClient client = WebTestClient.bindToServer().baseUrl(AUTH_URL)
+                    .responseTimeout(java.time.Duration.ofSeconds(30))
+                    .build();
             String body = """
                     {
                         "username": "admin",
@@ -103,7 +105,9 @@ public class CleanTestData {
 
     private static void bootstrapAdmin() {
         try {
-            WebTestClient client = WebTestClient.bindToServer().baseUrl(AUTH_URL).build();
+            WebTestClient client = WebTestClient.bindToServer().baseUrl(AUTH_URL)
+                    .responseTimeout(java.time.Duration.ofSeconds(30))
+                    .build();
             String body = """
                     {
                         "username": "admin",
@@ -130,7 +134,9 @@ public class CleanTestData {
         System.out.println("\n--- Cleaning test users ---");
 
         try {
-            WebTestClient client = WebTestClient.bindToServer().baseUrl(AUTH_URL).build();
+            WebTestClient client = WebTestClient.bindToServer().baseUrl(AUTH_URL)
+                    .responseTimeout(java.time.Duration.ofSeconds(30))
+                    .build();
 
             // List all users
             String response = client.get()
@@ -179,7 +185,9 @@ public class CleanTestData {
         System.out.println("\n--- Cleaning test agents ---");
 
         try {
-            WebTestClient client = WebTestClient.bindToServer().baseUrl(ONBOARDING_URL).build();
+            WebTestClient client = WebTestClient.bindToServer().baseUrl(ONBOARDING_URL)
+                    .responseTimeout(java.time.Duration.ofSeconds(30))
+                    .build();
 
             // List all agents
             String response = client.get()

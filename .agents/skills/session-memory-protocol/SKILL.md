@@ -9,7 +9,7 @@ This skill governs how the Agent (You) interacts with the project's long-term me
 
 ## 🧠 Session Memory Architecture
 
-The **Session Memory** is your single source of truth about ongoging tasks. It persists context between sessions. 
+The **Session Memory** is your single source of truth about system state. It persists context between sessions. 
 
 ### Location
 `.agents/session-memory/` (at Root of the project)

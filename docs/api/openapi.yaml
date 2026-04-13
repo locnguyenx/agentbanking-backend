@@ -2642,6 +2642,7 @@ components:
       - transactionType
       - agentId
       - amount
+      - idempotencyKey
       type: object
       properties:
         transactionType:

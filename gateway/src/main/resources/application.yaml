@@ -42,6 +42,14 @@ spring:
   cloud:
     gateway:
       routes:
+        - id: external-onboarding-verify-mykad-kyc
+          uri: ${onboarding-service.url:http://onboarding-service:8083}
+          predicates:
+            - Path=/api/v1/kyc/verify
+          filters:
+            - JwtAuth
+            - RewritePath=/api/v1/kyc/verify, /internal/verify-mykad
+
         # Auth/IAM Service (public endpoints - no JWT required)
         - id: auth-bootstrap
           uri: ${auth-service.url:http://auth-iam-service:8087}
@@ -263,6 +271,7 @@ spring:
             - Path=/api/v1/transactions
           filters:
             - JwtAuth
+            - RequestTransform=orchestrator
             - RewritePath=/api/v1/transactions, /api/v1/transactions
 
         - id: external-transactions-status
@@ -409,6 +418,7 @@ spring:
           filters:
             - JwtAuth
             - RewritePath=/api/v1/onboarding/verify-mykad, /internal/verify-mykad
+
 
         - id: external-onboarding-submit-application
           uri: ${onboarding-service.url:http://onboarding-service:8083}

@@ -49,8 +49,9 @@ class TransactionResolutionTest extends BaseIntegrationTest {
         var response = gatewayPost("/api/v1/backoffice/transactions/" + UUID.randomUUID() + "/maker-propose",
                 TestContext.makerToken, body);
 
-        var status = response.expectBody(String.class).returnResult().getStatus();
-        String responseBody = response.expectBody(String.class).returnResult().getResponseBody();
+        var result = response.expectBody(String.class).returnResult();
+        var status = result.getStatus();
+        String responseBody = result.getResponseBody();
 
         System.out.println("Maker propose status: " + (status != null ? status.value() : "null"));
         System.out.println("Maker propose response: " + responseBody);
@@ -86,8 +87,9 @@ class TransactionResolutionTest extends BaseIntegrationTest {
         var response = gatewayPost("/api/v1/backoffice/transactions/" + testWorkflowId + "/checker-approve",
                 TestContext.checkerToken, body);
 
-        var status = response.expectBody(String.class).returnResult().getStatus();
-        String responseBody = response.expectBody(String.class).returnResult().getResponseBody();
+        var result = response.expectBody(String.class).returnResult();
+        var status = result.getStatus();
+        String responseBody = result.getResponseBody();
 
         System.out.println("Checker approve status: " + (status != null ? status.value() : "null"));
         System.out.println("Checker approve response: " + responseBody);
@@ -121,8 +123,9 @@ class TransactionResolutionTest extends BaseIntegrationTest {
         var response = gatewayPost("/api/v1/backoffice/transactions/" + rejectWorkflowId + "/checker-reject",
                 TestContext.checkerToken, body);
 
-        var status = response.expectBody(String.class).returnResult().getStatus();
-        String responseBody = response.expectBody(String.class).returnResult().getResponseBody();
+        var result = response.expectBody(String.class).returnResult();
+        var status = result.getStatus();
+        String responseBody = result.getResponseBody();
 
         System.out.println("Checker reject status: " + (status != null ? status.value() : "null"));
         System.out.println("Checker reject response: " + responseBody);
@@ -170,8 +173,9 @@ class TransactionResolutionTest extends BaseIntegrationTest {
         var response = gatewayPost("/api/v1/backoffice/transactions/" + fourEyesWorkflowId + "/checker-approve",
                 TestContext.makerToken, approveBody);
 
-        var status = response.expectBody(String.class).returnResult().getStatus();
-        String responseBody = response.expectBody(String.class).returnResult().getResponseBody();
+        var result = response.expectBody(String.class).returnResult();
+        var status = result.getStatus();
+        String responseBody = result.getResponseBody();
 
         System.out.println("Four-eyes status: " + (status != null ? status.value() : "null"));
         System.out.println("Four-eyes response: " + responseBody);
@@ -201,8 +205,9 @@ class TransactionResolutionTest extends BaseIntegrationTest {
     void listResolutions_returnsAllCases() {
         var response = gatewayGet("/api/v1/backoffice/transactions", TestContext.makerToken);
 
-        var status = response.expectBody(String.class).returnResult().getStatus();
-        String responseBody = response.expectBody(String.class).returnResult().getResponseBody();
+        var result = response.expectBody(String.class).returnResult();
+        var status = result.getStatus();
+        String responseBody = result.getResponseBody();
 
         System.out.println("List resolutions status: " + (status != null ? status.value() : "null"));
         System.out.println("List resolutions response: " + responseBody);
@@ -212,7 +217,9 @@ class TransactionResolutionTest extends BaseIntegrationTest {
                 "Expected 200, got: " + (status != null ? status.value() : "null"));
         
         assertNotNull(responseBody, "Response body should not be null");
-        assertTrue(responseBody.startsWith("["), "Expected JSON array");
+        assertTrue(responseBody.startsWith("{"), "Expected JSON object");
+        assertTrue(responseBody.contains("\"content\":"), "Expected content field in response");
+        assertTrue(responseBody.contains("\"total\":"), "Expected total field in response");
     }
 
     @Test
@@ -222,8 +229,9 @@ class TransactionResolutionTest extends BaseIntegrationTest {
         var response = gatewayGet("/api/v1/backoffice/transactions?status=PENDING_CHECKER", 
                 TestContext.makerToken);
 
-        var status = response.expectBody(String.class).returnResult().getStatus();
-        String responseBody = response.expectBody(String.class).returnResult().getResponseBody();
+        var result = response.expectBody(String.class).returnResult();
+        var status = result.getStatus();
+        String responseBody = result.getResponseBody();
 
         System.out.println("List resolutions filtered status: " + (status != null ? status.value() : "null"));
         System.out.println("List resolutions filtered response: " + responseBody);

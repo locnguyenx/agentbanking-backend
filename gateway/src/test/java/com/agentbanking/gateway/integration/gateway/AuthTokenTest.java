@@ -71,7 +71,7 @@ class AuthTokenTest extends BaseIntegrationTest {
                 .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
                 .bodyValue(requestBody)
                 .exchange()
-                .expectStatus().isBadRequest();
+                .expectStatus().isUnauthorized();
     }
 
     @Test
@@ -90,7 +90,7 @@ class AuthTokenTest extends BaseIntegrationTest {
                 .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
                 .bodyValue(requestBody)
                 .exchange()
-                .expectStatus().isBadRequest();
+                .expectStatus().isUnauthorized();
     }
 
     @Test

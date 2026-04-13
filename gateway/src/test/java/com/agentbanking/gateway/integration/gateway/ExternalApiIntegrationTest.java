@@ -229,6 +229,37 @@ public class ExternalApiIntegrationTest extends BaseGatewayIntegrationTest {
     }
 
     @Test
+    @DisplayName("Onboarding: KYC Verify - /api/v1/kyc/verify")
+    void verifyKycVerify() {
+        wireMockServer.stubFor(post(urlPathEqualTo("/internal/verify-mykad"))
+                .willReturn(aResponse()
+                        .withStatus(200)
+                        .withHeader("Content-Type", "application/json")
+                        .withBody("{\"verified\":true}")));
+
+        String token = generateToken("agent001", "ROLE_AGENT");
+        
+        webClient.post()
+                .uri("/api/v1/kyc/verify")
+                .header("Authorization", "Bearer " + token)
+                .bodyValue("{\"mykadNumber\":\"123456789012\"}")
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath("$.verified").isEqualTo(true);
+    }
+
+    @Test
+    @DisplayName("Onboarding: KYC Verify - /api/v1/kyc/verify - Unauthorized")
+    void verifyKycVerifyUnauthorized() {
+        webClient.post()
+                .uri("/api/v1/kyc/verify")
+                .bodyValue("{\"mykadNumber\":\"123456789012\"}")
+                .exchange()
+                .expectStatus().isUnauthorized();
+    }
+
+    @Test
     @DisplayName("Onboarding: Compliance Status - /api/v1/compliance/status")
     void verifyComplianceStatus() {
         wireMockServer.stubFor(get(urlPathEqualTo("/internal/compliance/status"))
