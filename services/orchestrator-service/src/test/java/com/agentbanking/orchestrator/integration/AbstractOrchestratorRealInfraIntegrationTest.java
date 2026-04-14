@@ -1,6 +1,7 @@
 package com.agentbanking.orchestrator.integration;
 
 import com.agentbanking.orchestrator.infrastructure.external.*;
+import com.agentbanking.orchestrator.infrastructure.temporal.WorkflowFactory;
 import com.agentbanking.orchestrator.domain.port.out.RulesServicePort;
 import com.agentbanking.orchestrator.domain.port.out.RulesServicePort.*;
 import com.agentbanking.orchestrator.domain.port.out.LedgerServicePort;
@@ -28,6 +29,9 @@ public abstract class AbstractOrchestratorRealInfraIntegrationTest {
 
     // Mock all external Feign clients - these are tested separately in unit tests
     // The integration test focuses on: controller → use case → workflow router → Temporal workflow start → status polling
+
+    @MockBean
+    protected WorkflowFactory workflowFactory;
 
     @MockBean
     protected SwitchAdapterClient switchAdapterClient;
@@ -73,6 +77,10 @@ public abstract class AbstractOrchestratorRealInfraIntegrationTest {
 
     @BeforeEach
     void setUpMocks() {
+        // Configure WorkflowFactory mocks - verify correct workflow is selected
+        when(workflowFactory.startWorkflow(any(), any(String.class), any()))
+            .thenAnswer(invocation -> invocation.getArgument(0)); // Return idempotencyKey as workflowId
+
         // Configure RulesServicePort mocks
         when(rulesServicePort.checkVelocity(any()))
             .thenReturn(new VelocityCheckResult(true, null));

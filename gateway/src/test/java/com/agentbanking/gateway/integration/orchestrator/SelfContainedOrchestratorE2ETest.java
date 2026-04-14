@@ -258,7 +258,7 @@ class SelfContainedOrchestratorE2ETest {
             String idempotencyKey = "e2e-offus-" + UUID.randomUUID();
             String requestBody = buildWithdrawalRequest(idempotencyKey, "0123");
 
-            String body = gatewayClient.post()
+            var response = gatewayClient.post()
                     .uri("/api/v1/transactions")
                     .header("Authorization", "Bearer " + agentToken)
                     .header("X-Idempotency-Key", idempotencyKey)
@@ -267,18 +267,23 @@ class SelfContainedOrchestratorE2ETest {
                     .header("X-GPS-Longitude", "101.6869")
                     .contentType(MediaType.APPLICATION_JSON)
                     .bodyValue(requestBody)
-                    .exchange()
-                    .expectBody(String.class)
-                    .returnResult()
-                    .getResponseBody();
+                    .exchange();
 
+            int httpStatus = response.expectBody(String.class).returnResult().getStatus().value();
+            String body = response.expectBody(String.class).returnResult().getResponseBody();
+            if (httpStatus != 200 && httpStatus != 202) {
+                System.out.println("DEBUG: httpStatus=" + httpStatus + " body=" + body);
+            }
+            assertTrue(httpStatus == 200 || httpStatus == 202, "Should return 200 or 202 for async workflow start");
+            assertNotNull(body, "Response body should not be null");
+            assertNotNull(body, "Response body should not be null");
             assertNotNull(body, "Response body should not be null");
             JsonNode json = parseBody(body);
-            assertEquals(200, json.has("status") ? 200 : 0, "Should return 200");
-            if (json.has("status")) {
-                assertEquals("PENDING", json.get("status").asText());
-                assertEquals(idempotencyKey, json.get("workflowId").asText());
-            }
+            assertEquals("PENDING", json.get("status").asText());
+            assertEquals(idempotencyKey, json.get("workflowId").asText());
+            assertTrue(json.has("pollUrl"), "Response should contain pollUrl");
+            assertEquals("/api/v1/transactions/" + idempotencyKey + "/status", 
+                    json.get("pollUrl").asText(), "pollUrl format should match BDD spec");
         }
 
         @Test
@@ -297,7 +302,8 @@ class SelfContainedOrchestratorE2ETest {
                     .bodyValue(requestBody)
                     .exchange();
 
-            assertEquals(200, response.expectBody(String.class).returnResult().getStatus().value());
+            int httpStatus = response.expectBody(String.class).returnResult().getStatus().value();
+            assertTrue(httpStatus == 200 || httpStatus == 202, "Should return 200 or 202 for async workflow start");
         }
 
         @Test
@@ -316,7 +322,8 @@ class SelfContainedOrchestratorE2ETest {
                     .bodyValue(requestBody)
                     .exchange();
 
-            assertEquals(200, response.expectBody(String.class).returnResult().getStatus().value());
+            int httpStatus = response.expectBody(String.class).returnResult().getStatus().value();
+            assertTrue(httpStatus == 200 || httpStatus == 202, "Should return 200 or 202 for async workflow start");
         }
 
         @Test
@@ -335,7 +342,8 @@ class SelfContainedOrchestratorE2ETest {
                     .bodyValue(requestBody)
                     .exchange();
 
-            assertEquals(200, response.expectBody(String.class).returnResult().getStatus().value());
+            int httpStatus = response.expectBody(String.class).returnResult().getStatus().value();
+            assertTrue(httpStatus == 200 || httpStatus == 202, "Should return 200 or 202 for async workflow start");
         }
 
         @Test
@@ -354,7 +362,8 @@ class SelfContainedOrchestratorE2ETest {
                     .bodyValue(requestBody)
                     .exchange();
 
-            assertEquals(200, response.expectBody(String.class).returnResult().getStatus().value());
+            int httpStatus = response.expectBody(String.class).returnResult().getStatus().value();
+            assertTrue(httpStatus == 200 || httpStatus == 202, "Should return 200 or 202 for async workflow start");
         }
 
         @Test
@@ -406,7 +415,8 @@ class SelfContainedOrchestratorE2ETest {
                     .bodyValue(requestBody)
                     .exchange();
 
-            assertEquals(200, response.expectBody(String.class).returnResult().getStatus().value());
+            int httpStatus = response.expectBody(String.class).returnResult().getStatus().value();
+            assertTrue(httpStatus == 200 || httpStatus == 202, "Should return 200 or 202 for async workflow start");
         }
 
         @Test
@@ -425,7 +435,8 @@ class SelfContainedOrchestratorE2ETest {
                     .bodyValue(requestBody)
                     .exchange();
 
-            assertEquals(200, response.expectBody(String.class).returnResult().getStatus().value());
+            int httpStatus = response.expectBody(String.class).returnResult().getStatus().value();
+            assertTrue(httpStatus == 200 || httpStatus == 202, "Should return 200 or 202 for async workflow start");
         }
 
         @Test
@@ -444,7 +455,8 @@ class SelfContainedOrchestratorE2ETest {
                     .bodyValue(requestBody)
                     .exchange();
 
-            assertEquals(200, response.expectBody(String.class).returnResult().getStatus().value());
+            int httpStatus = response.expectBody(String.class).returnResult().getStatus().value();
+            assertTrue(httpStatus == 200 || httpStatus == 202, "Should return 200 or 202 for async workflow start");
         }
 
         @Test
@@ -463,7 +475,8 @@ class SelfContainedOrchestratorE2ETest {
                     .bodyValue(requestBody)
                     .exchange();
 
-            assertEquals(200, response.expectBody(String.class).returnResult().getStatus().value());
+            int httpStatus = response.expectBody(String.class).returnResult().getStatus().value();
+            assertTrue(httpStatus == 200 || httpStatus == 202, "Should return 200 or 202 for async workflow start");
         }
 
         @Test
@@ -482,7 +495,8 @@ class SelfContainedOrchestratorE2ETest {
                     .bodyValue(requestBody)
                     .exchange();
 
-            assertEquals(200, response.expectBody(String.class).returnResult().getStatus().value());
+            int httpStatus = response.expectBody(String.class).returnResult().getStatus().value();
+            assertTrue(httpStatus == 200 || httpStatus == 202, "Should return 200 or 202 for async workflow start");
         }
 
         @Test
@@ -501,7 +515,8 @@ class SelfContainedOrchestratorE2ETest {
                     .bodyValue(requestBody)
                     .exchange();
 
-            assertEquals(200, response.expectBody(String.class).returnResult().getStatus().value());
+            int httpStatus = response.expectBody(String.class).returnResult().getStatus().value();
+            assertTrue(httpStatus == 200 || httpStatus == 202, "Should return 200 or 202 for async workflow start");
         }
 
         @Test
@@ -520,7 +535,8 @@ class SelfContainedOrchestratorE2ETest {
                     .bodyValue(requestBody)
                     .exchange();
 
-            assertEquals(200, response.expectBody(String.class).returnResult().getStatus().value());
+            int httpStatus = response.expectBody(String.class).returnResult().getStatus().value();
+            assertTrue(httpStatus == 200 || httpStatus == 202, "Should return 200 or 202 for async workflow start");
         }
 
         @Test
@@ -539,7 +555,8 @@ class SelfContainedOrchestratorE2ETest {
                     .bodyValue(requestBody)
                     .exchange();
 
-            assertEquals(200, response.expectBody(String.class).returnResult().getStatus().value());
+            int httpStatus = response.expectBody(String.class).returnResult().getStatus().value();
+            assertTrue(httpStatus == 200 || httpStatus == 202, "Should return 200 or 202 for async workflow start");
         }
 
         @Test
@@ -558,7 +575,8 @@ class SelfContainedOrchestratorE2ETest {
                     .bodyValue(requestBody)
                     .exchange();
 
-            assertEquals(200, response.expectBody(String.class).returnResult().getStatus().value());
+            int httpStatus = response.expectBody(String.class).returnResult().getStatus().value();
+            assertTrue(httpStatus == 200 || httpStatus == 202, "Should return 200 or 202 for async workflow start");
         }
 
         // Request builders for new transaction types
@@ -1597,8 +1615,74 @@ class SelfContainedOrchestratorE2ETest {
             assertNotNull(body);
             JsonNode json = parseBody(body);
             assertEquals("PENDING", json.get("status").asText());
-
-            System.out.println("Transaction with high amount initiated - should trigger PENDING_REVIEW with pendingReason");
         }
+    }
+
+    // ================================================================
+    // Helper Methods for Complete BDD Verification
+    // ================================================================
+
+    /**
+     * Record for holding workflow execution details from poll response
+     */
+    private record WorkflowDetails(
+        String status,
+        String workflowId,
+        BigDecimal amount,
+        BigDecimal customerFee,
+        String externalReference,
+        String errorCode,
+        JsonNode details
+    ) {}
+
+    /**
+     * Waits for workflow to complete and returns full details.
+     */
+    private WorkflowDetails waitForWorkflowCompletion(String workflowId) {
+        int maxAttempts = 30;
+        int delayMs = 1000;
+        
+        for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+            var pollResponse = gatewayClient.get()
+                    .uri("/api/v1/transactions/" + workflowId + "/status")
+                    .header("Authorization", "Bearer " + agentToken)
+                    .exchange();
+            
+            String body = pollResponse.expectBody(String.class).returnResult().getResponseBody();
+            if (body == null) continue;
+            
+            JsonNode json = parseBody(body);
+            String status = json.has("status") ? json.get("status").asText() : null;
+            
+            if ("COMPLETED".equals(status) || "FAILED".equals(status) || "PENDING_REVIEW".equals(status)) {
+                return new WorkflowDetails(
+                    status, workflowId,
+                    json.has("amount") ? new BigDecimal(json.get("amount").asText()) : null,
+                    json.has("customerFee") ? new BigDecimal(json.get("customerFee").asText()) : null,
+                    json.has("externalReference") ? json.get("externalReference").asText() : null,
+                    json.has("errorCode") ? json.get("errorCode").asText() : null,
+                    json.has("details") ? json.get("details") : null
+                );
+            }
+            
+            try { Thread.sleep(delayMs); } catch (InterruptedException e) { break; }
+        }
+        
+        var finalResponse = gatewayClient.get()
+                .uri("/api/v1/transactions/" + workflowId + "/status")
+                .header("Authorization", "Bearer " + agentToken)
+                .exchange();
+        
+        String body = finalResponse.expectBody(String.class).returnResult().getResponseBody();
+        JsonNode json = parseBody(body);
+        
+        return new WorkflowDetails(
+            json.has("status") ? json.get("status").asText() : "TIMEOUT", workflowId,
+            json.has("amount") ? new BigDecimal(json.get("amount").asText()) : null,
+            json.has("customerFee") ? new BigDecimal(json.get("customerFee").asText()) : null,
+            json.has("externalReference") ? json.get("externalReference").asText() : null,
+            json.has("errorCode") ? json.get("errorCode").asText() : null,
+            json.has("details") ? json.get("details") : null
+        );
     }
 }

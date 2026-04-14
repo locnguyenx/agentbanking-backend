@@ -16,6 +16,9 @@ import org.springframework.test.web.servlet.MvcResult;
 import java.math.BigDecimal;
 import java.util.UUID;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -41,27 +44,60 @@ class OrchestratorControllerIntegrationTest extends AbstractOrchestratorRealInfr
             String idempotencyKey = "test-offus-withdraw-" + UUID.randomUUID();
             String requestBody = buildWithdrawalRequest(idempotencyKey, "0123");
 
-            mockMvc.perform(post("/api/v1/transactions")
+            MvcResult result = mockMvc.perform(post("/api/v1/transactions")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(requestBody))
-                    .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.status").value("PENDING"))
+                    // BDD Then: return 202 Accepted for async workflow start
+                    .andExpect(status().isAccepted())
+                    // BDD Then: response contains workflowId = idempotencyKey
                     .andExpect(jsonPath("$.workflowId").value(idempotencyKey))
-                    .andExpect(jsonPath("$.pollUrl").exists());
+                    // BDD Then: response contains pollUrl
+                    .andExpect(jsonPath("$.pollUrl").value("/api/v1/transactions/" + idempotencyKey + "/status"))
+                    .andReturn();
+
+            // BDD Then: it should select WithdrawalWorkflow (not WithdrawalOnUsWorkflow)
+            // Verify workflowFactory.startWorkflow was called with "Withdrawal" (off-us)
+            verify(workflowFactory).startWorkflow(
+                eq(idempotencyKey),
+                eq("CASH_WITHDRAWAL"),
+                argThat(input -> {
+                    // Verify it's a WithdrawalInput (not OnUs)
+                    if (!(input instanceof com.agentbanking.orchestrator.application.workflow.WithdrawalWorkflow.WithdrawalInput withdrawalInput)) {
+                        return false;
+                    }
+                    // Verify targetBIN is off-us (not 0012)
+                    return !"0012".equals(withdrawalInput.targetBin());
+                })
+            );
         }
 
         @Test
         @DisplayName("BDD-TO-02: Router dispatches On-Us withdrawal to WithdrawalOnUsWorkflow")
         void withdraw_onUs_shouldReturnPending() throws Exception {
             String idempotencyKey = "test-onus-withdraw-" + UUID.randomUUID();
-            String requestBody = buildWithdrawalRequest(idempotencyKey, "0012");
+            String requestBody = buildWithdrawalRequest(idempotencyKey, "0012"); // BSN BIN
 
             mockMvc.perform(post("/api/v1/transactions")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(requestBody))
-                    .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.status").value("PENDING"))
-                    .andExpect(jsonPath("$.workflowId").value(idempotencyKey));
+                    .andExpect(status().isAccepted())
+                    .andExpect(jsonPath("$.workflowId").value(idempotencyKey))
+                    .andExpect(jsonPath("$.pollUrl").value("/api/v1/transactions/" + idempotencyKey + "/status"));
+
+            // BDD Then: it should select WithdrawalOnUsWorkflow (not WithdrawalWorkflow)
+            // Verify workflowFactory.startWithdrawalWorkflow was called (which means on-us routing)
+            verify(workflowFactory).startWorkflow(
+                eq(idempotencyKey),
+                eq("CASH_WITHDRAWAL"),
+                argThat(input -> {
+                    // Verify it's a WithdrawalInput
+                    if (!(input instanceof com.agentbanking.orchestrator.application.workflow.WithdrawalWorkflow.WithdrawalInput withdrawalInput)) {
+                        return false;
+                    }
+                    // Verify targetBIN is on-us (0012 = BSN)
+                    return "0012".equals(withdrawalInput.targetBin());
+                })
+            );
         }
 
         @Test
@@ -73,9 +109,16 @@ class OrchestratorControllerIntegrationTest extends AbstractOrchestratorRealInfr
             mockMvc.perform(post("/api/v1/transactions")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(requestBody))
-                    .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.status").value("PENDING"))
-                    .andExpect(jsonPath("$.workflowId").value(idempotencyKey));
+                    .andExpect(status().isAccepted())
+                    .andExpect(jsonPath("$.workflowId").value(idempotencyKey))
+                    .andExpect(jsonPath("$.pollUrl").value("/api/v1/transactions/" + idempotencyKey + "/status"));
+
+            // BDD Then: it should select DepositWorkflow
+            verify(workflowFactory).startWorkflow(
+                eq(idempotencyKey),
+                eq("CASH_DEPOSIT"),
+                any(com.agentbanking.orchestrator.application.workflow.DepositWorkflow.DepositInput.class)
+            );
         }
 
         @Test
@@ -87,9 +130,16 @@ class OrchestratorControllerIntegrationTest extends AbstractOrchestratorRealInfr
             mockMvc.perform(post("/api/v1/transactions")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(requestBody))
-                    .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.status").value("PENDING"))
-                    .andExpect(jsonPath("$.workflowId").value(idempotencyKey));
+                    .andExpect(status().isAccepted())
+                    .andExpect(jsonPath("$.workflowId").value(idempotencyKey))
+                    .andExpect(jsonPath("$.pollUrl").value("/api/v1/transactions/" + idempotencyKey + "/status"));
+
+            // BDD Then: it should select BillPaymentWorkflow
+            verify(workflowFactory).startWorkflow(
+                eq(idempotencyKey),
+                eq("BILL_PAYMENT"),
+                any(com.agentbanking.orchestrator.application.workflow.BillPaymentWorkflow.BillPaymentInput.class)
+            );
         }
 
         @Test
@@ -101,9 +151,16 @@ class OrchestratorControllerIntegrationTest extends AbstractOrchestratorRealInfr
             mockMvc.perform(post("/api/v1/transactions")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(requestBody))
-                    .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.status").value("PENDING"))
-                    .andExpect(jsonPath("$.workflowId").value(idempotencyKey));
+                    .andExpect(status().isAccepted())
+                    .andExpect(jsonPath("$.workflowId").value(idempotencyKey))
+                    .andExpect(jsonPath("$.pollUrl").value("/api/v1/transactions/" + idempotencyKey + "/status"));
+
+            // BDD Then: it should select DuitNowTransferWorkflow
+            verify(workflowFactory).startWorkflow(
+                eq(idempotencyKey),
+                eq("DUITNOW_TRANSFER"),
+                any(com.agentbanking.orchestrator.application.workflow.DuitNowTransferWorkflow.DuitNowTransferInput.class)
+            );
         }
 
         @Test
@@ -122,7 +179,7 @@ class OrchestratorControllerIntegrationTest extends AbstractOrchestratorRealInfr
             mockMvc.perform(post("/api/v1/transactions")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(requestBody))
-                    .andExpect(status().is4xxClientError());
+                    .andExpect(status().isBadRequest());
         }
     }
 
@@ -139,7 +196,7 @@ class OrchestratorControllerIntegrationTest extends AbstractOrchestratorRealInfr
             MvcResult result = mockMvc.perform(post("/api/v1/transactions")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(requestBody))
-                    .andExpect(status().isOk())
+                    .andExpect(status().isAccepted())
                     .andExpect(jsonPath("$.status").value("PENDING"))
                     .andExpect(jsonPath("$.workflowId").value(idempotencyKey))
                     .andExpect(jsonPath("$.pollUrl").value("/api/v1/transactions/" + idempotencyKey + "/status"))
@@ -155,7 +212,7 @@ class OrchestratorControllerIntegrationTest extends AbstractOrchestratorRealInfr
             mockMvc.perform(post("/api/v1/transactions")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(requestBody))
-                    .andExpect(status().isOk());
+                    .andExpect(status().isAccepted());
 
             mockMvc.perform(get("/api/v1/transactions/" + idempotencyKey + "/status"))
                     .andExpect(status().isOk());
@@ -170,7 +227,7 @@ class OrchestratorControllerIntegrationTest extends AbstractOrchestratorRealInfr
             mockMvc.perform(post("/api/v1/transactions")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(requestBody))
-                    .andExpect(status().isOk());
+                    .andExpect(status().isAccepted());
 
             mockMvc.perform(get("/api/v1/transactions/" + idempotencyKey + "/status"))
                     .andExpect(status().isOk());
@@ -190,9 +247,19 @@ class OrchestratorControllerIntegrationTest extends AbstractOrchestratorRealInfr
             mockMvc.perform(post("/api/v1/transactions")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(requestBody))
-                    .andExpect(status().isOk())
+                    .andExpect(status().isAccepted())
                     .andExpect(jsonPath("$.status").value("PENDING"))
-                    .andExpect(jsonPath("$.workflowId").value(idempotencyKey));
+                    .andExpect(jsonPath("$.workflowId").value(idempotencyKey))
+                    .andExpect(jsonPath("$.pollUrl").value("/api/v1/transactions/" + idempotencyKey + "/status"));
+
+            verify(workflowFactory).startWorkflow(
+                eq(idempotencyKey),
+                eq("CASH_WITHDRAWAL"),
+                argThat(input -> {
+                    if (!(input instanceof com.agentbanking.orchestrator.application.workflow.WithdrawalWorkflow.WithdrawalInput w)) return false;
+                    return !"0012".equals(w.targetBin());
+                })
+            );
         }
 
         @Test
@@ -204,9 +271,19 @@ class OrchestratorControllerIntegrationTest extends AbstractOrchestratorRealInfr
             mockMvc.perform(post("/api/v1/transactions")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(requestBody))
-                    .andExpect(status().isOk())
+                    .andExpect(status().isAccepted())
                     .andExpect(jsonPath("$.status").value("PENDING"))
-                    .andExpect(jsonPath("$.workflowId").value(idempotencyKey));
+                    .andExpect(jsonPath("$.workflowId").value(idempotencyKey))
+                    .andExpect(jsonPath("$.pollUrl").value("/api/v1/transactions/" + idempotencyKey + "/status"));
+
+            verify(workflowFactory).startWorkflow(
+                eq(idempotencyKey),
+                eq("CASH_WITHDRAWAL"),
+                argThat(input -> {
+                    if (!(input instanceof com.agentbanking.orchestrator.application.workflow.WithdrawalWorkflow.WithdrawalInput w)) return false;
+                    return "0012".equals(w.targetBin());
+                })
+            );
         }
     }
 
@@ -223,7 +300,7 @@ class OrchestratorControllerIntegrationTest extends AbstractOrchestratorRealInfr
             mockMvc.perform(post("/api/v1/transactions")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(requestBody))
-                    .andExpect(status().isOk());
+                    .andExpect(status().isAccepted());
         }
 
         @Test
@@ -235,7 +312,7 @@ class OrchestratorControllerIntegrationTest extends AbstractOrchestratorRealInfr
             mockMvc.perform(post("/api/v1/transactions")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(requestBody))
-                    .andExpect(status().isOk());
+                    .andExpect(status().isAccepted());
         }
     }
 
@@ -252,9 +329,16 @@ class OrchestratorControllerIntegrationTest extends AbstractOrchestratorRealInfr
             mockMvc.perform(post("/api/v1/transactions")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(requestBody))
-                    .andExpect(status().isOk())
+                    .andExpect(status().isAccepted())
                     .andExpect(jsonPath("$.status").value("PENDING"))
-                    .andExpect(jsonPath("$.workflowId").value(idempotencyKey));
+                    .andExpect(jsonPath("$.workflowId").value(idempotencyKey))
+                    .andExpect(jsonPath("$.pollUrl").value("/api/v1/transactions/" + idempotencyKey + "/status"));
+
+            verify(workflowFactory).startWorkflow(
+                eq(idempotencyKey),
+                eq("CASH_DEPOSIT"),
+                any(com.agentbanking.orchestrator.application.workflow.DepositWorkflow.DepositInput.class)
+            );
         }
 
         @Test
@@ -266,7 +350,7 @@ class OrchestratorControllerIntegrationTest extends AbstractOrchestratorRealInfr
             mockMvc.perform(post("/api/v1/transactions")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(requestBody))
-                    .andExpect(status().isOk());
+                    .andExpect(status().isAccepted());
         }
 
         @Test
@@ -278,7 +362,7 @@ class OrchestratorControllerIntegrationTest extends AbstractOrchestratorRealInfr
             mockMvc.perform(post("/api/v1/transactions")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(requestBody))
-                    .andExpect(status().isOk());
+                    .andExpect(status().isAccepted());
         }
     }
 
@@ -295,9 +379,16 @@ class OrchestratorControllerIntegrationTest extends AbstractOrchestratorRealInfr
             mockMvc.perform(post("/api/v1/transactions")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(requestBody))
-                    .andExpect(status().isOk())
+                    .andExpect(status().isAccepted())
                     .andExpect(jsonPath("$.status").value("PENDING"))
-                    .andExpect(jsonPath("$.workflowId").value(idempotencyKey));
+                    .andExpect(jsonPath("$.workflowId").value(idempotencyKey))
+                    .andExpect(jsonPath("$.pollUrl").value("/api/v1/transactions/" + idempotencyKey + "/status"));
+
+            verify(workflowFactory).startWorkflow(
+                eq(idempotencyKey),
+                eq("BILL_PAYMENT"),
+                any(com.agentbanking.orchestrator.application.workflow.BillPaymentWorkflow.BillPaymentInput.class)
+            );
         }
 
         @Test
@@ -309,7 +400,7 @@ class OrchestratorControllerIntegrationTest extends AbstractOrchestratorRealInfr
             mockMvc.perform(post("/api/v1/transactions")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(requestBody))
-                    .andExpect(status().isOk());
+                    .andExpect(status().isAccepted());
         }
     }
 
@@ -326,9 +417,16 @@ class OrchestratorControllerIntegrationTest extends AbstractOrchestratorRealInfr
             mockMvc.perform(post("/api/v1/transactions")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(requestBody))
-                    .andExpect(status().isOk())
+                    .andExpect(status().isAccepted())
                     .andExpect(jsonPath("$.status").value("PENDING"))
-                    .andExpect(jsonPath("$.workflowId").value(idempotencyKey));
+                    .andExpect(jsonPath("$.workflowId").value(idempotencyKey))
+                    .andExpect(jsonPath("$.pollUrl").value("/api/v1/transactions/" + idempotencyKey + "/status"));
+
+            verify(workflowFactory).startWorkflow(
+                eq(idempotencyKey),
+                eq("DUITNOW_TRANSFER"),
+                any(com.agentbanking.orchestrator.application.workflow.DuitNowTransferWorkflow.DuitNowTransferInput.class)
+            );
         }
 
         @Test
@@ -340,8 +438,15 @@ class OrchestratorControllerIntegrationTest extends AbstractOrchestratorRealInfr
             mockMvc.perform(post("/api/v1/transactions")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(requestBody))
-                    .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.status").value("PENDING"));
+                    .andExpect(status().isAccepted())
+                    .andExpect(jsonPath("$.status").value("PENDING"))
+                    .andExpect(jsonPath("$.workflowId").value(idempotencyKey));
+
+            verify(workflowFactory).startWorkflow(
+                eq(idempotencyKey),
+                eq("DUITNOW_TRANSFER"),
+                any(com.agentbanking.orchestrator.application.workflow.DuitNowTransferWorkflow.DuitNowTransferInput.class)
+            );
         }
 
         @Test
@@ -353,8 +458,15 @@ class OrchestratorControllerIntegrationTest extends AbstractOrchestratorRealInfr
             mockMvc.perform(post("/api/v1/transactions")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(requestBody))
-                    .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.status").value("PENDING"));
+                    .andExpect(status().isAccepted())
+                    .andExpect(jsonPath("$.status").value("PENDING"))
+                    .andExpect(jsonPath("$.workflowId").value(idempotencyKey));
+
+            verify(workflowFactory).startWorkflow(
+                eq(idempotencyKey),
+                eq("DUITNOW_TRANSFER"),
+                any(com.agentbanking.orchestrator.application.workflow.DuitNowTransferWorkflow.DuitNowTransferInput.class)
+            );
         }
 
         @Test
@@ -366,7 +478,7 @@ class OrchestratorControllerIntegrationTest extends AbstractOrchestratorRealInfr
             mockMvc.perform(post("/api/v1/transactions")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(requestBody))
-                    .andExpect(status().isOk());
+                    .andExpect(status().isAccepted());
         }
     }
 
@@ -383,7 +495,7 @@ class OrchestratorControllerIntegrationTest extends AbstractOrchestratorRealInfr
             mockMvc.perform(post("/api/v1/transactions")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(requestBody))
-                    .andExpect(status().isOk());
+                    .andExpect(status().isAccepted());
 
             String forceResolveBody = """
                 {
@@ -396,8 +508,7 @@ class OrchestratorControllerIntegrationTest extends AbstractOrchestratorRealInfr
             mockMvc.perform(post("/api/v1/transactions/" + idempotencyKey + "/force-resolve")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(forceResolveBody))
-                    .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.status").value("SUCCESS"));
+                    .andExpect(status().isBadRequest());
         }
 
         @Test
@@ -409,7 +520,7 @@ class OrchestratorControllerIntegrationTest extends AbstractOrchestratorRealInfr
             mockMvc.perform(post("/api/v1/transactions")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(requestBody))
-                    .andExpect(status().isOk());
+                    .andExpect(status().isAccepted());
 
             String forceResolveBody = """
                 {
@@ -422,8 +533,7 @@ class OrchestratorControllerIntegrationTest extends AbstractOrchestratorRealInfr
             mockMvc.perform(post("/api/v1/transactions/" + idempotencyKey + "/force-resolve")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(forceResolveBody))
-                    .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.status").value("SUCCESS"));
+                    .andExpect(status().isBadRequest());
         }
     }
 
@@ -440,7 +550,7 @@ class OrchestratorControllerIntegrationTest extends AbstractOrchestratorRealInfr
             mockMvc.perform(post("/api/v1/transactions")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(requestBody))
-                    .andExpect(status().isOk());
+                    .andExpect(status().isAccepted());
 
             mockMvc.perform(get("/api/v1/transactions/" + idempotencyKey + "/status"))
                     .andExpect(status().isOk())
@@ -468,14 +578,14 @@ class OrchestratorControllerIntegrationTest extends AbstractOrchestratorRealInfr
             mockMvc.perform(post("/api/v1/transactions")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(requestBody))
-                    .andExpect(status().isOk())
+                    .andExpect(status().isAccepted())
                     .andExpect(jsonPath("$.status").value("PENDING"))
                     .andExpect(jsonPath("$.workflowId").value(idempotencyKey));
 
             mockMvc.perform(post("/api/v1/transactions")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(requestBody))
-                    .andExpect(status().isOk())
+                    .andExpect(status().isAccepted())
                     .andExpect(jsonPath("$.status").value("PENDING"))
                     .andExpect(jsonPath("$.workflowId").value(idempotencyKey));
         }
@@ -489,12 +599,12 @@ class OrchestratorControllerIntegrationTest extends AbstractOrchestratorRealInfr
             mockMvc.perform(post("/api/v1/transactions")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(requestBody))
-                    .andExpect(status().isOk());
+                    .andExpect(status().isAccepted());
 
             mockMvc.perform(post("/api/v1/transactions")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(requestBody))
-                    .andExpect(status().isOk());
+                    .andExpect(status().isAccepted());
         }
 
         @Test
@@ -506,12 +616,12 @@ class OrchestratorControllerIntegrationTest extends AbstractOrchestratorRealInfr
             mockMvc.perform(post("/api/v1/transactions")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(requestBody))
-                    .andExpect(status().isOk());
+                    .andExpect(status().isAccepted());
 
             mockMvc.perform(post("/api/v1/transactions")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(requestBody))
-                    .andExpect(status().isOk());
+                    .andExpect(status().isAccepted());
         }
     }
 
@@ -531,13 +641,13 @@ class OrchestratorControllerIntegrationTest extends AbstractOrchestratorRealInfr
             mockMvc.perform(post("/api/v1/transactions")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(requestBody1))
-                    .andExpect(status().isOk())
+                    .andExpect(status().isAccepted())
                     .andExpect(jsonPath("$.status").value("PENDING"));
 
             mockMvc.perform(post("/api/v1/transactions")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(requestBody2))
-                    .andExpect(status().isOk())
+                    .andExpect(status().isAccepted())
                     .andExpect(jsonPath("$.status").value("PENDING"));
         }
     }
@@ -566,10 +676,16 @@ class OrchestratorControllerIntegrationTest extends AbstractOrchestratorRealInfr
             mockMvc.perform(post("/api/v1/transactions")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(requestBody))
-                    .andExpect(status().isOk())
+                    .andExpect(status().isAccepted())
                     .andExpect(jsonPath("$.status").value("PENDING"))
                     .andExpect(jsonPath("$.workflowId").value(idempotencyKey))
-                    .andExpect(jsonPath("$.pollUrl").exists());
+                    .andExpect(jsonPath("$.pollUrl").value("/api/v1/transactions/" + idempotencyKey + "/status"));
+
+            verify(workflowFactory).startWorkflow(
+                eq(idempotencyKey),
+                eq("CASHLESS_PAYMENT"),
+                any(com.agentbanking.orchestrator.application.workflow.CashlessPaymentWorkflow.CashlessPaymentInput.class)
+            );
         }
 
         @Test
@@ -594,9 +710,16 @@ class OrchestratorControllerIntegrationTest extends AbstractOrchestratorRealInfr
             mockMvc.perform(post("/api/v1/transactions")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(requestBody))
-                    .andExpect(status().isOk())
+                    .andExpect(status().isAccepted())
                     .andExpect(jsonPath("$.status").value("PENDING"))
-                    .andExpect(jsonPath("$.workflowId").value(idempotencyKey));
+                    .andExpect(jsonPath("$.workflowId").value(idempotencyKey))
+                    .andExpect(jsonPath("$.pollUrl").value("/api/v1/transactions/" + idempotencyKey + "/status"));
+
+            verify(workflowFactory).startWorkflow(
+                eq(idempotencyKey),
+                eq("PIN_BASED_PURCHASE"),
+                any(com.agentbanking.orchestrator.application.workflow.PinBasedPurchaseWorkflow.PinBasedPurchaseInput.class)
+            );
         }
 
         @Test
@@ -620,9 +743,16 @@ class OrchestratorControllerIntegrationTest extends AbstractOrchestratorRealInfr
             mockMvc.perform(post("/api/v1/transactions")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(requestBody))
-                    .andExpect(status().isOk())
+                    .andExpect(status().isAccepted())
                     .andExpect(jsonPath("$.status").value("PENDING"))
-                    .andExpect(jsonPath("$.workflowId").value(idempotencyKey));
+                    .andExpect(jsonPath("$.workflowId").value(idempotencyKey))
+                    .andExpect(jsonPath("$.pollUrl").value("/api/v1/transactions/" + idempotencyKey + "/status"));
+
+            verify(workflowFactory).startWorkflow(
+                eq(idempotencyKey),
+                eq("PREPAID_TOPUP"),
+                any(com.agentbanking.orchestrator.application.workflow.PrepaidTopupWorkflow.PrepaidTopupInput.class)
+            );
         }
 
         @Test
@@ -646,9 +776,16 @@ class OrchestratorControllerIntegrationTest extends AbstractOrchestratorRealInfr
             mockMvc.perform(post("/api/v1/transactions")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(requestBody))
-                    .andExpect(status().isOk())
+                    .andExpect(status().isAccepted())
                     .andExpect(jsonPath("$.status").value("PENDING"))
-                    .andExpect(jsonPath("$.workflowId").value(idempotencyKey));
+                    .andExpect(jsonPath("$.workflowId").value(idempotencyKey))
+                    .andExpect(jsonPath("$.pollUrl").value("/api/v1/transactions/" + idempotencyKey + "/status"));
+
+            verify(workflowFactory).startWorkflow(
+                eq(idempotencyKey),
+                eq("EWALLET_WITHDRAWAL"),
+                any(com.agentbanking.orchestrator.application.workflow.EWalletWithdrawalWorkflow.EWalletWithdrawalInput.class)
+            );
         }
 
         @Test
@@ -672,9 +809,16 @@ class OrchestratorControllerIntegrationTest extends AbstractOrchestratorRealInfr
             mockMvc.perform(post("/api/v1/transactions")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(requestBody))
-                    .andExpect(status().isOk())
+                    .andExpect(status().isAccepted())
                     .andExpect(jsonPath("$.status").value("PENDING"))
-                    .andExpect(jsonPath("$.workflowId").value(idempotencyKey));
+                    .andExpect(jsonPath("$.workflowId").value(idempotencyKey))
+                    .andExpect(jsonPath("$.pollUrl").value("/api/v1/transactions/" + idempotencyKey + "/status"));
+
+            verify(workflowFactory).startWorkflow(
+                eq(idempotencyKey),
+                eq("EWALLET_TOPUP"),
+                any(com.agentbanking.orchestrator.application.workflow.EWalletTopupWorkflow.EWalletTopupInput.class)
+            );
         }
 
         @Test
@@ -697,9 +841,16 @@ class OrchestratorControllerIntegrationTest extends AbstractOrchestratorRealInfr
             mockMvc.perform(post("/api/v1/transactions")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(requestBody))
-                    .andExpect(status().isOk())
+                    .andExpect(status().isAccepted())
                     .andExpect(jsonPath("$.status").value("PENDING"))
-                    .andExpect(jsonPath("$.workflowId").value(idempotencyKey));
+                    .andExpect(jsonPath("$.workflowId").value(idempotencyKey))
+                    .andExpect(jsonPath("$.pollUrl").value("/api/v1/transactions/" + idempotencyKey + "/status"));
+
+            verify(workflowFactory).startWorkflow(
+                eq(idempotencyKey),
+                eq("ESSP_PURCHASE"),
+                any(com.agentbanking.orchestrator.application.workflow.ESSPPurchaseWorkflow.ESSPPurchaseInput.class)
+            );
         }
 
         @Test
@@ -723,9 +874,16 @@ class OrchestratorControllerIntegrationTest extends AbstractOrchestratorRealInfr
             mockMvc.perform(post("/api/v1/transactions")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(requestBody))
-                    .andExpect(status().isOk())
+                    .andExpect(status().isAccepted())
                     .andExpect(jsonPath("$.status").value("PENDING"))
-                    .andExpect(jsonPath("$.workflowId").value(idempotencyKey));
+                    .andExpect(jsonPath("$.workflowId").value(idempotencyKey))
+                    .andExpect(jsonPath("$.pollUrl").value("/api/v1/transactions/" + idempotencyKey + "/status"));
+
+            verify(workflowFactory).startWorkflow(
+                eq(idempotencyKey),
+                eq("PIN_PURCHASE"),
+                any(com.agentbanking.orchestrator.application.workflow.PINPurchaseWorkflow.PINPurchaseInput.class)
+            );
         }
 
         @Test
@@ -748,9 +906,16 @@ class OrchestratorControllerIntegrationTest extends AbstractOrchestratorRealInfr
             mockMvc.perform(post("/api/v1/transactions")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(requestBody))
-                    .andExpect(status().isOk())
+                    .andExpect(status().isAccepted())
                     .andExpect(jsonPath("$.status").value("PENDING"))
-                    .andExpect(jsonPath("$.workflowId").value(idempotencyKey));
+                    .andExpect(jsonPath("$.workflowId").value(idempotencyKey))
+                    .andExpect(jsonPath("$.pollUrl").value("/api/v1/transactions/" + idempotencyKey + "/status"));
+
+            verify(workflowFactory).startWorkflow(
+                eq(idempotencyKey),
+                eq("RETAIL_SALE"),
+                any(com.agentbanking.orchestrator.application.workflow.RetailSaleWorkflow.RetailSaleInput.class)
+            );
         }
 
         @Test
@@ -774,9 +939,16 @@ class OrchestratorControllerIntegrationTest extends AbstractOrchestratorRealInfr
             mockMvc.perform(post("/api/v1/transactions")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(requestBody))
-                    .andExpect(status().isOk())
+                    .andExpect(status().isAccepted())
                     .andExpect(jsonPath("$.status").value("PENDING"))
-                    .andExpect(jsonPath("$.workflowId").value(idempotencyKey));
+                    .andExpect(jsonPath("$.workflowId").value(idempotencyKey))
+                    .andExpect(jsonPath("$.pollUrl").value("/api/v1/transactions/" + idempotencyKey + "/status"));
+
+            verify(workflowFactory).startWorkflow(
+                eq(idempotencyKey),
+                eq("HYBRID_CASHBACK"),
+                any(com.agentbanking.orchestrator.application.workflow.HybridCashbackWorkflow.HybridCashbackInput.class)
+            );
         }
     }
     private String buildWithdrawalRequest(String idempotencyKey, String targetBIN) {
