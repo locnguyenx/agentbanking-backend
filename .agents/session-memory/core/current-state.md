@@ -1,22 +1,23 @@
 # Session Memory - Current State
 
 **Project:** Agent Banking Platform  
-**Last Update:** 2026-04-13
+**Last Update:** 2026-04-14
 
 ## 🎯 THE NOW
 
 ### Current Task
-Fixed balance API and added Kafka event publish/consume test coverage.
+BDD test verification alignment and auth security fix.
 
 ### Status
-- **Phase:** Bug Fix + Test Coverage
-- **Active Since:** 2026-04-13
+- **Phase:** BDD Test Verification + Infrastructure Fix
+- **Active Since:** 2026-04-14
 
 ### Summary
-- Fixed 400 Bad Request on `/api/v1/agent/balance` API
-- Root cause: Gateway rewrite dropped query param, agent float didn't exist in DB
-- Added Kafka event consumer/publisher unit tests (21 tests, 6 test files)
-- Fixed AgentService to publish event even when user creation fails
+- Fixed BDD tests to verify workflow selection (not just HTTP 202 status)
+- Added verify(workflowFactory).startWorkflow() assertions in orchestrator tests
+- Fixed auth SecurityConfig to allow /api/v1/auth/** endpoints
+- Fixed HTTP 200 vs 202 mismatch in E2E tests
+- Created missing database tables via Docker exec
 
 ### Key Files Modified
 - **Bug Fix:**

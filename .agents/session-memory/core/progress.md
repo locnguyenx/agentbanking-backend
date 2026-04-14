@@ -1,7 +1,7 @@
 # Session Memory - Progress
 
 **Project:** Agent Banking Platform  
-**Last Update:** 2026-04-13
+**Last Update:** 2026-04-14
 
 ## 📊 THE HISTORY
 
@@ -20,6 +20,9 @@
 | 2026-04-13 | Backoffice: Fix "Create User Account" for agents (400 error) | ✅ |
 | 2026-04-13 | Balance API: Fix 400 error (gateway rewrite + missing agent float) | ✅ |
 | 2026-04-13 | Tests: Add 21 unit tests for Kafka event publish/consume | ✅ |
+| 2026-04-14 | BDD Test Alignment: Verify workflow selection, not just HTTP 202 | ✅ |
+| 2026-04-14 | Auth Security: Fix /api/v1/auth/** endpoint access | ✅ |
+| 2026-04-14 | Infrastructure: Create missing DB tables via Docker exec | ✅ |
 
 ### Key Discovery
 
