@@ -86,10 +86,14 @@ public class AgentService {
                 publishAgentCreatedEvent(finalAgent);
                 return finalAgent;
             } else {
-                return updateUserCreationStatus(savedAgent, UserCreationStatus.FAILED, "Auth service returned non-success status");
+                AgentRecord failedAgent = updateUserCreationStatus(savedAgent, UserCreationStatus.FAILED, "Auth service returned non-success status");
+                publishAgentCreatedEvent(failedAgent);
+                return failedAgent;
             }
         } catch (Exception e) {
-            return updateUserCreationStatus(savedAgent, UserCreationStatus.FAILED, e.getMessage());
+            AgentRecord failedAgent = updateUserCreationStatus(savedAgent, UserCreationStatus.FAILED, e.getMessage());
+            publishAgentCreatedEvent(failedAgent);
+            return failedAgent;
         }
     }
 

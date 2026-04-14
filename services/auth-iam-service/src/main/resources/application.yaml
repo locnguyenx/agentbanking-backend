@@ -17,7 +17,7 @@ spring:
       hibernate:
         format_sql: true
   flyway:
-    enabled: true
+    enabled: false
     locations: classpath:db/migration
     baseline-on-migrate: true
   redis:
@@ -48,6 +48,9 @@ spring:
           destination: agent.lifecycle
           group: auth-iam-service
           content-type: application/json
+
+onboarding-service:
+  url: ${ONBOARDING_SERVICE_URL:http://onboarding-service:8083}
 
 jwt:
   secret: ${JWT_SECRET:your-super-secret-jwt-key-change-in-production-minimum-32-chars-long}

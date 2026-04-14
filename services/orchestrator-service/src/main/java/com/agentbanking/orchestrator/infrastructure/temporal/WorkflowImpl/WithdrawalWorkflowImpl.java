@@ -11,6 +11,7 @@ import com.agentbanking.orchestrator.domain.port.out.RulesServicePort.*;
 import com.agentbanking.orchestrator.domain.port.out.SwitchAdapterPort.*;
 
 import io.temporal.activity.ActivityOptions;
+import io.temporal.failure.ActivityFailure;
 import io.temporal.spring.boot.WorkflowImpl;
 import io.temporal.workflow.Workflow;
 import org.slf4j.Logger;
@@ -112,29 +113,39 @@ public class WithdrawalWorkflowImpl implements WithdrawalWorkflow {
                 currentStatus = WorkflowStatus.FAILED;
                 WorkflowResult failResult = WorkflowResult.failed(velocityResult.errorCode(), "Velocity check failed", "DECLINE");
                 persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
-                        input.idempotencyKey(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null, "Velocity check failed"));
+                        Workflow.getInfo().getWorkflowId(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null, "Velocity check failed"));
                 return failResult;
             }
 
-            StpDecision stpDecision = evaluateStpActivity.evaluateStp(
-                    new EvaluateStpActivity.Input(
-                            "CASH_WITHDRAWAL",
-                            input.agentId().toString(),
-                            input.amount().toString(),
-                            input.customerMykad(),
-                            input.agentTier(),
-                            0,
-                            "0",
-                            "0"
-                    )
-            );
+            StpDecision stpDecision;
+            try {
+                stpDecision = evaluateStpActivity.evaluateStp(
+                        new EvaluateStpActivity.Input(
+                                "CASH_WITHDRAWAL",
+                                input.agentId().toString(),
+                                input.amount().toString(),
+                                input.customerMykad(),
+                                input.agentTier(),
+                                0,
+                                "0",
+                                "0"
+                        )
+                );
+            } catch (ActivityFailure e) {
+                log.error("STP evaluation failed after retries: {}", e.getMessage());
+                currentStatus = WorkflowStatus.FAILED;
+                WorkflowResult stpFailResult = WorkflowResult.failed("ERR_STP_UNAVAILABLE", "STP service unavailable after retries", "RETRY");
+                persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
+                        Workflow.getInfo().getWorkflowId(), "FAILED", stpFailResult.errorCode(), stpFailResult.errorMessage(), null, null, null, "STP service unavailable: " + e.getMessage()));
+                return stpFailResult;
+            }
             if (!stpDecision.approved()) {
                 // Auto-create resolution case for non-STP transactions
                 if (stpDecision.category().equals("NON_STP") || 
                     stpDecision.category().equals("CONDITIONAL_STP")) {
                     saveResolutionCaseActivity.saveResolutionCase(
                         new SaveResolutionCaseActivity.Input(
-                            input.idempotencyKey(),
+                            Workflow.getInfo().getWorkflowId(),
                             null, // transactionId not available yet
                             stpDecision.category(),
                             stpDecision.reason()
@@ -144,7 +155,7 @@ public class WithdrawalWorkflowImpl implements WithdrawalWorkflow {
                 currentStatus = WorkflowStatus.PENDING_REVIEW;
                 WorkflowResult stpResult = WorkflowResult.failed("ERR_STP_REVIEW", stpDecision.reason(), "REVIEW");
                 persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
-                        input.idempotencyKey(), "PENDING_REVIEW", stpResult.errorCode(), stpResult.errorMessage(), null, null, null, stpDecision.reason()));
+                        Workflow.getInfo().getWorkflowId(), "PENDING_REVIEW", stpResult.errorCode(), stpResult.errorMessage(), null, null, null, stpDecision.reason()));
                 return stpResult;
             }
 
@@ -160,7 +171,7 @@ public class WithdrawalWorkflowImpl implements WithdrawalWorkflow {
                             fees.customerFee(),
                             fees.agentCommission(),
                             fees.bankShare(),
-                            input.idempotencyKey(),
+                            Workflow.getInfo().getWorkflowId(),
                             input.customerCardMasked(),
                             input.geofenceLat(),
                             input.geofenceLng(),
@@ -172,7 +183,7 @@ public class WithdrawalWorkflowImpl implements WithdrawalWorkflow {
                 currentStatus = WorkflowStatus.FAILED;
                 WorkflowResult blockFailResult = WorkflowResult.failed(blockResult.errorCode(), "Float block failed", "DECLINE");
                 persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
-                        input.idempotencyKey(), "FAILED", blockFailResult.errorCode(), blockFailResult.errorMessage(), null, null, null, "Float block failed"));
+                        Workflow.getInfo().getWorkflowId(), "FAILED", blockFailResult.errorCode(), blockFailResult.errorMessage(), null, null, null, "Float block failed"));
                 return blockFailResult;
             }
             UUID transactionId = blockResult.transactionId();
@@ -193,7 +204,7 @@ public class WithdrawalWorkflowImpl implements WithdrawalWorkflow {
                 currentStatus = WorkflowStatus.FAILED;
                 WorkflowResult authFailResult = WorkflowResult.failed(errorCode, "Switch authorization failed", actionCode);
                 persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
-                        input.idempotencyKey(), "FAILED", authFailResult.errorCode(), authFailResult.errorMessage(), null, null, null, "Switch authorization failed"));
+                        Workflow.getInfo().getWorkflowId(), "FAILED", authFailResult.errorCode(), authFailResult.errorMessage(), null, null, null, "Switch authorization failed"));
                 return authFailResult;
             }
 
@@ -206,7 +217,7 @@ public class WithdrawalWorkflowImpl implements WithdrawalWorkflow {
                 currentStatus = WorkflowStatus.FAILED;
                 WorkflowResult commitFailResult = WorkflowResult.failed(commitResult.errorCode(), "Float commit failed", "RETRY");
                 persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
-                        input.idempotencyKey(), "FAILED", commitFailResult.errorCode(), commitFailResult.errorMessage(), null, null, null, "Float commit failed"));
+                        Workflow.getInfo().getWorkflowId(), "FAILED", commitFailResult.errorCode(), commitFailResult.errorMessage(), null, null, null, "Float commit failed"));
                 return commitFailResult;
             }
 
@@ -223,7 +234,7 @@ public class WithdrawalWorkflowImpl implements WithdrawalWorkflow {
             WorkflowResult completedResult = WorkflowResult.completed(transactionId, authResult.referenceCode(),
                     input.amount(), fees.customerFee());
             persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
-                    input.idempotencyKey(), "COMPLETED", null, null,
+                    Workflow.getInfo().getWorkflowId(), "COMPLETED", null, null,
                     authResult.referenceCode(), fees.customerFee(), authResult.referenceCode(), null));
             return completedResult;
 
@@ -233,7 +244,7 @@ public class WithdrawalWorkflowImpl implements WithdrawalWorkflow {
             WorkflowResult sysFailResult = WorkflowResult.failed("ERR_SYS_WORKFLOW_FAILED", e.getMessage(), "REVIEW");
             try {
                 persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
-                        input.idempotencyKey(), "FAILED", sysFailResult.errorCode(), sysFailResult.errorMessage(), null, null, null, "Workflow exception: " + e.getMessage()));
+                        Workflow.getInfo().getWorkflowId(), "FAILED", sysFailResult.errorCode(), sysFailResult.errorMessage(), null, null, null, "Workflow exception: " + e.getMessage()));
             } catch (Exception ex) {
                 log.warn("Failed to persist workflow failure result: {}", ex.getMessage());
             }

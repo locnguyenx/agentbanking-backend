@@ -11,6 +11,7 @@ import com.agentbanking.orchestrator.domain.port.out.RulesServicePort.*;
 import com.agentbanking.orchestrator.domain.port.out.SwitchAdapterPort.*;
 
 import io.temporal.activity.ActivityOptions;
+import io.temporal.failure.ActivityFailure;
 import io.temporal.spring.boot.WorkflowImpl;
 import io.temporal.workflow.Workflow;
 import org.slf4j.Logger;
@@ -119,30 +120,40 @@ public class DuitNowTransferWorkflowImpl implements DuitNowTransferWorkflow {
                 currentStatus = WorkflowStatus.FAILED;
                 WorkflowResult failResult = WorkflowResult.failed(velocityResult.errorCode(), "Velocity check failed", "DECLINE");
                 persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
-                        input.idempotencyKey(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null, "Velocity check failed"));
+                        Workflow.getInfo().getWorkflowId(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null, "Velocity check failed"));
                 return failResult;
             }
 
             // Step 2: Evaluate STP
-            var stpDecision = evaluateStpActivity.evaluateStp(
-                    new EvaluateStpActivity.Input(
-                            "DUITNOW_TRANSFER",
-                            input.agentId().toString(),
-                            input.amount().toString(),
-                            input.customerMykad(),
-                            input.agentTier(),
-                            0,
-                            "0",
-                            "0"
-                    )
-            );
+            StpDecision stpDecision;
+            try {
+                stpDecision = evaluateStpActivity.evaluateStp(
+                        new EvaluateStpActivity.Input(
+                                "DUITNOW_TRANSFER",
+                                input.agentId().toString(),
+                                input.amount().toString(),
+                                input.customerMykad(),
+                                input.agentTier(),
+                                0,
+                                "0",
+                                "0"
+                        )
+                );
+            } catch (ActivityFailure e) {
+                log.error("Evaluate STP activity failed: {}", e.getMessage());
+                currentStatus = WorkflowStatus.FAILED;
+                WorkflowResult failResult = WorkflowResult.failed("ERR_STP_ACTIVITY", e.getMessage(), "RETRY");
+                persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
+                        Workflow.getInfo().getWorkflowId(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null, "Evaluate STP activity failed: " + e.getMessage()));
+                return failResult;
+            }
             if (!stpDecision.approved()) {
                 // Auto-create resolution case for non-STP transactions
                 if (stpDecision.category().equals("NON_STP") || 
                     stpDecision.category().equals("CONDITIONAL_STP")) {
                     saveResolutionCaseActivity.saveResolutionCase(
                         new SaveResolutionCaseActivity.Input(
-                            input.idempotencyKey(),
+                            Workflow.getInfo().getWorkflowId(),
                             null, // transactionId not available yet
                             stpDecision.category(),
                             stpDecision.reason()
@@ -152,7 +163,7 @@ public class DuitNowTransferWorkflowImpl implements DuitNowTransferWorkflow {
                 currentStatus = WorkflowStatus.PENDING_REVIEW;
                 WorkflowResult reviewResult = WorkflowResult.failed("ERR_STP_REVIEW", stpDecision.reason(), "REVIEW");
                 persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
-                        input.idempotencyKey(), "PENDING_REVIEW", reviewResult.errorCode(), reviewResult.errorMessage(), null, null, null, stpDecision.reason()));
+                        Workflow.getInfo().getWorkflowId(), "PENDING_REVIEW", reviewResult.errorCode(), reviewResult.errorMessage(), null, null, null, stpDecision.reason()));
                 return reviewResult;
             }
 
@@ -163,26 +174,36 @@ public class DuitNowTransferWorkflowImpl implements DuitNowTransferWorkflow {
             BigDecimal totalAmount = input.amount().add(fees.customerFee());
 
             // Step 4: Block float
-            FloatBlockResult blockResult = blockFloatActivity.blockFloat(
-                    new FloatBlockInput(
-                            input.agentId(),
-                            input.amount(),
-                            fees.customerFee(),
-                            fees.agentCommission(),
-                            fees.bankShare(),
-                            input.idempotencyKey(),
-                            null,
-                            input.geofenceLat(),
-                            input.geofenceLng(),
-                            input.agentTier(),
-                            input.targetBin()
-                    )
-            );
+            FloatBlockResult blockResult;
+            try {
+                blockResult = blockFloatActivity.blockFloat(
+                        new FloatBlockInput(
+                                input.agentId(),
+                                input.amount(),
+                                fees.customerFee(),
+                                fees.agentCommission(),
+                                fees.bankShare(),
+                                Workflow.getInfo().getWorkflowId(),
+                                null,
+                                input.geofenceLat(),
+                                input.geofenceLng(),
+                                input.agentTier(),
+                                input.targetBin()
+                        )
+                );
+            } catch (ActivityFailure e) {
+                log.error("Block float activity failed: {}", e.getMessage());
+                currentStatus = WorkflowStatus.FAILED;
+                WorkflowResult failResult = WorkflowResult.failed("ERR_FLOAT_BLOCK_ACTIVITY", e.getMessage(), "RETRY");
+                persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
+                        Workflow.getInfo().getWorkflowId(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null, "Block float activity failed: " + e.getMessage()));
+                return failResult;
+            }
             if (!blockResult.success()) {
                 currentStatus = WorkflowStatus.FAILED;
                 WorkflowResult failResult = WorkflowResult.failed(blockResult.errorCode(), "Float block failed", "DECLINE");
                 persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
-                        input.idempotencyKey(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null, "Float block failed"));
+                        Workflow.getInfo().getWorkflowId(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null, "Float block failed"));
                 return failResult;
             }
             UUID transactionId = blockResult.transactionId();
@@ -196,14 +217,24 @@ public class DuitNowTransferWorkflowImpl implements DuitNowTransferWorkflow {
                 currentStatus = WorkflowStatus.FAILED;
                 WorkflowResult failResult = WorkflowResult.failed(proxyResult.errorCode(), "Proxy not found", "DECLINE");
                 persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
-                        input.idempotencyKey(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null, "Proxy not found"));
+                        Workflow.getInfo().getWorkflowId(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null, "Proxy not found"));
                 return failResult;
             }
 
-            // Step 5: Send DuitNow transfer
-            DuitNowTransferResult transferResult = sendDuitNowTransferActivity.sendDuitNowTransfer(
-                    new com.agentbanking.orchestrator.domain.port.out.SwitchAdapterPort.DuitNowTransferInput(proxyResult.bankCode(), proxyResult.recipientName(),
-                            input.amount(), transactionId));
+            // Step 5: Send DuitNow transfer (authorize)
+            DuitNowTransferResult transferResult;
+            try {
+                transferResult = sendDuitNowTransferActivity.sendDuitNowTransfer(
+                        new com.agentbanking.orchestrator.domain.port.out.SwitchAdapterPort.DuitNowTransferInput(proxyResult.bankCode(), proxyResult.recipientName(),
+                                input.amount(), transactionId));
+            } catch (ActivityFailure e) {
+                log.error("Send DuitNow transfer activity failed: {}", e.getMessage());
+                currentStatus = WorkflowStatus.FAILED;
+                WorkflowResult failResult = WorkflowResult.failed("ERR_AUTHORIZE_ACTIVITY", e.getMessage(), "RETRY");
+                persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
+                        Workflow.getInfo().getWorkflowId(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null, "Authorize activity failed: " + e.getMessage()));
+                return failResult;
+            }
             if (!transferResult.success()) {
                 releaseFloatActivity.releaseFloat(
                         new FloatReleaseInput(input.agentId(), totalAmount, transactionId));
@@ -217,7 +248,7 @@ public class DuitNowTransferWorkflowImpl implements DuitNowTransferWorkflow {
                 currentStatus = WorkflowStatus.FAILED;
                 WorkflowResult failResult = WorkflowResult.failed(errorCode, "DuitNow transfer failed", actionCode);
                 persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
-                        input.idempotencyKey(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null, "DuitNow transfer failed"));
+                        Workflow.getInfo().getWorkflowId(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null, "DuitNow transfer failed"));
                 return failResult;
             }
 
@@ -231,7 +262,7 @@ public class DuitNowTransferWorkflowImpl implements DuitNowTransferWorkflow {
                 currentStatus = WorkflowStatus.FAILED;
                 WorkflowResult failResult = WorkflowResult.failed(commitResult.errorCode(), "Float commit failed", "RETRY");
                 persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
-                        input.idempotencyKey(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null, "Float commit failed"));
+                        Workflow.getInfo().getWorkflowId(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null, "Float commit failed"));
                 return failResult;
             }
 
@@ -249,7 +280,7 @@ public class DuitNowTransferWorkflowImpl implements DuitNowTransferWorkflow {
             WorkflowResult completedResult = WorkflowResult.completed(transactionId, transferResult.paynetReference(),
                     input.amount(), fees.customerFee());
             persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
-                    input.idempotencyKey(), "COMPLETED", null, null,
+                    Workflow.getInfo().getWorkflowId(), "COMPLETED", null, null,
                     transferResult.paynetReference(), fees.customerFee(), transferResult.paynetReference(), null));
             return completedResult;
 
@@ -259,7 +290,7 @@ public class DuitNowTransferWorkflowImpl implements DuitNowTransferWorkflow {
             WorkflowResult failResult = WorkflowResult.failed("ERR_SYS_WORKFLOW_FAILED", e.getMessage(), "REVIEW");
             try {
                 persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
-                        input.idempotencyKey(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null, "Workflow exception: " + e.getMessage()));
+                        Workflow.getInfo().getWorkflowId(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null, "Workflow exception: " + e.getMessage()));
             } catch (Exception ex) {
                 log.warn("Failed to persist fail result: {}", ex.getMessage());
             }

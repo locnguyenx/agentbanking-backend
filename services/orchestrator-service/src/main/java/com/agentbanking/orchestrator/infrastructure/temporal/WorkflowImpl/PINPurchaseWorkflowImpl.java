@@ -15,8 +15,10 @@ import com.agentbanking.orchestrator.domain.port.out.LedgerServicePort.FloatBloc
 import com.agentbanking.orchestrator.domain.port.out.LedgerServicePort.FloatCommitInput;
 import com.agentbanking.orchestrator.domain.port.out.LedgerServicePort.FloatCreditInput;
 import com.agentbanking.orchestrator.domain.port.out.LedgerServicePort.FloatReleaseInput;
+import com.agentbanking.orchestrator.domain.port.out.PINInventoryPort.PINGenerationResult;
 
 import io.temporal.activity.ActivityOptions;
+import io.temporal.failure.ActivityFailure;
 import io.temporal.spring.boot.WorkflowImpl;
 import io.temporal.workflow.Workflow;
 import org.slf4j.Logger;
@@ -89,17 +91,29 @@ public class PINPurchaseWorkflowImpl implements PINPurchaseWorkflow {
 
         try {
             BigDecimal totalAmount = input.faceValue().multiply(BigDecimal.valueOf(input.quantity()));
-            
-            var inventoryResult = validatePINInventoryActivity.validate(input.provider(), input.faceValue());
-            if (!inventoryResult.available()) {
+            UUID transactionId;
+            PINGenerationResult pinResult;
+
+            try {
+                var inventoryResult = validatePINInventoryActivity.validate(input.provider(), input.faceValue());
+                if (!inventoryResult.available()) {
+                    currentStatus = WorkflowStatus.FAILED;
+                    WorkflowResult failResult = WorkflowResult.failed("ERR_PIN_INVENTORY_DEPLETED", "PIN inventory depleted", "DECLINE");
+                    persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
+                            Workflow.getInfo().getWorkflowId(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null, "PIN inventory depleted"));
+                    return failResult;
+                }
+            } catch (ActivityFailure e) {
+                log.error("validatePINInventoryActivity failed: {}", e.getMessage());
                 currentStatus = WorkflowStatus.FAILED;
-                WorkflowResult failResult = WorkflowResult.failed("ERR_PIN_INVENTORY_DEPLETED", "PIN inventory depleted", "DECLINE");
+                WorkflowResult failResult = WorkflowResult.failed("ERR_ACTIVITY_FAILED", "PIN inventory validation failed: " + e.getMessage(), "RETRY");
                 persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
-                        input.idempotencyKey(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null, "PIN inventory depleted"));
+                        Workflow.getInfo().getWorkflowId(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null, "ActivityFailure: " + e.getMessage()));
                 return failResult;
             }
 
-            FloatBlockResult blockResult = blockFloatActivity.blockFloat(
+            try {
+                FloatBlockResult blockResult = blockFloatActivity.blockFloat(
                     new FloatBlockInput(
                             input.agentId(),
                             totalAmount,
@@ -118,23 +132,51 @@ public class PINPurchaseWorkflowImpl implements PINPurchaseWorkflow {
                 currentStatus = WorkflowStatus.FAILED;
                 WorkflowResult failResult = WorkflowResult.failed(blockResult.errorCode(), "Float block failed", "DECLINE");
                 persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
-                        input.idempotencyKey(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null, "Float block failed"));
+                        Workflow.getInfo().getWorkflowId(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null, "Float block failed"));
                 return failResult;
             }
-            UUID transactionId = blockResult.transactionId();
-
-            var pinResult = generatePINActivity.generate(input.provider(), input.faceValue(), input.idempotencyKey());
-            if (!pinResult.success()) {
-                releaseFloatActivity.releaseFloat(new FloatReleaseInput(input.agentId(), totalAmount, transactionId));
+            transactionId = blockResult.transactionId();
+            } catch (ActivityFailure e) {
+                log.error("blockFloatActivity failed: {}", e.getMessage());
                 currentStatus = WorkflowStatus.FAILED;
-                WorkflowResult failResult = WorkflowResult.failed(pinResult.errorCode(), "PIN generation failed", "DECLINE");
+                WorkflowResult failResult = WorkflowResult.failed("ERR_ACTIVITY_FAILED", "Float block failed: " + e.getMessage(), "RETRY");
                 persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
-                        input.idempotencyKey(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null, "PIN generation failed"));
+                        Workflow.getInfo().getWorkflowId(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null, "ActivityFailure: " + e.getMessage()));
                 return failResult;
             }
 
-            commitFloatActivity.commitFloat(new FloatCommitInput(input.agentId(), totalAmount, transactionId));
-            creditAgentFloatActivity.creditAgentFloat(
+            try {
+                pinResult = generatePINActivity.generate(input.provider(), input.faceValue(), input.idempotencyKey());
+                if (!pinResult.success()) {
+                    releaseFloatActivity.releaseFloat(new FloatReleaseInput(input.agentId(), totalAmount, transactionId));
+                    currentStatus = WorkflowStatus.FAILED;
+                    WorkflowResult failResult = WorkflowResult.failed(pinResult.errorCode(), "PIN generation failed", "DECLINE");
+                    persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
+                            Workflow.getInfo().getWorkflowId(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null, "PIN generation failed"));
+                    return failResult;
+                }
+            } catch (ActivityFailure e) {
+                log.error("generatePINActivity failed: {}", e.getMessage());
+                currentStatus = WorkflowStatus.FAILED;
+                WorkflowResult failResult = WorkflowResult.failed("ERR_ACTIVITY_FAILED", "PIN generation failed: " + e.getMessage(), "RETRY");
+                persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
+                        Workflow.getInfo().getWorkflowId(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null, "ActivityFailure: " + e.getMessage()));
+                return failResult;
+            }
+
+            try {
+                commitFloatActivity.commitFloat(new FloatCommitInput(input.agentId(), totalAmount, transactionId));
+            } catch (ActivityFailure e) {
+                log.error("commitFloatActivity failed: {}", e.getMessage());
+                currentStatus = WorkflowStatus.FAILED;
+                WorkflowResult failResult = WorkflowResult.failed("ERR_ACTIVITY_FAILED", "Float commit failed: " + e.getMessage(), "RETRY");
+                persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
+                        Workflow.getInfo().getWorkflowId(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null, "ActivityFailure: " + e.getMessage()));
+                return failResult;
+            }
+
+            try {
+                creditAgentFloatActivity.creditAgentFloat(
                     new FloatCreditInput(
                             input.agentId(),
                             totalAmount,
@@ -150,11 +192,19 @@ public class PINPurchaseWorkflowImpl implements PINPurchaseWorkflow {
                             input.geofenceLng()
                     )
             );
+            } catch (ActivityFailure e) {
+                log.error("creditAgentFloatActivity failed: {}", e.getMessage());
+                currentStatus = WorkflowStatus.FAILED;
+                WorkflowResult failResult = WorkflowResult.failed("ERR_ACTIVITY_FAILED", "Credit agent float failed: " + e.getMessage(), "RETRY");
+                persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
+                        Workflow.getInfo().getWorkflowId(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null, "ActivityFailure: " + e.getMessage()));
+                return failResult;
+            }
 
             currentStatus = WorkflowStatus.COMPLETED;
             WorkflowResult completedResult = WorkflowResult.completed(transactionId, pinResult.pinCode(), totalAmount, BigDecimal.ZERO);
             persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
-                    input.idempotencyKey(), "COMPLETED", null, null, pinResult.pinCode(), BigDecimal.ZERO, pinResult.pinCode(), null));
+                    Workflow.getInfo().getWorkflowId(), "COMPLETED", null, null, pinResult.pinCode(), BigDecimal.ZERO, pinResult.pinCode(), null));
             return completedResult;
 
         } catch (Exception e) {
@@ -163,7 +213,7 @@ public class PINPurchaseWorkflowImpl implements PINPurchaseWorkflow {
             WorkflowResult failResult = WorkflowResult.failed("ERR_SYS_WORKFLOW_FAILED", e.getMessage(), "REVIEW");
             try {
                 persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
-                        input.idempotencyKey(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null, "Workflow exception: " + e.getMessage()));
+                        Workflow.getInfo().getWorkflowId(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null, "Workflow exception: " + e.getMessage()));
             } catch (Exception ex) {
                 log.warn("Failed to persist fail result: {}", ex.getMessage());
             }

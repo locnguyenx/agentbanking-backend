@@ -13,6 +13,7 @@ import com.agentbanking.orchestrator.domain.model.WorkflowStatus;
 import com.agentbanking.orchestrator.domain.port.out.LedgerServicePort.*;
 
 import io.temporal.activity.ActivityOptions;
+import io.temporal.failure.ActivityFailure;
 import io.temporal.spring.boot.WorkflowImpl;
 import io.temporal.workflow.Workflow;
 import org.slf4j.Logger;
@@ -89,11 +90,26 @@ public class PrepaidTopupWorkflowImpl implements PrepaidTopupWorkflow {
                 currentStatus = WorkflowStatus.FAILED;
                 WorkflowResult failResult = WorkflowResult.failed("ERR_INVALID_PHONE_NUMBER", "Invalid phone number", "DECLINE");
                 persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
-                        input.idempotencyKey(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null, "Invalid phone number"));
+                        Workflow.getInfo().getWorkflowId(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null, "Invalid phone number"));
                 return failResult;
             }
+        } catch (ActivityFailure e) {
+            log.error("ValidatePhone activity failed: {}", e.getMessage());
+            currentStatus = WorkflowStatus.FAILED;
+            WorkflowResult failResult = WorkflowResult.failed("ERR_ACTIVITY_FAILURE", "Phone validation failed: " + e.getMessage(), "RETRY");
+            try {
+                persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
+                        Workflow.getInfo().getWorkflowId(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null, "Activity failure: " + e.getMessage()));
+            } catch (Exception ex) {
+                log.warn("Failed to persist fail result: {}", ex.getMessage());
+            }
+            return failResult;
+        }
 
-            FloatBlockResult blockResult = blockFloatActivity.blockFloat(
+        FloatBlockResult blockResult = null;
+        UUID transactionId = null;
+        try {
+            blockResult = blockFloatActivity.blockFloat(
                     new FloatBlockInput(
                             input.agentId(),
                             input.amount(),
@@ -112,21 +128,52 @@ public class PrepaidTopupWorkflowImpl implements PrepaidTopupWorkflow {
                 currentStatus = WorkflowStatus.FAILED;
                 WorkflowResult failResult = WorkflowResult.failed(blockResult.errorCode(), "Float block failed", "DECLINE");
                 persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
-                        input.idempotencyKey(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null, "Float block failed"));
+                        Workflow.getInfo().getWorkflowId(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null, "Float block failed"));
                 return failResult;
             }
-            UUID transactionId = blockResult.transactionId();
+            transactionId = blockResult.transactionId();
+        } catch (ActivityFailure e) {
+            log.error("BlockFloat activity failed: {}", e.getMessage());
+            currentStatus = WorkflowStatus.FAILED;
+            WorkflowResult failResult = WorkflowResult.failed("ERR_ACTIVITY_FAILURE", "Float block failed: " + e.getMessage(), "RETRY");
+            try {
+                persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
+                        Workflow.getInfo().getWorkflowId(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null, "Activity failure: " + e.getMessage()));
+            } catch (Exception ex) {
+                log.warn("Failed to persist fail result: {}", ex.getMessage());
+            }
+            return failResult;
+        }
 
-            var topupResult = topUpTelcoActivity.topup(input.telcoProvider(), input.phoneNumber(), input.amount(), input.idempotencyKey());
+        var topupResult = topUpTelcoActivity.topup(input.telcoProvider(), input.phoneNumber(), input.amount(), input.idempotencyKey());
+        try {
             if (!topupResult.success()) {
                 releaseFloatActivity.releaseFloat(new FloatReleaseInput(input.agentId(), input.amount(), transactionId));
                 currentStatus = WorkflowStatus.FAILED;
                 WorkflowResult failResult = WorkflowResult.failed(topupResult.errorCode(), "Topup failed", "DECLINE");
                 persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
-                        input.idempotencyKey(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null, "Switch authorization failed"));
+                        Workflow.getInfo().getWorkflowId(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null, "Switch authorization failed"));
                 return failResult;
             }
+        } catch (ActivityFailure e) {
+            log.error("TopupTelco activity failed: {}", e.getMessage());
+            currentStatus = WorkflowStatus.FAILED;
+            WorkflowResult failResult = WorkflowResult.failed("ERR_ACTIVITY_FAILURE", "Topup failed: " + e.getMessage(), "RETRY");
+            try {
+                releaseFloatActivity.releaseFloat(new FloatReleaseInput(input.agentId(), input.amount(), transactionId));
+            } catch (Exception ex) {
+                log.warn("Failed to release float after topup failure: {}", ex.getMessage());
+            }
+            try {
+                persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
+                        Workflow.getInfo().getWorkflowId(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null, "Activity failure: " + e.getMessage()));
+            } catch (Exception ex) {
+                log.warn("Failed to persist fail result: {}", ex.getMessage());
+            }
+            return failResult;
+        }
 
+        try {
             commitFloatActivity.commitFloat(new FloatCommitInput(input.agentId(), input.amount(), transactionId));
             creditAgentFloatActivity.creditAgentFloat(
                     new FloatCreditInput(
@@ -144,25 +191,28 @@ public class PrepaidTopupWorkflowImpl implements PrepaidTopupWorkflow {
                             input.geofenceLng()
                     )
             );
-
-            currentStatus = WorkflowStatus.COMPLETED;
-            WorkflowResult completedResult = WorkflowResult.completed(transactionId, topupResult.telcoReference(), input.amount(), BigDecimal.ZERO);
-            persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
-                    input.idempotencyKey(), "COMPLETED", null, null, topupResult.telcoReference(), BigDecimal.ZERO, topupResult.telcoReference(), null));
-            return completedResult;
-
-        } catch (Exception e) {
-            log.error("PrepaidTopup workflow failed: {}", e.getMessage());
+        } catch (ActivityFailure e) {
+            log.error("Commit/CreditFloat activity failed: {}", e.getMessage());
             currentStatus = WorkflowStatus.FAILED;
-            WorkflowResult failResult = WorkflowResult.failed("ERR_SYS_WORKFLOW_FAILED", e.getMessage(), "REVIEW");
+            WorkflowResult failResult = WorkflowResult.failed("ERR_ACTIVITY_FAILURE", "Float commit/credit failed: " + e.getMessage(), "REVIEW");
             try {
                 persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
-                        input.idempotencyKey(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null, "Workflow exception: " + e.getMessage()));
+                        Workflow.getInfo().getWorkflowId(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null, "Activity failure: " + e.getMessage()));
             } catch (Exception ex) {
                 log.warn("Failed to persist fail result: {}", ex.getMessage());
             }
             return failResult;
         }
+
+        currentStatus = WorkflowStatus.COMPLETED;
+        WorkflowResult completedResult = WorkflowResult.completed(transactionId, topupResult.telcoReference(), input.amount(), BigDecimal.ZERO);
+        try {
+            persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
+                    Workflow.getInfo().getWorkflowId(), "COMPLETED", null, null, topupResult.telcoReference(), BigDecimal.ZERO, topupResult.telcoReference(), null));
+        } catch (Exception ex) {
+            log.warn("Failed to persist completed result: {}", ex.getMessage());
+        }
+        return completedResult;
     }
 
     @Override

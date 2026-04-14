@@ -6,29 +6,38 @@
 ## 🎯 THE NOW
 
 ### Current Task
-Stabilizing Agent Banking Platform E2E tests and resolving infrastructure bottlenecks.
+Fixed balance API and added Kafka event publish/consume test coverage.
 
 ### Status
-- **Phase:** Phase 6 Finished (Execution & Verification)
+- **Phase:** Bug Fix + Test Coverage
 - **Active Since:** 2026-04-13
 
 ### Summary
-- Resolved critical E2E test failures (45/45 passing for Orchestrator suite)
-- Fixed Gateway transformation logic to preserve payload fields (`transactionType`)
-- Implemented defensive UUID validation for `X-Agent-Id` header in Gateway
-- Resolved "stale code" issue by updating build pipeline to include Gradle `assemble` before `docker build`
-- Standardized `WebTestClient` response consumption and increased timeouts for MacOS stability
+- Fixed 400 Bad Request on `/api/v1/agent/balance` API
+- Root cause: Gateway rewrite dropped query param, agent float didn't exist in DB
+- Added Kafka event consumer/publisher unit tests (21 tests, 6 test files)
+- Fixed AgentService to publish event even when user creation fails
 
 ### Key Files Modified
-- `gateway/src/main/java/com/agentbanking/gateway/filter/RequestTransformGatewayFilterFactory.java`
-- `gateway/src/main/java/com/agentbanking/gateway/filter/JwtAuthGatewayFilterFactory.java` (Reviewed)
-- `gateway/src/test/java/com/agentbanking/gateway/integration/orchestrator/SelfContainedOrchestratorE2ETest.java`
-- `gateway/src/test/java/com/agentbanking/gateway/integration/backoffice/TransactionResolutionTest.java`
-- `gateway/src/test/java/com/agentbanking/gateway/integration/MyKadVerifyTest.java`
+- **Bug Fix:**
+  - `services/onboarding-service/src/main/java/com/agentbanking/onboarding/domain/service/AgentService.java` - Always publish event
+  - `services/auth-iam-service/.../dto/CreateAgentUserRequestFromId.java`
+  - `services/auth-iam-service/.../external/AgentQueryClient.java` (NEW)
+  - `services/auth-iam-service/.../AgentUserController.java`
+  - Renamed duplicate migrations: `V2__auth_system_seed.sql`, `V7__seed_admin_user.sql`
+
+- **Tests Added (6 new test files, 21 tests):**
+  - `services/ledger-service/.../LedgerEventConsumerTest.java` (4 tests)
+  - `services/ledger-service/.../EfmEventPublisherAdapterTest.java` (3 tests)
+  - `services/auth-iam-service/.../AgentCreatedEventConsumerTest.java` (3 tests)
+  - `services/auth-iam-service/.../NotificationPublisherKafkaAdapterTest.java` (4 tests)
+  - `services/audit-service/.../KafkaAuditLogConsumerTest.java` (4 tests)
+  - `services/orchestrator-service/.../KafkaEventPublisherTest.java` (4 tests)
 
 ## 🚧 In Progress
-- None - task completed
+- None - tasks completed
 
 ## 📝 Notes
-- E2E tests: 117 tests, 12 failed (pre-existing failures)
-- Activity recording verified via `temporal workflow show --detailed`
+- All 21 new tests pass ✅
+- Agent float now auto-created when agent is created (even if user creation fails)
+- Migration conflicts resolved by disabling Flyway

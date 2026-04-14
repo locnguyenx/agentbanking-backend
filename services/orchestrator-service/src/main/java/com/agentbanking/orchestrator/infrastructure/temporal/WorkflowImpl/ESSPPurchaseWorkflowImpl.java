@@ -2,6 +2,8 @@ package com.agentbanking.orchestrator.infrastructure.temporal.WorkflowImpl;
 
 import com.agentbanking.orchestrator.application.activity.*;
 import com.agentbanking.orchestrator.application.activity.ValidateESSPPurchaseActivity;
+import com.agentbanking.orchestrator.domain.port.out.ESSPServicePort.ESSPValidationResult;
+import com.agentbanking.orchestrator.domain.port.out.ESSPServicePort.ESSPPurchaseResult;
 import com.agentbanking.orchestrator.application.activity.PurchaseESSPActivity;
 import com.agentbanking.orchestrator.application.activity.BlockFloatActivity;
 import com.agentbanking.orchestrator.application.activity.CommitFloatActivity;
@@ -13,6 +15,7 @@ import com.agentbanking.orchestrator.domain.model.WorkflowStatus;
 import com.agentbanking.orchestrator.domain.port.out.LedgerServicePort.*;
 
 import io.temporal.activity.ActivityOptions;
+import io.temporal.failure.ActivityFailure;
 import io.temporal.spring.boot.WorkflowImpl;
 import io.temporal.workflow.Workflow;
 import org.slf4j.Logger;
@@ -84,16 +87,28 @@ public class ESSPPurchaseWorkflowImpl implements ESSPPurchaseWorkflow {
         currentStatus = WorkflowStatus.RUNNING;
 
         try {
-            var validationResult = validateESSPPurchaseActivity.validate(input.amount());
+            ESSPValidationResult validationResult;
+            try {
+                validationResult = validateESSPPurchaseActivity.validate(input.amount());
+            } catch (ActivityFailure e) {
+                log.error("ValidateCard activity failed: {}", e.getMessage());
+                currentStatus = WorkflowStatus.FAILED;
+                WorkflowResult failResult = WorkflowResult.failed("ERR_ESSP_VALIDATION_FAILED", "Card validation failed: " + e.getMessage(), "RETRY");
+                persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
+                        Workflow.getInfo().getWorkflowId(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null, "ValidateCard activity failed"));
+                return failResult;
+            }
             if (!validationResult.valid()) {
                 currentStatus = WorkflowStatus.FAILED;
                 WorkflowResult failResult = WorkflowResult.failed("ERR_ESSP_INVALID_AMOUNT", "Invalid ESSP amount", "DECLINE");
                 persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
-                        input.idempotencyKey(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null, "Validation failed"));
+                        Workflow.getInfo().getWorkflowId(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null, "Validation failed"));
                 return failResult;
             }
 
-            FloatBlockResult blockResult = blockFloatActivity.blockFloat(
+            FloatBlockResult blockResult;
+            try {
+                blockResult = blockFloatActivity.blockFloat(
                     new FloatBlockInput(
                             input.agentId(),
                             input.amount(),
@@ -108,28 +123,57 @@ public class ESSPPurchaseWorkflowImpl implements ESSPPurchaseWorkflow {
                             input.targetBin()
                     )
             );
+            } catch (ActivityFailure e) {
+                log.error("BlockFloat activity failed: {}", e.getMessage());
+                currentStatus = WorkflowStatus.FAILED;
+                WorkflowResult failResult = WorkflowResult.failed("ERR_ESSP_BLOCK_FLOAT_FAILED", "Float block failed: " + e.getMessage(), "RETRY");
+                persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
+                        Workflow.getInfo().getWorkflowId(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null, "BlockFloat activity failed"));
+                return failResult;
+            }
             if (!blockResult.success()) {
                 currentStatus = WorkflowStatus.FAILED;
                 WorkflowResult failResult = WorkflowResult.failed(blockResult.errorCode(), "Float block failed", "DECLINE");
                 persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
-                        input.idempotencyKey(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null, "Float block failed"));
+                        Workflow.getInfo().getWorkflowId(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null, "Float block failed"));
                 return failResult;
             }
             UUID transactionId = blockResult.transactionId();
 
-            var purchaseResult = purchaseESSPActivity.purchase(input.amount(), input.customerMykad(), input.idempotencyKey());
+            ESSPPurchaseResult purchaseResult;
+            try {
+                purchaseResult = purchaseESSPActivity.purchase(input.amount(), input.customerMykad(), input.idempotencyKey());
+            } catch (ActivityFailure e) {
+                log.error("ProcessEssPayment activity failed: {}", e.getMessage());
+                releaseFloatActivity.releaseFloat(new FloatReleaseInput(input.agentId(), input.amount(), transactionId));
+                currentStatus = WorkflowStatus.FAILED;
+                WorkflowResult failResult = WorkflowResult.failed("ERR_ESSP_PAYMENT_FAILED", "ESSP payment failed: " + e.getMessage(), "RETRY");
+                persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
+                        Workflow.getInfo().getWorkflowId(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null, "ProcessEssPayment activity failed"));
+                return failResult;
+            }
             if (!purchaseResult.success()) {
                 releaseFloatActivity.releaseFloat(new FloatReleaseInput(input.agentId(), input.amount(), transactionId));
                 currentStatus = WorkflowStatus.FAILED;
                 WorkflowResult failResult = WorkflowResult.failed(purchaseResult.errorCode(), "ESSP purchase failed", "DECLINE");
                 persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
-                        input.idempotencyKey(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null, "Switch authorization failed"));
+                        Workflow.getInfo().getWorkflowId(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null, "Switch authorization failed"));
                 return failResult;
             }
 
-            commitFloatActivity.commitFloat(new FloatCommitInput(input.agentId(), input.amount(), transactionId));
-            creditAgentFloatActivity.creditAgentFloat(
-                    new FloatCreditInput(
+            try {
+                commitFloatActivity.commitFloat(new FloatCommitInput(input.agentId(), input.amount(), transactionId));
+            } catch (ActivityFailure e) {
+                log.error("CommitFloat activity failed: {}", e.getMessage());
+                currentStatus = WorkflowStatus.FAILED;
+                WorkflowResult failResult = WorkflowResult.failed("ERR_ESSP_COMMIT_FLOAT_FAILED", "Float commit failed: " + e.getMessage(), "REVIEW");
+                persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
+                        Workflow.getInfo().getWorkflowId(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null, "CommitFloat activity failed"));
+                return failResult;
+            }
+            try {
+                creditAgentFloatActivity.creditAgentFloat(
+                        new FloatCreditInput(
                             input.agentId(),
                             input.amount(),
                             BigDecimal.ZERO,
@@ -144,11 +188,19 @@ public class ESSPPurchaseWorkflowImpl implements ESSPPurchaseWorkflow {
                             input.geofenceLng()
                     )
             );
+            } catch (ActivityFailure e) {
+                log.error("CreditAgentFloat activity failed: {}", e.getMessage());
+                currentStatus = WorkflowStatus.FAILED;
+                WorkflowResult failResult = WorkflowResult.failed("ERR_ESSP_CREDIT_FLOAT_FAILED", "Float credit failed: " + e.getMessage(), "REVIEW");
+                persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
+                        Workflow.getInfo().getWorkflowId(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null, "CreditAgentFloat activity failed"));
+                return failResult;
+            }
 
             currentStatus = WorkflowStatus.COMPLETED;
             WorkflowResult completedResult = WorkflowResult.completed(transactionId, purchaseResult.certificateNumber(), input.amount(), BigDecimal.ZERO);
             persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
-                    input.idempotencyKey(), "COMPLETED", null, null, purchaseResult.certificateNumber(), BigDecimal.ZERO, purchaseResult.certificateNumber(), null));
+                    Workflow.getInfo().getWorkflowId(), "COMPLETED", null, null, purchaseResult.certificateNumber(), BigDecimal.ZERO, purchaseResult.certificateNumber(), null));
             return completedResult;
 
         } catch (Exception e) {
@@ -157,7 +209,7 @@ public class ESSPPurchaseWorkflowImpl implements ESSPPurchaseWorkflow {
             WorkflowResult failResult = WorkflowResult.failed("ERR_SYS_WORKFLOW_FAILED", e.getMessage(), "REVIEW");
             try {
                 persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
-                        input.idempotencyKey(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null, "Workflow exception: " + e.getMessage()));
+                        Workflow.getInfo().getWorkflowId(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null, "Workflow exception: " + e.getMessage()));
             } catch (Exception ex) {
                 log.warn("Failed to persist fail result: {}", ex.getMessage());
             }

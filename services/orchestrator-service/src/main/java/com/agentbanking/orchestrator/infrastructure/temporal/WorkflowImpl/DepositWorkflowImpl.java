@@ -24,6 +24,7 @@ import com.agentbanking.orchestrator.application.activity.ValidateAccountActivit
 import com.agentbanking.orchestrator.application.activity.CreditAgentFloatActivity;
 
 import io.temporal.activity.ActivityOptions;
+import io.temporal.failure.ActivityFailure;
 import io.temporal.spring.boot.WorkflowImpl;
 import io.temporal.workflow.Workflow;
 import org.slf4j.Logger;
@@ -120,30 +121,40 @@ public class DepositWorkflowImpl implements DepositWorkflow {
                 currentStatus = WorkflowStatus.FAILED;
                 WorkflowResult failResult = WorkflowResult.failed(velocityResult.errorCode(), "Velocity check failed", "DECLINE");
                 persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
-                        input.idempotencyKey(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null, "Velocity check failed"));
+                        Workflow.getInfo().getWorkflowId(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null, "Velocity check failed"));
                 return failResult;
             }
 
             // Step 2: Evaluate STP
-            var stpDecision = evaluateStpActivity.evaluateStp(
-                    new EvaluateStpActivity.Input(
-                            "CASH_DEPOSIT",
-                            input.agentId().toString(),
-                            input.amount().toString(),
-                            input.customerMykad(),
-                            input.agentTier(),
-                            0,
-                            "0",
-                            "0"
-                    )
-            );
+            StpDecision stpDecision;
+            try {
+                stpDecision = evaluateStpActivity.evaluateStp(
+                        new EvaluateStpActivity.Input(
+                                "CASH_DEPOSIT",
+                                input.agentId().toString(),
+                                input.amount().toString(),
+                                input.customerMykad(),
+                                input.agentTier(),
+                                0,
+                                "0",
+                                "0"
+                        )
+                );
+            } catch (ActivityFailure e) {
+                log.error("STP evaluation failed after retries: {}", e.getMessage());
+                currentStatus = WorkflowStatus.FAILED;
+                WorkflowResult stpFailResult = WorkflowResult.failed("ERR_STP_UNAVAILABLE", "STP service unavailable after retries", "RETRY");
+                persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
+                        Workflow.getInfo().getWorkflowId(), "FAILED", stpFailResult.errorCode(), stpFailResult.errorMessage(), null, null, null, "STP service unavailable: " + e.getMessage()));
+                return stpFailResult;
+            }
             if (!stpDecision.approved()) {
                 // Auto-create resolution case for non-STP transactions
                 if (stpDecision.category().equals("NON_STP") || 
                     stpDecision.category().equals("CONDITIONAL_STP")) {
                     saveResolutionCaseActivity.saveResolutionCase(
                         new SaveResolutionCaseActivity.Input(
-                            input.idempotencyKey(),
+                            Workflow.getInfo().getWorkflowId(),
                             null, // transactionId not available yet
                             stpDecision.category(),
                             stpDecision.reason()
@@ -153,7 +164,7 @@ public class DepositWorkflowImpl implements DepositWorkflow {
                 currentStatus = WorkflowStatus.PENDING_REVIEW;
                 WorkflowResult reviewResult = WorkflowResult.failed("ERR_STP_REVIEW", stpDecision.reason(), "REVIEW");
                 persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
-                        input.idempotencyKey(), "PENDING_REVIEW", reviewResult.errorCode(), reviewResult.errorMessage(), null, null, null, stpDecision.reason()));
+                        Workflow.getInfo().getWorkflowId(), "PENDING_REVIEW", reviewResult.errorCode(), reviewResult.errorMessage(), null, null, null, stpDecision.reason()));
                 return reviewResult;
             }
 
@@ -168,38 +179,58 @@ public class DepositWorkflowImpl implements DepositWorkflow {
                 currentStatus = WorkflowStatus.FAILED;
                 WorkflowResult failResult = WorkflowResult.failed(accountResult.errorCode(), "Invalid account", "DECLINE");
                 persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
-                        input.idempotencyKey(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null, "Invalid account"));
+                        Workflow.getInfo().getWorkflowId(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null, "Invalid account"));
                 return failResult;
             }
 
             // Step 4: Credit agent float
-            FloatCreditResult creditResult = creditAgentFloatActivity.creditAgentFloat(
-                    new FloatCreditInput(
-                            input.agentId(),
-                            input.amount(),
-                            fees.customerFee(),
-                            fees.agentCommission(),
-                            fees.bankShare(),
-                            input.idempotencyKey(),
-                            input.destinationAccount(),
-                            input.agentTier(),
-                            input.targetBin(),
-                            input.idempotencyKey(), // referenceNumber fallback
-                            input.geofenceLat(),
-                            input.geofenceLng()
-                    )
-            );
+            FloatCreditResult creditResult;
+            try {
+                creditResult = creditAgentFloatActivity.creditAgentFloat(
+                        new FloatCreditInput(
+                                input.agentId(),
+                                input.amount(),
+                                fees.customerFee(),
+                                fees.agentCommission(),
+                                fees.bankShare(),
+                                input.idempotencyKey(),
+                                input.destinationAccount(),
+                                input.agentTier(),
+                                input.targetBin(),
+                                input.idempotencyKey(), // referenceNumber fallback
+                                input.geofenceLat(),
+                                input.geofenceLng()
+                        )
+                );
+            } catch (ActivityFailure e) {
+                log.error("Float credit failed after retries: {}", e.getMessage());
+                currentStatus = WorkflowStatus.FAILED;
+                WorkflowResult creditFailResult = WorkflowResult.failed("ERR_FLOAT_CREDIT_UNAVAILABLE", "Float credit service unavailable after retries", "RETRY");
+                persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
+                        Workflow.getInfo().getWorkflowId(), "FAILED", creditFailResult.errorCode(), creditFailResult.errorMessage(), null, null, null, "Float credit unavailable: " + e.getMessage()));
+                return creditFailResult;
+            }
             if (!creditResult.success()) {
                 currentStatus = WorkflowStatus.FAILED;
                 WorkflowResult failResult = WorkflowResult.failed(creditResult.errorCode(), "Float credit failed", "DECLINE");
                 persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
-                        input.idempotencyKey(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null, "Float credit failed"));
+                        Workflow.getInfo().getWorkflowId(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null, "Float credit failed"));
                 return failResult;
             }
 
             // Step 5: Post to CBS
-            CbsPostResult cbsResult = postToCBSActivity.postToCbs(
-                    new CbsPostInput(input.destinationAccount(), input.amount()));
+            CbsPostResult cbsResult;
+            try {
+                cbsResult = postToCBSActivity.postToCbs(
+                        new CbsPostInput(input.destinationAccount(), input.amount()));
+            } catch (ActivityFailure e) {
+                log.error("CBS posting failed after retries: {}", e.getMessage());
+                currentStatus = WorkflowStatus.FAILED;
+                WorkflowResult cbsFailResult = WorkflowResult.failed("ERR_CBS_UNAVAILABLE", "CBS service unavailable after retries", "RETRY");
+                persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
+                        Workflow.getInfo().getWorkflowId(), "FAILED", cbsFailResult.errorCode(), cbsFailResult.errorMessage(), null, null, null, "CBS unavailable: " + e.getMessage()));
+                return cbsFailResult;
+            }
             if (!cbsResult.success()) {
                 // Compensation: reverse the credit
                 releaseFloatActivity.releaseFloat(
@@ -207,7 +238,7 @@ public class DepositWorkflowImpl implements DepositWorkflow {
                 currentStatus = WorkflowStatus.FAILED;
                 WorkflowResult failResult = WorkflowResult.failed(cbsResult.errorCode(), "CBS posting failed", "RETRY");
                 persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
-                        input.idempotencyKey(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null, "CBS posting failed"));
+                        Workflow.getInfo().getWorkflowId(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null, "CBS posting failed"));
                 return failResult;
             }
 
@@ -226,7 +257,7 @@ public class DepositWorkflowImpl implements DepositWorkflow {
             WorkflowResult completedResult = WorkflowResult.completed(txId, cbsResult.reference(),
                     input.amount(), fees.customerFee());
             persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
-                    input.idempotencyKey(), "COMPLETED", null, null,
+                    Workflow.getInfo().getWorkflowId(), "COMPLETED", null, null,
                     cbsResult.reference(), fees.customerFee(), cbsResult.reference(), null));
             return completedResult;
 
@@ -236,7 +267,7 @@ public class DepositWorkflowImpl implements DepositWorkflow {
             WorkflowResult failResult = WorkflowResult.failed("ERR_SYS_WORKFLOW_FAILED", e.getMessage(), "REVIEW");
             try {
                 persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
-                        input.idempotencyKey(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null, "Workflow exception: " + e.getMessage()));
+                        Workflow.getInfo().getWorkflowId(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null, "Workflow exception: " + e.getMessage()));
             } catch (Exception ex) {
                 log.warn("Failed to persist fail result: {}", ex.getMessage());
             }

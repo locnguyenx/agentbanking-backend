@@ -11,6 +11,7 @@ import com.agentbanking.orchestrator.domain.port.out.LedgerServicePort.*;
 import com.agentbanking.orchestrator.domain.port.out.RulesServicePort.*;
 
 import io.temporal.activity.ActivityOptions;
+import io.temporal.failure.ActivityFailure;
 import io.temporal.spring.boot.WorkflowImpl;
 import io.temporal.workflow.Workflow;
 import org.slf4j.Logger;
@@ -145,21 +146,31 @@ public class BillPaymentWorkflowImpl implements BillPaymentWorkflow {
             BigDecimal totalAmount = input.amount().add(fees.customerFee());
 
             // Step 4: Block float
-            FloatBlockResult blockResult = blockFloatActivity.blockFloat(
-                    new FloatBlockInput(
-                            input.agentId(),
-                            input.amount(),
-                            fees.customerFee(),
-                            fees.agentCommission(),
-                            fees.bankShare(),
-                            input.idempotencyKey(),
-                            null,
-                            input.geofenceLat(),
-                            input.geofenceLng(),
-                            input.agentTier(),
-                            input.targetBin()
-                    )
-            );
+            FloatBlockResult blockResult;
+            try {
+                blockResult = blockFloatActivity.blockFloat(
+                        new FloatBlockInput(
+                                input.agentId(),
+                                input.amount(),
+                                fees.customerFee(),
+                                fees.agentCommission(),
+                                fees.bankShare(),
+                                input.idempotencyKey(),
+                                null,
+                                input.geofenceLat(),
+                                input.geofenceLng(),
+                                input.agentTier(),
+                                input.targetBin()
+                        )
+                );
+            } catch (ActivityFailure e) {
+                log.error("Activity failure in blockFloat: {}", e.getMessage());
+                currentStatus = WorkflowStatus.FAILED;
+                WorkflowResult failResult = WorkflowResult.failed("ERR_ACTIVITY_FAILED", "Float block activity failed: " + e.getMessage(), "RETRY");
+                persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
+                        Workflow.getInfo().getWorkflowId(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null, e.getMessage()));
+                return failResult;
+            }
             if (!blockResult.success()) {
                 currentStatus = WorkflowStatus.FAILED;
                 return WorkflowResult.failed(blockResult.errorCode(), "Float block failed", "DECLINE");
@@ -167,8 +178,20 @@ public class BillPaymentWorkflowImpl implements BillPaymentWorkflow {
             UUID transactionId = blockResult.transactionId();
 
             // Step 4: Validate bill
-            BillValidationResult billResult = validateBillActivity.validateBill(
-                    new BillValidationInput(input.billerCode(), input.ref1()));
+            BillValidationResult billResult;
+            try {
+                billResult = validateBillActivity.validateBill(
+                        new BillValidationInput(input.billerCode(), input.ref1()));
+            } catch (ActivityFailure e) {
+                log.error("Activity failure in validateBill: {}", e.getMessage());
+                releaseFloatActivity.releaseFloat(
+                        new FloatReleaseInput(input.agentId(), totalAmount, transactionId));
+                currentStatus = WorkflowStatus.FAILED;
+                WorkflowResult failResult = WorkflowResult.failed("ERR_ACTIVITY_FAILED", "Bill validation activity failed: " + e.getMessage(), "DECLINE");
+                persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
+                        Workflow.getInfo().getWorkflowId(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null, e.getMessage()));
+                return failResult;
+            }
             if (!billResult.valid()) {
                 releaseFloatActivity.releaseFloat(
                         new FloatReleaseInput(input.agentId(), totalAmount, transactionId));
@@ -177,9 +200,21 @@ public class BillPaymentWorkflowImpl implements BillPaymentWorkflow {
             }
 
             // Step 5: Pay biller
-            BillPaymentResult paymentResult = payBillerActivity.payBill(
-                    new com.agentbanking.orchestrator.domain.port.out.BillerServicePort.BillPaymentInput(input.billerCode(), input.ref1(), input.ref2(),
-                            input.amount(), input.idempotencyKey()));
+            BillPaymentResult paymentResult;
+            try {
+                paymentResult = payBillerActivity.payBill(
+                        new com.agentbanking.orchestrator.domain.port.out.BillerServicePort.BillPaymentInput(input.billerCode(), input.ref1(), input.ref2(),
+                                input.amount(), input.idempotencyKey()));
+            } catch (ActivityFailure e) {
+                log.error("Activity failure in payBill: {}", e.getMessage());
+                releaseFloatActivity.releaseFloat(
+                        new FloatReleaseInput(input.agentId(), totalAmount, transactionId));
+                currentStatus = WorkflowStatus.FAILED;
+                WorkflowResult failResult = WorkflowResult.failed("ERR_ACTIVITY_FAILED", "Bill payment activity failed: " + e.getMessage(), "DECLINE");
+                persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
+                        Workflow.getInfo().getWorkflowId(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null, e.getMessage()));
+                return failResult;
+            }
             if (!paymentResult.success()) {
                 releaseFloatActivity.releaseFloat(
                         new FloatReleaseInput(input.agentId(), totalAmount, transactionId));
@@ -219,7 +254,7 @@ public class BillPaymentWorkflowImpl implements BillPaymentWorkflow {
             WorkflowResult completedResult = WorkflowResult.completed(transactionId, paymentResult.billerReference(),
                     input.amount(), fees.customerFee());
             persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
-                    input.idempotencyKey(), "COMPLETED", null, null,
+                    Workflow.getInfo().getWorkflowId(), "COMPLETED", null, null,
                     paymentResult.billerReference(), fees.customerFee(), paymentResult.billerReference(), null));
             return completedResult;
 
@@ -229,7 +264,7 @@ public class BillPaymentWorkflowImpl implements BillPaymentWorkflow {
             WorkflowResult sysFailResult = WorkflowResult.failed("ERR_SYS_WORKFLOW_FAILED", e.getMessage(), "REVIEW");
             try {
                 persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
-                        input.idempotencyKey(), "FAILED", sysFailResult.errorCode(), sysFailResult.errorMessage(), null, null, null, "Workflow exception: " + e.getMessage()));
+                        Workflow.getInfo().getWorkflowId(), "FAILED", sysFailResult.errorCode(), sysFailResult.errorMessage(), null, null, null, "Workflow exception: " + e.getMessage()));
             } catch (Exception ex) {
                 log.warn("Failed to persist workflow failure result: {}", ex.getMessage());
             }
