@@ -44,9 +44,12 @@ public class OrchestratorController {
             var existing = queryWorkflowStatusUseCase.getStatus(request.idempotencyKey());
             if (existing.isPresent()) {
                 log.info("Returning cached response for idempotency key: {}", request.idempotencyKey());
-                return ResponseEntity.ok(mapToTransactionResponse(
-                    new StartTransactionResult("PENDING", request.idempotencyKey(), 
-                        "/api/v1/transactions/" + request.idempotencyKey() + "/status")));
+                // BDD-IDE-02/03: Return 202 for cached responses too
+                return ResponseEntity.accepted()
+                        .location(java.net.URI.create("/api/v1/transactions/" + request.idempotencyKey() + "/status"))
+                        .body(mapToTransactionResponse(
+                            new StartTransactionResult("PENDING", request.idempotencyKey(),
+                                "/api/v1/transactions/" + request.idempotencyKey() + "/status")));
             }
         }
 
@@ -73,7 +76,12 @@ public class OrchestratorController {
         );
 
         StartTransactionResult result = startTransactionUseCase.start(command);
-        return ResponseEntity.ok(mapToTransactionResponse(result));
+        
+        // BDD Spec: Return 202 Accepted for async workflow start
+        // Response includes pollUrl for client to check status
+        return ResponseEntity.accepted()
+                .location(java.net.URI.create(result.pollUrl()))
+                .body(mapToTransactionResponse(result));
     }
 
     @GetMapping("/{workflowId}/status")

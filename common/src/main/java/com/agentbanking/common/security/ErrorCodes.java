@@ -41,6 +41,17 @@ public final class ErrorCodes {
     public static final String ERR_BIZ_QUOTE_CALCULATION_FAILED = "ERR_BIZ_QUOTE_CALCULATION_FAILED";
     public static final String ERR_BIZ_PROXY_NOT_FOUND = "ERR_BIZ_PROXY_NOT_FOUND";
     public static final String ERR_BIZ_COMPLIANCE_CHECK_FAILED = "ERR_BIZ_COMPLIANCE_CHECK_FAILED";
+    public static final String ERR_UNSUPPORTED_TRANSACTION_TYPE = "ERR_BIZ_UNSUPPORTED_TRANSACTION_TYPE";
+    public static final String ERR_INVALID_ACCOUNT = "ERR_BIZ_INVALID_ACCOUNT";
+    public static final String ERR_BIOMETRIC_MISMATCH = "ERR_BIZ_BIOMETRIC_MISMATCH";
+    public static final String ERR_BIZ_MYKAD_NOT_FOUND = "ERR_BIZ_MYKAD_NOT_FOUND";
+    public static final String ERR_ESSP_SERVICE_UNAVAILABLE = "ERR_BIZ_ESSP_SERVICE_UNAVAILABLE";
+    public static final String ERR_QR_PAYMENT_TIMEOUT = "ERR_BIZ_QR_PAYMENT_TIMEOUT";
+    public static final String ERR_RTP_DECLINED = "ERR_BIZ_RTP_DECLINED";
+    public static final String ERR_PIN_INVENTORY_DEPLETED = "ERR_BIZ_PIN_INVENTORY_DEPLETED";
+    public static final String ERR_PIN_GENERATION_FAILED = "ERR_BIZ_PIN_GENERATION_FAILED";
+    public static final String ERR_WALLET_INSUFFICIENT = "ERR_BIZ_WALLET_INSUFFICIENT";
+    public static final String ERR_AGGREGATOR_TIMEOUT = "ERR_BIZ_AGGREGATOR_TIMEOUT";
 
     // External System Errors (ERR_EXT_xxx)
     public static final String ERR_SWITCH_DECLINED = "ERR_EXT_SWITCH_DECLINED";
@@ -55,6 +66,8 @@ public final class ErrorCodes {
     public static final String ERR_BILLER_PAYMENT_FAILED = "ERR_EXT_BILLER_PAYMENT_FAILED";
     public static final String ERR_TOPUP_FAILED = "ERR_EXT_TOPUP_FAILED";
     public static final String ERR_EXT_PROXY_ENQUIRY_FAILED = "ERR_EXT_PROXY_ENQUIRY_FAILED";
+    public static final String ERR_NETWORK_TIMEOUT = "ERR_EXT_NETWORK_TIMEOUT";
+    public static final String ERR_BILLER_TIMEOUT = "ERR_EXT_BILLER_TIMEOUT";
 
     // Auth Errors (ERR_AUTH_xxx)
     public static final String ERR_TOKEN_EXPIRED = "ERR_AUTH_TOKEN_EXPIRED";

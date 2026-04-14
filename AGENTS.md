@@ -102,6 +102,6 @@ This project is an **Agent Banking Platform** that facilitates financial service
 
 ## 3. Conditional Rules & References
 When applicable, refer to these specialized files for additional constraints:
-- **API Design & Error Handling:** `@rules/api-standards.md`
-- **Testing & Coverage:** `@rules/testing-guidelines.md`
-- **Business Logic & Domains:** `@rules/banking-guidelines.md`
+- **API Design & Error Handling:** `@.agents/rules/api-standards.md`
+- **Testing & Coverage:** `@.agents/rules/testing-guidelines.md`
+- **Business Logic & Domains:** `@.agents/rules/banking-guidelines.md`
