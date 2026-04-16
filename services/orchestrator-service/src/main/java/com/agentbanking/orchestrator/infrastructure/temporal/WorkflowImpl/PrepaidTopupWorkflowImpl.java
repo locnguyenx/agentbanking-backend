@@ -13,7 +13,9 @@ import com.agentbanking.orchestrator.domain.model.WorkflowStatus;
 import com.agentbanking.orchestrator.domain.port.out.LedgerServicePort.*;
 
 import io.temporal.activity.ActivityOptions;
+import io.temporal.common.RetryOptions;
 import io.temporal.failure.ActivityFailure;
+import io.temporal.failure.CanceledFailure;
 import io.temporal.spring.boot.WorkflowImpl;
 import io.temporal.workflow.Workflow;
 import org.slf4j.Logger;
@@ -57,25 +59,32 @@ public class PrepaidTopupWorkflowImpl implements PrepaidTopupWorkflow {
     @SuppressWarnings("SpringJavaAutowiredMembersInspection")
     public PrepaidTopupWorkflowImpl() {
         this.validatePhoneNumberActivity = Workflow.newActivityStub(ValidatePhoneNumberActivity.class, ActivityOptions.newBuilder()
-                .setStartToCloseTimeout(Duration.ofMinutes(2))
+                .setStartToCloseTimeout(Duration.ofSeconds(30))
+                .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(3).build())
                 .build());
         this.topUpTelcoActivity = Workflow.newActivityStub(TopUpTelcoActivity.class, ActivityOptions.newBuilder()
-                .setStartToCloseTimeout(Duration.ofMinutes(5))
+                .setStartToCloseTimeout(Duration.ofSeconds(60))
+                .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(3).build())
                 .build());
         this.blockFloatActivity = Workflow.newActivityStub(BlockFloatActivity.class, ActivityOptions.newBuilder()
-                .setStartToCloseTimeout(Duration.ofMinutes(2))
+                .setStartToCloseTimeout(Duration.ofSeconds(30))
+                .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(3).build())
                 .build());
         this.commitFloatActivity = Workflow.newActivityStub(CommitFloatActivity.class, ActivityOptions.newBuilder()
-                .setStartToCloseTimeout(Duration.ofMinutes(2))
+                .setStartToCloseTimeout(Duration.ofSeconds(30))
+                .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(3).build())
                 .build());
         this.releaseFloatActivity = Workflow.newActivityStub(ReleaseFloatActivity.class, ActivityOptions.newBuilder()
-                .setStartToCloseTimeout(Duration.ofMinutes(2))
+                .setStartToCloseTimeout(Duration.ofSeconds(30))
+                .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(3).build())
                 .build());
         this.creditAgentFloatActivity = Workflow.newActivityStub(CreditAgentFloatActivity.class, ActivityOptions.newBuilder()
-                .setStartToCloseTimeout(Duration.ofMinutes(2))
+                .setStartToCloseTimeout(Duration.ofSeconds(30))
+                .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(3).build())
                 .build());
         this.persistWorkflowResultActivity = Workflow.newActivityStub(PersistWorkflowResultActivity.class, ActivityOptions.newBuilder()
-                .setStartToCloseTimeout(Duration.ofMinutes(2))
+                .setStartToCloseTimeout(Duration.ofSeconds(30))
+                .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(3).build())
                 .build());
     }
 

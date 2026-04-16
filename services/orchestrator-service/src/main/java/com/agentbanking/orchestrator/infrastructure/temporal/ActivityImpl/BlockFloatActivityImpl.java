@@ -4,10 +4,10 @@ import com.agentbanking.orchestrator.application.activity.BlockFloatActivity;
 import com.agentbanking.orchestrator.domain.port.out.LedgerServicePort;
 import com.agentbanking.orchestrator.domain.port.out.LedgerServicePort.FloatBlockInput;
 import com.agentbanking.orchestrator.domain.port.out.LedgerServicePort.FloatBlockResult;
-
-
+import io.temporal.spring.boot.ActivityImpl;
 import org.springframework.stereotype.Component;
 
+@ActivityImpl(workers = "agent-banking-tasks")
 @Component
 public class BlockFloatActivityImpl implements BlockFloatActivity {
 

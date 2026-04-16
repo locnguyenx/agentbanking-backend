@@ -36,6 +36,9 @@ vi.mock('../api/client', () => {
       resetUserPassword: vi.fn().mockResolvedValue({}),
       getAgentUserStatus: vi.fn().mockResolvedValue({ status: 'NOT_CREATED' }),
       createAgentUser: vi.fn().mockResolvedValue({}),
+      getAgentFloat: vi.fn().mockResolvedValue({ exists: false }),
+      getAgentFloatTransactions: vi.fn().mockResolvedValue({ agentId: '', period: '2026-04', totalCount: 0, totalVolume: 0, byType: [] }),
+      createAgentFloat: vi.fn().mockResolvedValue({ exists: true, float: { balance: 5000 } }),
       getTransactions: vi.fn().mockResolvedValue({ content: [], totalElements: 0 }),
       getSettlement: vi.fn().mockResolvedValue({}),
       exportSettlement: vi.fn().mockResolvedValue({}),
@@ -147,6 +150,54 @@ describe('Agents', () => {
     await waitFor(() => {
       const prevButton = screen.getByTestId('prev-page-button')
       expect(prevButton).toBeDisabled()
+    })
+  })
+
+  it('should display Float Balance column in table', async () => {
+    renderWithProviders(<Agents />)
+    
+    await waitFor(() => {
+      expect(screen.getByText('Float Balance')).toBeInTheDocument()
+    })
+  })
+
+  it('should show No Float for agents without float', async () => {
+    renderWithProviders(<Agents />)
+    
+    await waitFor(() => {
+      expect(screen.getAllByText('No Float').length).toBeGreaterThan(0)
+    })
+  })
+
+  it('should display Create AgentFloat option in action menu', async () => {
+    renderWithProviders(<Agents />)
+    
+    await waitFor(() => {
+      const firstActionButton = screen.getByTestId('action-a0000000-0000-0000-0000-000000000001-button')
+      fireEvent.click(firstActionButton)
+    })
+    
+    await waitFor(() => {
+      expect(screen.getByText('Create AgentFloat')).toBeInTheDocument()
+    })
+  })
+
+  it('should open Create AgentFloat modal when action is clicked', async () => {
+    renderWithProviders(<Agents />)
+    
+    await waitFor(() => {
+      const firstActionButton = screen.getByTestId('action-a0000000-0000-0000-0000-000000000001-button')
+      fireEvent.click(firstActionButton)
+    })
+    
+    await waitFor(() => {
+      fireEvent.click(screen.getByText('Create AgentFloat'))
+    })
+    
+    await waitFor(() => {
+      expect(screen.getByText('Create Agent Float')).toBeInTheDocument()
+      expect(screen.getByText('Initial Balance')).toBeInTheDocument()
+      expect(screen.getByText('Currency')).toBeInTheDocument()
     })
   })
 })

@@ -1,44 +1,46 @@
 # Session Memory - Current State
 
-**Project:** Agent Banking Platform  
-**Last Update:** 2026-04-14
+**Project:** Agent Banking Platform
+**Last Update:** 2026-04-16
 
 ## 🎯 THE NOW
 
-### Current Task
-BDD test verification alignment and auth security fix.
+### Session Status: CLOSED
 
-### Status
-- **Phase:** BDD Test Verification + Infrastructure Fix
-- **Active Since:** 2026-04-14
+### Completed Fixes (2026-04-16 - Full Day Session)
 
-### Summary
-- Fixed BDD tests to verify workflow selection (not just HTTP 202 status)
-- Added verify(workflowFactory).startWorkflow() assertions in orchestrator tests
-- Fixed auth SecurityConfig to allow /api/v1/auth/** endpoints
-- Fixed HTTP 200 vs 202 mismatch in E2E tests
-- Created missing database tables via Docker exec
+**Issue 1 - Dashboard Agent Count Inconsistency:**
+- Root cause: Dashboard API was counting transaction agents instead of registered agents
+- Fixed: Dashboard API now queries onboarding service for accurate agent counts (22 total, 21 active, 1 suspended)
 
-### Key Files Modified
-- **Bug Fix:**
-  - `services/onboarding-service/src/main/java/com/agentbanking/onboarding/domain/service/AgentService.java` - Always publish event
-  - `services/auth-iam-service/.../dto/CreateAgentUserRequestFromId.java`
-  - `services/auth-iam-service/.../external/AgentQueryClient.java` (NEW)
-  - `services/auth-iam-service/.../AgentUserController.java`
-  - Renamed duplicate migrations: `V2__auth_system_seed.sql`, `V7__seed_admin_user.sql`
+**Issue 2 - Agents Page Stats Inconsistency:**
+- Root cause: Agent statistics calculated from paginated results (only first 20 agents)
+- Fixed: Agents API now returns complete statistics (total, active, suspended, inactive counts)
 
-- **Tests Added (6 new test files, 21 tests):**
-  - `services/ledger-service/.../LedgerEventConsumerTest.java` (4 tests)
-  - `services/ledger-service/.../EfmEventPublisherAdapterTest.java` (3 tests)
-  - `services/auth-iam-service/.../AgentCreatedEventConsumerTest.java` (3 tests)
-  - `services/auth-iam-service/.../NotificationPublisherKafkaAdapterTest.java` (4 tests)
-  - `services/audit-service/.../KafkaAuditLogConsumerTest.java` (4 tests)
-  - `services/orchestrator-service/.../KafkaEventPublisherTest.java` (4 tests)
+**Issue 3 - Frontend Caching Issues:**
+- Root cause: Browser caching old JavaScript after code updates
+- Fixed: Added no-cache headers to nginx, updated React Query keys, manually deployed updated JavaScript
 
-## 🚧 In Progress
-- None - tasks completed
+**Issue 4 - OpenAPI Spec Enum Mismatch:**
+- Root cause: OpenAPI spec used incorrect enum values [TIER_1, TIER_2, TIER_3]
+- Fixed: Updated to match production enum [MICRO, STANDARD, PREMIER]
+- Remaining: Test files still contain old values (73 instances) - not critical for production
+
+### Container Builds
+- ✅ backoffice: 71f1d51705b1
+- ✅ orchestrator-service: 812df446d421 (--no-cache)
+
+---
+
+## 🚧 PENDING ISSUES (Parked for Next Session)
+
+1. **Root cause investigation for orphan case** - Need to investigate why case was created without workflow:
+   - Case ID: b9d39b5b-bae4-4828-aaf9-cb6186107d8b
+   - Investigate case creation flow in SaveResolutionCaseActivityImpl
+
+---
 
 ## 📝 Notes
-- All 21 new tests pass ✅
-- Agent float now auto-created when agent is created (even if user creation fails)
-- Migration conflicts resolved by disabling Flyway
+- All code compiles successfully
+- Build verified with tests
+- Session completed at 2026-04-15 22:35

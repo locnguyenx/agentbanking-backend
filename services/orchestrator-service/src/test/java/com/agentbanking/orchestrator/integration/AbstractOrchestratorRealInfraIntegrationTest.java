@@ -120,7 +120,7 @@ public abstract class AbstractOrchestratorRealInfraIntegrationTest {
                 "REF123456",                          // referenceNumber
                 BigDecimal.valueOf(3.1390),           // geofenceLat
                 BigDecimal.valueOf(101.6869),         // geofenceLng
-                "TIER_1",                             // agentTier
+                "MICRO",                              // agentTier
                 "0123",                               // targetBin
                 null,                                 // billerCode
                 null,                                 // ref1

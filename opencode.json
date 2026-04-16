@@ -1,4 +1,17 @@
 {
   "$schema": "https://opencode.ai/config.json",
-  "plugin": ["superpowers@git+https://github.com/obra/superpowers.git"]
+  "plugin": ["superpowers@git+https://github.com/obra/superpowers.git"],
+  "provider": {
+    "nvidia": {
+      "models": {
+        "minimaxai/minimax-m2.7": {
+          "name": "minimax-m2.7",
+          "limit": {
+            "context": 204800,
+            "output": 131000
+          }
+        }
+      }
+    }
+  }
 }

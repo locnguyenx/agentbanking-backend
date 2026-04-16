@@ -83,6 +83,7 @@ interface ResolutionItem {
   ref1?: string
   ref2?: string
   destinationAccount?: string
+  isOrphan?: boolean
 }
 
 function mapResolutionStatus(status: string): ResolutionItem['status'] {
@@ -505,33 +506,54 @@ toast.success('Resolution rejected successfully!')
                     <Eye size={14} />
                     View
                   </button>
-                  <button 
-                    className="btn btn-outline btn-sm" 
-                    onClick={() => handleForceResolve(item)}
-                    style={{ color: '#7c3aed', borderColor: '#7c3aed' }}
-                    data-testid={`force-resolve-${item.workflowId}-button`}
-                  >
-                    <Zap size={14} />
-                    Force Resolve
-                  </button>
-                  {item.status === 'PENDING_MAKER' && (
-                    <button className="btn btn-secondary btn-sm" onClick={() => { setSelectedItem(item); setShowProposalModal(true); }}>
-                      <FileCheck size={14} />
-                      Propose
-                    </button>
-                  )}
-                  {item.status === 'PENDING_CHECKER' && (
-                    <>
-                      <button className="btn btn-secondary btn-sm" onClick={() => handleApprove(item)} data-testid={`approve-${item.workflowId}-button`}>
-                        <CheckCircle size={14} />
-                        Approve
-                      </button>
-                      <button className="btn btn-outline btn-sm" onClick={() => handleReject(item)} style={{ color: '#ef4444', borderColor: '#ef4444' }} data-testid={`reject-${item.workflowId}-button`}>
-                        <XCircle size={14} />
-                        Reject
-                      </button>
-                    </>
-                  )}
+{item.isOrphan ? (
+                      <>
+                        <span style={{ 
+                          background: '#fef3c7', 
+                          color: '#b45309', 
+                          padding: '4px 8px', 
+                          borderRadius: 4, 
+                          fontSize: 12,
+                          fontWeight: 600,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 4
+                        }}>
+                          <AlertTriangle size={14} />
+                          Orphan (No Workflow)
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <button 
+                          className="btn btn-outline btn-sm" 
+                          onClick={() => handleForceResolve(item)}
+                          style={{ color: '#7c3aed', borderColor: '#7c3aed' }}
+                          data-testid={`force-resolve-${item.workflowId}-button`}
+                        >
+                          <Zap size={14} />
+                          Force Resolve
+                        </button>
+                        {item.status === 'PENDING_MAKER' && (
+                          <button className="btn btn-secondary btn-sm" onClick={() => { setSelectedItem(item); setShowProposalModal(true); }}>
+                            <FileCheck size={14} />
+                            Propose
+                          </button>
+                        )}
+                        {item.status === 'PENDING_CHECKER' && (
+                          <>
+                            <button className="btn btn-secondary btn-sm" onClick={() => handleApprove(item)} data-testid={`approve-${item.workflowId}-button`}>
+                              <CheckCircle size={14} />
+                              Approve
+                            </button>
+                            <button className="btn btn-outline btn-sm" onClick={() => handleReject(item)} style={{ color: '#ef4444', borderColor: '#ef4444' }} data-testid={`reject-${item.workflowId}-button`}>
+                              <XCircle size={14} />
+                              Reject
+                            </button>
+                          </>
+                        )}
+                      </>
+                    )}
                 </div>
               </div>
             </div>

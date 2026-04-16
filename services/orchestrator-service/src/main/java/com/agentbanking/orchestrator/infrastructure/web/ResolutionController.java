@@ -257,15 +257,18 @@ public class ResolutionController {
                 map.put("makerPendingReason", c.makerPendingReason() != null ? c.makerPendingReason() : "");
                 map.put("checkerPendingReason", c.checkerPendingReason() != null ? c.checkerPendingReason() : "");
                 map.put("createdAt", c.createdAt() != null ? c.createdAt().toString() : "");
-                map.put("updatedAt", c.updatedAt() != null ? c.updatedAt().toString() : "");
+map.put("updatedAt", c.updatedAt() != null ? c.updatedAt().toString() : "");
                 
-if (txRecord.isPresent()) {
-                     map.put("errorCode", txRecord.get().errorCode() != null ? txRecord.get().errorCode() : "");
-                     map.put("errorMessage", txRecord.get().errorMessage() != null ? txRecord.get().errorMessage() : "");
-                     map.put("completedAt", txRecord.get().completedAt() != null ? txRecord.get().completedAt().toString() : "");
-                     map.put("referenceNumber", txRecord.get().referenceNumber() != null ? txRecord.get().referenceNumber() : "");
-                     map.put("customerFee", txRecord.get().customerFee() != null ? txRecord.get().customerFee() : null);
-                 }
+                boolean isOrphan = !txRecord.isPresent();
+                map.put("isOrphan", isOrphan);
+                
+                if (txRecord.isPresent()) {
+                    map.put("errorCode", txRecord.get().errorCode() != null ? txRecord.get().errorCode() : "");
+                    map.put("errorMessage", txRecord.get().errorMessage() != null ? txRecord.get().errorMessage() : "");
+                    map.put("completedAt", txRecord.get().completedAt() != null ? txRecord.get().completedAt().toString() : "");
+                    map.put("referenceNumber", txRecord.get().referenceNumber() != null ? txRecord.get().referenceNumber() : "");
+                    map.put("customerFee", txRecord.get().customerFee() != null ? txRecord.get().customerFee() : null);
+                }
                 
                 return map;
             })

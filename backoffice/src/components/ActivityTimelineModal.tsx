@@ -39,6 +39,7 @@ interface WorkflowDetailsModalProps {
   onCreateCase?: () => void
   hasExistingCase?: boolean
   resolutionCase?: { caseId: string; status: string }
+  needsResolution?: boolean
 }
 
 export const WorkflowDetailsModal: React.FC<WorkflowDetailsModalProps> = ({
@@ -47,7 +48,8 @@ export const WorkflowDetailsModal: React.FC<WorkflowDetailsModalProps> = ({
   onClose,
   onCreateCase,
   hasExistingCase = false,
-  resolutionCase
+  resolutionCase,
+  needsResolution = false
 }) => {
   const [activeTab, setActiveTab] = useState<'main' | 'execution'>('main')
   const [autoRefreshEnabled, setAutoRefreshEnabled] = useState(false)
@@ -507,7 +509,8 @@ export const WorkflowDetailsModal: React.FC<WorkflowDetailsModalProps> = ({
           <button className="btn btn-outline" onClick={onClose}>
             Close
           </button>
-          {onCreateCase && !hasExistingCase && (
+          {onCreateCase && !hasExistingCase && (needsResolution || workflow.status === 'COMPENSATING' || 
+            (workflow.status === 'PENDING' && !!workflow.pendingReason)) && (
             <button className="btn btn-primary" onClick={onCreateCase}>
               Create Resolution Case
             </button>

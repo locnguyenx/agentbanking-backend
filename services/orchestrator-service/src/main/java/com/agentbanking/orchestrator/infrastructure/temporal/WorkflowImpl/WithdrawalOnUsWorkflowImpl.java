@@ -11,6 +11,7 @@ import com.agentbanking.orchestrator.domain.port.out.LedgerServicePort.*;
 import com.agentbanking.orchestrator.domain.port.out.RulesServicePort.*;
 
 import io.temporal.activity.ActivityOptions;
+import io.temporal.common.RetryOptions;
 import io.temporal.failure.ActivityFailure;
 import io.temporal.spring.boot.WorkflowImpl;
 import io.temporal.workflow.Workflow;
@@ -26,6 +27,7 @@ public class WithdrawalOnUsWorkflowImpl implements WithdrawalOnUsWorkflow {
     private static final Logger log = Workflow.getLogger(WithdrawalOnUsWorkflowImpl.class);
 
     private CheckVelocityActivity checkVelocityActivity;
+    private EvaluateStpActivity evaluateStpActivity;
     private CalculateFeesActivity calculateFeesActivity;
     private BlockFloatActivity blockFloatActivity;
     private CommitFloatActivity commitFloatActivity;
@@ -38,6 +40,7 @@ public class WithdrawalOnUsWorkflowImpl implements WithdrawalOnUsWorkflow {
 
     public WithdrawalOnUsWorkflowImpl(
             CheckVelocityActivity checkVelocityActivity,
+            EvaluateStpActivity evaluateStpActivity,
             CalculateFeesActivity calculateFeesActivity,
             BlockFloatActivity blockFloatActivity,
             CommitFloatActivity commitFloatActivity,
@@ -46,6 +49,7 @@ public class WithdrawalOnUsWorkflowImpl implements WithdrawalOnUsWorkflow {
             PublishKafkaEventActivity publishKafkaEventActivity,
             PersistWorkflowResultActivity persistWorkflowResultActivity) {
         this.checkVelocityActivity = checkVelocityActivity;
+        this.evaluateStpActivity = evaluateStpActivity;
         this.calculateFeesActivity = calculateFeesActivity;
         this.blockFloatActivity = blockFloatActivity;
         this.commitFloatActivity = commitFloatActivity;
@@ -58,28 +62,40 @@ public class WithdrawalOnUsWorkflowImpl implements WithdrawalOnUsWorkflow {
     @SuppressWarnings("SpringJavaAutowiredMembersInspection")
     public WithdrawalOnUsWorkflowImpl() {
         this.checkVelocityActivity = Workflow.newActivityStub(CheckVelocityActivity.class, ActivityOptions.newBuilder()
-                .setStartToCloseTimeout(Duration.ofMinutes(5))
+                .setStartToCloseTimeout(Duration.ofSeconds(30))
+                .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(3).build())
+                .build());
+        this.evaluateStpActivity = Workflow.newActivityStub(EvaluateStpActivity.class, ActivityOptions.newBuilder()
+                .setStartToCloseTimeout(Duration.ofSeconds(30))
+                .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(3).build())
                 .build());
         this.calculateFeesActivity = Workflow.newActivityStub(CalculateFeesActivity.class, ActivityOptions.newBuilder()
-                .setStartToCloseTimeout(Duration.ofMinutes(1))
+                .setStartToCloseTimeout(Duration.ofSeconds(30))
+                .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(3).build())
                 .build());
         this.blockFloatActivity = Workflow.newActivityStub(BlockFloatActivity.class, ActivityOptions.newBuilder()
-                .setStartToCloseTimeout(Duration.ofMinutes(2))
+                .setStartToCloseTimeout(Duration.ofSeconds(30))
+                .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(3).build())
                 .build());
         this.commitFloatActivity = Workflow.newActivityStub(CommitFloatActivity.class, ActivityOptions.newBuilder()
-                .setStartToCloseTimeout(Duration.ofMinutes(2))
+                .setStartToCloseTimeout(Duration.ofSeconds(30))
+                .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(3).build())
                 .build());
         this.releaseFloatActivity = Workflow.newActivityStub(ReleaseFloatActivity.class, ActivityOptions.newBuilder()
-                .setStartToCloseTimeout(Duration.ofMinutes(2))
+                .setStartToCloseTimeout(Duration.ofSeconds(30))
+                .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(3).build())
                 .build());
         this.postToCBSActivity = Workflow.newActivityStub(PostToCBSActivity.class, ActivityOptions.newBuilder()
-                .setStartToCloseTimeout(Duration.ofMinutes(5))
+                .setStartToCloseTimeout(Duration.ofSeconds(60))
+                .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(3).build())
                 .build());
         this.publishKafkaEventActivity = Workflow.newActivityStub(PublishKafkaEventActivity.class, ActivityOptions.newBuilder()
-                .setStartToCloseTimeout(Duration.ofMinutes(1))
+                .setStartToCloseTimeout(Duration.ofSeconds(30))
+                .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(3).build())
                 .build());
         this.persistWorkflowResultActivity = Workflow.newActivityStub(PersistWorkflowResultActivity.class, ActivityOptions.newBuilder()
-                .setStartToCloseTimeout(Duration.ofMinutes(2))
+                .setStartToCloseTimeout(Duration.ofSeconds(30))
+                .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(3).build())
                 .build());
     }
 
@@ -227,7 +243,16 @@ public class WithdrawalOnUsWorkflowImpl implements WithdrawalOnUsWorkflow {
             persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
                     Workflow.getInfo().getWorkflowId(), "COMPLETED", null, null, cbsResult.reference(), fees.customerFee(), cbsResult.reference(), null));
             return completedResult;
-
+        } catch (io.temporal.failure.CanceledFailure e) {
+            log.error("Workflow timed out: {}", e.getMessage());
+            currentStatus = WorkflowStatus.FAILED;
+            try {
+                persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
+                        Workflow.getInfo().getWorkflowId(), "FAILED", "ERR_WORKFLOW_TIMEOUT", "Workflow timed out - maximum execution time exceeded", null, null, null, "Workflow timeout"));
+            } catch (Exception ex) {
+                log.warn("Failed to persist timeout status: {}", ex.getMessage());
+            }
+            throw e;
         } catch (Exception e) {
             log.error("Workflow failed with exception: {}", e.getMessage());
             currentStatus = WorkflowStatus.FAILED;

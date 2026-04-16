@@ -247,7 +247,16 @@
   justify-content: flex-end;
 }
 
-/* Activity Timeline Modal */
+/* Generic Modal */
+.modal {
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  padding: 24px;
+  max-width: 500px;
+  width: 90vw;
+}
+
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -262,6 +271,7 @@
   backdrop-filter: blur(4px);
 }
 
+/* Activity Timeline Modal */
 .modal-content.execution-modal {
   width: 90vw;
   max-width: 1000px;

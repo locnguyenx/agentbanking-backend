@@ -15,4 +15,5 @@ public interface AgentJpaRepository extends JpaRepository<AgentEntity, UUID> {
     Optional<AgentEntity> findByMykadNumber(String mykadNumber);
     Optional<AgentEntity> findByAgentCode(String agentCode);
     Page<AgentEntity> findByStatus(AgentStatus status, Pageable pageable);
+    Page<AgentEntity> findAllByOrderByCreatedAtDesc(Pageable pageable);
 }

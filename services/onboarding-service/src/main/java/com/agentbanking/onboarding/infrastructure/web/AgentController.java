@@ -1,6 +1,7 @@
 package com.agentbanking.onboarding.infrastructure.web;
 
 import com.agentbanking.onboarding.domain.model.AgentRecord;
+import com.agentbanking.onboarding.domain.model.AgentStatus;
 import com.agentbanking.onboarding.domain.model.AgentTier;
 import com.agentbanking.onboarding.domain.port.in.*;
 import jakarta.validation.Valid;
@@ -71,11 +72,18 @@ public class AgentController {
     }
 
     @GetMapping
-    public ResponseEntity<List<AgentResponse>> listAgents(
+    public ResponseEntity<PaginatedAgentResponse> listAgents(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
         List<AgentRecord> agents = listAgentsUseCase.list(page, size);
-        return ResponseEntity.ok(agents.stream().map(AgentResponse::from).toList());
+        long totalCount = listAgentsUseCase.countAll();
+        long activeCount = listAgentsUseCase.countByStatus(AgentStatus.ACTIVE);
+        long suspendedCount = listAgentsUseCase.countByStatus(AgentStatus.SUSPENDED);
+        long inactiveCount = listAgentsUseCase.countByStatus(AgentStatus.INACTIVE);
+
+        AgentStats stats = new AgentStats(totalCount, activeCount, suspendedCount, inactiveCount);
+        List<AgentResponse> agentResponses = agents.stream().map(AgentResponse::from).toList();
+        return ResponseEntity.ok(new PaginatedAgentResponse(agentResponses, stats, page, size));
     }
 
     @GetMapping("/{id}")
@@ -83,6 +91,16 @@ public class AgentController {
         return listAgentsUseCase.findById(id)
             .map(agent -> ResponseEntity.ok(AgentResponse.from(agent)))
             .orElse(ResponseEntity.notFound().build());
+    }
+
+    @GetMapping("/count")
+    public ResponseEntity<Map<String, Long>> getAgentStats() {
+        long totalAgents = listAgentsUseCase.countAll();
+        long activeAgents = listAgentsUseCase.countByStatus(AgentStatus.ACTIVE);
+        return ResponseEntity.ok(Map.of(
+            "totalAgents", totalAgents,
+            "activeAgents", activeAgents
+        ));
     }
 
     public record CreateAgentRequest(
@@ -101,6 +119,20 @@ public class AgentController {
         @NotNull @Positive BigDecimal merchantGpsLat,
         @NotNull @Positive BigDecimal merchantGpsLng,
         @NotBlank String phoneNumber
+    ) {}
+
+    public record AgentStats(
+        long total,
+        long active,
+        long suspended,
+        long inactive
+    ) {}
+
+    public record PaginatedAgentResponse(
+        List<AgentResponse> agents,
+        AgentStats stats,
+        int page,
+        int size
     ) {}
 
     public record AgentResponse(

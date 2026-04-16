@@ -11,7 +11,9 @@ import com.agentbanking.orchestrator.domain.port.out.LedgerServicePort.*;
 import com.agentbanking.orchestrator.domain.port.out.RulesServicePort.*;
 
 import io.temporal.activity.ActivityOptions;
+import io.temporal.common.RetryOptions;
 import io.temporal.failure.ActivityFailure;
+import io.temporal.failure.CanceledFailure;
 import io.temporal.spring.boot.WorkflowImpl;
 import io.temporal.workflow.Workflow;
 import org.slf4j.Logger;
@@ -69,41 +71,65 @@ public class BillPaymentWorkflowImpl implements BillPaymentWorkflow {
 
     @SuppressWarnings("SpringJavaAutowiredMembersInspection")
     public BillPaymentWorkflowImpl() {
+        // CheckVelocity: 3s | Retry 1x
         this.checkVelocityActivity = Workflow.newActivityStub(CheckVelocityActivity.class, ActivityOptions.newBuilder()
-                .setStartToCloseTimeout(Duration.ofMinutes(5))
+                .setStartToCloseTimeout(Duration.ofSeconds(30))
+                .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(3).build())
                 .build());
+        // EvaluateStp: 2s | Retry 1x
         this.evaluateStpActivity = Workflow.newActivityStub(EvaluateStpActivity.class, ActivityOptions.newBuilder()
-                .setStartToCloseTimeout(Duration.ofMinutes(3))
+                .setStartToCloseTimeout(Duration.ofSeconds(30))
+                .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(3).build())
                 .build());
+        // CalculateFees: 2s | Retry 1x
         this.calculateFeesActivity = Workflow.newActivityStub(CalculateFeesActivity.class, ActivityOptions.newBuilder()
-                .setStartToCloseTimeout(Duration.ofMinutes(1))
+                .setStartToCloseTimeout(Duration.ofSeconds(30))
+                .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(3).build())
                 .build());
+        // BlockFloat: 5s | Retry 1x (financial)
         this.blockFloatActivity = Workflow.newActivityStub(BlockFloatActivity.class, ActivityOptions.newBuilder()
-                .setStartToCloseTimeout(Duration.ofMinutes(2))
+                .setStartToCloseTimeout(Duration.ofSeconds(30))
+                .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(3).build())
                 .build());
+        // CommitFloat: 5s | Retry 1x
         this.commitFloatActivity = Workflow.newActivityStub(CommitFloatActivity.class, ActivityOptions.newBuilder()
-                .setStartToCloseTimeout(Duration.ofMinutes(2))
+                .setStartToCloseTimeout(Duration.ofSeconds(30))
+                .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(3).build())
                 .build());
+        // ReleaseFloat: 5s | Retry 1x
         this.releaseFloatActivity = Workflow.newActivityStub(ReleaseFloatActivity.class, ActivityOptions.newBuilder()
-                .setStartToCloseTimeout(Duration.ofMinutes(2))
+                .setStartToCloseTimeout(Duration.ofSeconds(30))
+                .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(3).build())
                 .build());
+        // ValidateBill: 3s | Retry 1x
         this.validateBillActivity = Workflow.newActivityStub(ValidateBillActivity.class, ActivityOptions.newBuilder()
-                .setStartToCloseTimeout(Duration.ofMinutes(2))
+                .setStartToCloseTimeout(Duration.ofSeconds(30))
+                .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(3).build())
                 .build());
+        // PayBiller: 10s | Retry 1x
         this.payBillerActivity = Workflow.newActivityStub(PayBillerActivity.class, ActivityOptions.newBuilder()
-                .setStartToCloseTimeout(Duration.ofMinutes(5))
+                .setStartToCloseTimeout(Duration.ofSeconds(60))
+                .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(3).build())
                 .build());
+        // NotifyBiller: 5s | Retry 1x
         this.notifyBillerActivity = Workflow.newActivityStub(NotifyBillerActivity.class, ActivityOptions.newBuilder()
-                .setStartToCloseTimeout(Duration.ofMinutes(2))
+                .setStartToCloseTimeout(Duration.ofSeconds(30))
+                .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(3).build())
                 .build());
+        // PublishKafkaEvent: 5s | Retry 1x
         this.publishKafkaEventActivity = Workflow.newActivityStub(PublishKafkaEventActivity.class, ActivityOptions.newBuilder()
-                .setStartToCloseTimeout(Duration.ofMinutes(1))
+                .setStartToCloseTimeout(Duration.ofSeconds(30))
+                .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(3).build())
                 .build());
+        // SaveResolutionCase: 5s | Retry 1x
         this.saveResolutionCaseActivity = Workflow.newActivityStub(SaveResolutionCaseActivity.class, ActivityOptions.newBuilder()
-                .setStartToCloseTimeout(Duration.ofMinutes(2))
+                .setStartToCloseTimeout(Duration.ofSeconds(30))
+                .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(3).build())
                 .build());
+        // PersistWorkflowResult: 5s | Retry 1x
         this.persistWorkflowResultActivity = Workflow.newActivityStub(PersistWorkflowResultActivity.class, ActivityOptions.newBuilder()
-                .setStartToCloseTimeout(Duration.ofMinutes(2))
+                .setStartToCloseTimeout(Duration.ofSeconds(30))
+                .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(3).build())
                 .build());
     }
 
@@ -258,6 +284,16 @@ public class BillPaymentWorkflowImpl implements BillPaymentWorkflow {
                     paymentResult.billerReference(), fees.customerFee(), paymentResult.billerReference(), null));
             return completedResult;
 
+        } catch (CanceledFailure e) {
+            log.error("Workflow timed out: {}", e.getMessage());
+            currentStatus = WorkflowStatus.FAILED;
+            try {
+                persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
+                        Workflow.getInfo().getWorkflowId(), "FAILED", "ERR_WORKFLOW_TIMEOUT", "Workflow timed out - maximum execution time exceeded", null, null, null, "Workflow timeout"));
+            } catch (Exception ex) {
+                log.warn("Failed to persist timeout status: {}", ex.getMessage());
+            }
+            throw e;
         } catch (Exception e) {
             log.error("Workflow failed with exception: {}", e.getMessage());
             currentStatus = WorkflowStatus.FAILED;

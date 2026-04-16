@@ -312,29 +312,36 @@ export const WorkflowCard: React.FC<WorkflowCardProps> = ({
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <span style={{ fontSize: '12px', color: '#64748b' }}>Actions:</span>
-          {!resolutionCase ? (
-            <button 
-              className="btn btn-primary btn-sm"
-              onClick={(e) => {
-                e.stopPropagation()
-                onCreateCase(workflow)
-              }}
-              style={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                gap: '6px',
-                padding: '6px 12px'
-              }}
-            >
-              <AlertTriangle size={14} />
-              Create Case
-            </button>
-          ) : (
-            <span style={{ fontSize: '12px', color: '#059669', display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <CheckCircle size={14} />
-              Case created
-            </span>
-          )}
+          {(() => {
+            const needsResolution = workflow.status === 'COMPENSATING' || 
+              (workflow.status === 'PENDING' && !!workflow.pendingReason);
+            if (!needsResolution) {
+              return null;
+            }
+            return !resolutionCase ? (
+              <button 
+                className="btn btn-primary btn-sm"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onCreateCase(workflow)
+                }}
+                style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '6px',
+                  padding: '6px 12px'
+                }}
+              >
+                <AlertTriangle size={14} />
+                Create Case
+              </button>
+            ) : (
+              <span style={{ fontSize: '12px', color: '#059669', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <CheckCircle size={14} />
+                Case created
+              </span>
+            );
+          })()}
         </div>
         
         <button 

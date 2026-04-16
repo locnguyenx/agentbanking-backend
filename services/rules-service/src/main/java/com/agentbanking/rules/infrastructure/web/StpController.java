@@ -24,8 +24,13 @@ public class StpController {
             @RequestBody Map<String, Object> request) {
         String transactionType = (String) request.get("transactionType");
         String customerMykad = (String) request.get("customerMykad");
-        BigDecimal amount = new BigDecimal(request.get("amount").toString());
+        BigDecimal amount = request.get("amount") != null
+            ? new BigDecimal(request.get("amount").toString())
+            : BigDecimal.ZERO;
         String agentTier = (String) request.get("agentTier");
+        if (agentTier == null || agentTier.isBlank()) {
+            agentTier = "STANDARD";
+        }
         int transactionCountToday = request.containsKey("transactionCountToday")
                 ? ((Number) request.get("transactionCountToday")).intValue() : 0;
         BigDecimal amountToday = request.containsKey("amountToday")

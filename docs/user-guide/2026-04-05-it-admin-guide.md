@@ -606,13 +606,14 @@ This gives you a fresh system with:
    - ✅ Cleaned ALL transaction data (orchestrator, ledger)
    - ✅ Cleaned ALL auth data (users, roles, permissions, sessions, etc.)
    - ✅ Removed the test user I accidentally created
-2. loadAuthSeedData task:
+2. recreateDatabaseSchema task: to recreate tables which are truncated in previous task
+3. loadAuthSeedData task:
    - ✅ Loaded ONLY essential auth foundation
    - ✅ Created 1 admin user (username: admin, password: password)
    - ✅ Created 5 roles (IT_ADMIN, BANK_OPERATOR, AGENT, AUDITOR, TELLER)
    - ✅ Created 11 permissions
-3. resetSystem task:
-   - ✅ Successfully ran cleanAllData → loadAuthSeedData
+4. resetSystem task:
+   - ✅ Successfully ran cleanAllData → restartServicesForSchema → loadAuthSeedData
    - ✅ System is now clean with fresh auth seed data
    - ✅ No demo/garbage data - ready for testing
 

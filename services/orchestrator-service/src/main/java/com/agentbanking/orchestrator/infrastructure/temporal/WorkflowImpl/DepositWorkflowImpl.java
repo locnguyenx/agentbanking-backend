@@ -24,7 +24,9 @@ import com.agentbanking.orchestrator.application.activity.ValidateAccountActivit
 import com.agentbanking.orchestrator.application.activity.CreditAgentFloatActivity;
 
 import io.temporal.activity.ActivityOptions;
+import io.temporal.common.RetryOptions;
 import io.temporal.failure.ActivityFailure;
+import io.temporal.failure.CanceledFailure;
 import io.temporal.spring.boot.WorkflowImpl;
 import io.temporal.workflow.Workflow;
 import org.slf4j.Logger;
@@ -76,35 +78,55 @@ public class DepositWorkflowImpl implements DepositWorkflow {
 
     @SuppressWarnings("SpringJavaAutowiredMembersInspection")
     public DepositWorkflowImpl() {
+        // CheckVelocity: 3s | Retry 1x (use SHORT_TIMEOUT from config)
         this.checkVelocityActivity = Workflow.newActivityStub(CheckVelocityActivity.class, ActivityOptions.newBuilder()
-                .setStartToCloseTimeout(Duration.ofMinutes(5))
+                .setStartToCloseTimeout(Duration.ofSeconds(30))
+                .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(3).build())
                 .build());
+        // EvaluateStp: 2s | Retry 1x
         this.evaluateStpActivity = Workflow.newActivityStub(EvaluateStpActivity.class, ActivityOptions.newBuilder()
-                .setStartToCloseTimeout(Duration.ofMinutes(3))
+                .setStartToCloseTimeout(Duration.ofSeconds(30))
+                .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(3).build())
                 .build());
+        // CalculateFees: 2s | Retry 1x
         this.calculateFeesActivity = Workflow.newActivityStub(CalculateFeesActivity.class, ActivityOptions.newBuilder()
-                .setStartToCloseTimeout(Duration.ofMinutes(1))
+                .setStartToCloseTimeout(Duration.ofSeconds(30))
+                .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(3).build())
                 .build());
+        // ValidateAccount: 5s | Retry 1x
         this.validateAccountActivity = Workflow.newActivityStub(ValidateAccountActivity.class, ActivityOptions.newBuilder()
-                .setStartToCloseTimeout(Duration.ofMinutes(2))
+                .setStartToCloseTimeout(Duration.ofSeconds(30))
+                .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(3).build())
                 .build());
+        // CreditAgentFloat: 5s | Retry 1x (financial)
         this.creditAgentFloatActivity = Workflow.newActivityStub(CreditAgentFloatActivity.class, ActivityOptions.newBuilder()
-                .setStartToCloseTimeout(Duration.ofMinutes(2))
+                .setStartToCloseTimeout(Duration.ofSeconds(30))
+                .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(3).build())
                 .build());
+        // ReleaseFloat: 5s | Retry 1x
         this.releaseFloatActivity = Workflow.newActivityStub(ReleaseFloatActivity.class, ActivityOptions.newBuilder()
-                .setStartToCloseTimeout(Duration.ofMinutes(2))
+                .setStartToCloseTimeout(Duration.ofSeconds(30))
+                .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(3).build())
                 .build());
+        // PostToCBS: 10s | Retry 1x
         this.postToCBSActivity = Workflow.newActivityStub(PostToCBSActivity.class, ActivityOptions.newBuilder()
-                .setStartToCloseTimeout(Duration.ofMinutes(5))
+                .setStartToCloseTimeout(Duration.ofSeconds(60))
+                .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(3).build())
                 .build());
+        // PublishKafkaEvent: 5s | Retry 1x (no retry - don't block on Kafka failure)
         this.publishKafkaEventActivity = Workflow.newActivityStub(PublishKafkaEventActivity.class, ActivityOptions.newBuilder()
-                .setStartToCloseTimeout(Duration.ofMinutes(1))
+                .setStartToCloseTimeout(Duration.ofSeconds(30))
+                .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(3).build())
                 .build());
+        // SaveResolutionCase: 5s | Retry 1x
         this.saveResolutionCaseActivity = Workflow.newActivityStub(SaveResolutionCaseActivity.class, ActivityOptions.newBuilder()
-                .setStartToCloseTimeout(Duration.ofMinutes(2))
+                .setStartToCloseTimeout(Duration.ofSeconds(30))
+                .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(3).build())
                 .build());
+        // PersistWorkflowResult: 5s | Retry 1x
         this.persistWorkflowResultActivity = Workflow.newActivityStub(PersistWorkflowResultActivity.class, ActivityOptions.newBuilder()
-                .setStartToCloseTimeout(Duration.ofMinutes(2))
+                .setStartToCloseTimeout(Duration.ofSeconds(30))
+                .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(3).build())
                 .build());
     }
 
@@ -261,6 +283,16 @@ public class DepositWorkflowImpl implements DepositWorkflow {
                     cbsResult.reference(), fees.customerFee(), cbsResult.reference(), null));
             return completedResult;
 
+        } catch (CanceledFailure e) {
+            log.error("Workflow timed out: {}", e.getMessage());
+            currentStatus = WorkflowStatus.FAILED;
+            try {
+                persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
+                        Workflow.getInfo().getWorkflowId(), "FAILED", "ERR_WORKFLOW_TIMEOUT", "Workflow timed out - maximum execution time exceeded", null, null, null, "Workflow timeout"));
+            } catch (Exception ex) {
+                log.warn("Failed to persist timeout status: {}", ex.getMessage());
+            }
+            throw e;
         } catch (Exception e) {
             log.error("Workflow failed with exception: {}", e.getMessage());
             currentStatus = WorkflowStatus.FAILED;

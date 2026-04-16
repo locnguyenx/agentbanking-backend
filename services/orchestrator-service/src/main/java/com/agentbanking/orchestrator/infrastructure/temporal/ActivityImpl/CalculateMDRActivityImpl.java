@@ -2,11 +2,13 @@ package com.agentbanking.orchestrator.infrastructure.temporal.ActivityImpl;
 
 import com.agentbanking.orchestrator.application.activity.CalculateMDRActivity;
 import com.agentbanking.orchestrator.domain.model.MDRResult;
+import io.temporal.spring.boot.ActivityImpl;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 
+@ActivityImpl(workers = "agent-banking-tasks")
 @Component
 public class CalculateMDRActivityImpl implements CalculateMDRActivity {
 

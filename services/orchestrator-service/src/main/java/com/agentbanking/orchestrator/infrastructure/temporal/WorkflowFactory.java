@@ -8,6 +8,7 @@ import io.temporal.client.WorkflowStub;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import java.time.Duration;
 import java.util.UUID;
 
 @Component
@@ -50,6 +51,7 @@ public class WorkflowFactory {
         WorkflowOptions options = WorkflowOptions.newBuilder()
                 .setWorkflowId(workflowId)
                 .setTaskQueue(taskQueue)
+                .setWorkflowExecutionTimeout(Duration.ofMinutes(1))
                 .setWorkflowIdReusePolicy(
                         WorkflowIdReusePolicy.WORKFLOW_ID_REUSE_POLICY_REJECT_DUPLICATE)
                 .build();
@@ -64,6 +66,7 @@ public class WorkflowFactory {
         WorkflowOptions options = WorkflowOptions.newBuilder()
                 .setWorkflowId(workflowId)
                 .setTaskQueue(taskQueue)
+                .setWorkflowExecutionTimeout(Duration.ofMinutes(1))
                 .setWorkflowIdReusePolicy(
                         WorkflowIdReusePolicy.WORKFLOW_ID_REUSE_POLICY_REJECT_DUPLICATE)
                 .build();
@@ -78,6 +81,7 @@ public class WorkflowFactory {
         WorkflowOptions options = WorkflowOptions.newBuilder()
                 .setWorkflowId(workflowId)
                 .setTaskQueue(taskQueue)
+                .setWorkflowExecutionTimeout(Duration.ofMinutes(1))
                 .setWorkflowIdReusePolicy(
                         WorkflowIdReusePolicy.WORKFLOW_ID_REUSE_POLICY_REJECT_DUPLICATE)
                 .build();
@@ -92,6 +96,7 @@ public class WorkflowFactory {
         WorkflowOptions options = WorkflowOptions.newBuilder()
                 .setWorkflowId(workflowId)
                 .setTaskQueue(taskQueue)
+                .setWorkflowExecutionTimeout(Duration.ofMinutes(1))
                 .setWorkflowIdReusePolicy(
                         WorkflowIdReusePolicy.WORKFLOW_ID_REUSE_POLICY_REJECT_DUPLICATE)
                 .build();
@@ -106,6 +111,7 @@ public class WorkflowFactory {
         WorkflowOptions options = WorkflowOptions.newBuilder()
                 .setWorkflowId(workflowId)
                 .setTaskQueue(taskQueue)
+                .setWorkflowExecutionTimeout(Duration.ofMinutes(1))
                 .setWorkflowIdReusePolicy(
                         WorkflowIdReusePolicy.WORKFLOW_ID_REUSE_POLICY_REJECT_DUPLICATE)
                 .build();
@@ -120,6 +126,7 @@ public class WorkflowFactory {
         WorkflowOptions options = WorkflowOptions.newBuilder()
                 .setWorkflowId(workflowId)
                 .setTaskQueue(taskQueue)
+                .setWorkflowExecutionTimeout(Duration.ofMinutes(1))
                 .setWorkflowIdReusePolicy(
                         WorkflowIdReusePolicy.WORKFLOW_ID_REUSE_POLICY_REJECT_DUPLICATE)
                 .build();
@@ -134,6 +141,7 @@ public class WorkflowFactory {
         WorkflowOptions options = WorkflowOptions.newBuilder()
                 .setWorkflowId(workflowId)
                 .setTaskQueue(taskQueue)
+                .setWorkflowExecutionTimeout(Duration.ofMinutes(1))
                 .setWorkflowIdReusePolicy(
                         WorkflowIdReusePolicy.WORKFLOW_ID_REUSE_POLICY_REJECT_DUPLICATE)
                 .build();
@@ -148,6 +156,7 @@ public class WorkflowFactory {
         WorkflowOptions options = WorkflowOptions.newBuilder()
                 .setWorkflowId(workflowId)
                 .setTaskQueue(taskQueue)
+                .setWorkflowExecutionTimeout(Duration.ofMinutes(1))
                 .setWorkflowIdReusePolicy(
                         WorkflowIdReusePolicy.WORKFLOW_ID_REUSE_POLICY_REJECT_DUPLICATE)
                 .build();
@@ -162,6 +171,7 @@ public class WorkflowFactory {
         WorkflowOptions options = WorkflowOptions.newBuilder()
                 .setWorkflowId(workflowId)
                 .setTaskQueue(taskQueue)
+                .setWorkflowExecutionTimeout(Duration.ofMinutes(1))
                 .setWorkflowIdReusePolicy(
                         WorkflowIdReusePolicy.WORKFLOW_ID_REUSE_POLICY_REJECT_DUPLICATE)
                 .build();
@@ -176,6 +186,7 @@ public class WorkflowFactory {
         WorkflowOptions options = WorkflowOptions.newBuilder()
                 .setWorkflowId(workflowId)
                 .setTaskQueue(taskQueue)
+                .setWorkflowExecutionTimeout(Duration.ofMinutes(1))
                 .setWorkflowIdReusePolicy(
                         WorkflowIdReusePolicy.WORKFLOW_ID_REUSE_POLICY_REJECT_DUPLICATE)
                 .build();
@@ -190,6 +201,7 @@ public class WorkflowFactory {
         WorkflowOptions options = WorkflowOptions.newBuilder()
                 .setWorkflowId(workflowId)
                 .setTaskQueue(taskQueue)
+                .setWorkflowExecutionTimeout(Duration.ofMinutes(1))
                 .setWorkflowIdReusePolicy(
                         WorkflowIdReusePolicy.WORKFLOW_ID_REUSE_POLICY_REJECT_DUPLICATE)
                 .build();
@@ -204,6 +216,7 @@ public class WorkflowFactory {
         WorkflowOptions options = WorkflowOptions.newBuilder()
                 .setWorkflowId(workflowId)
                 .setTaskQueue(taskQueue)
+                .setWorkflowExecutionTimeout(Duration.ofMinutes(1))
                 .setWorkflowIdReusePolicy(
                         WorkflowIdReusePolicy.WORKFLOW_ID_REUSE_POLICY_REJECT_DUPLICATE)
                 .build();
@@ -218,6 +231,7 @@ public class WorkflowFactory {
         WorkflowOptions options = WorkflowOptions.newBuilder()
                 .setWorkflowId(workflowId)
                 .setTaskQueue(taskQueue)
+                .setWorkflowExecutionTimeout(Duration.ofMinutes(1))
                 .setWorkflowIdReusePolicy(
                         WorkflowIdReusePolicy.WORKFLOW_ID_REUSE_POLICY_REJECT_DUPLICATE)
                 .build();

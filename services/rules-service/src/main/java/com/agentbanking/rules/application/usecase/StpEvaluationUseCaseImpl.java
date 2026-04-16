@@ -22,7 +22,11 @@ public class StpEvaluationUseCaseImpl implements StpEvaluationUseCase {
     public StpEvaluationResponse evaluate(StpEvaluationCommand command) {
         AgentTier tier;
         try {
-            tier = AgentTier.valueOf(command.agentTier().toUpperCase());
+            if (command.agentTier() == null || command.agentTier().isBlank()) {
+                tier = AgentTier.STANDARD;
+            } else {
+                tier = AgentTier.valueOf(command.agentTier().toUpperCase());
+            }
         } catch (IllegalArgumentException e) {
             tier = AgentTier.MICRO;
         }

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { X, Edit2, Users, Search, Filter, Download, ChevronLeft, ChevronRight, MoreVertical, MapPin, CheckCircle, Clock, XCircle } from 'lucide-react'
+import { X, Edit2, Users, Search, Filter, Download, ChevronLeft, ChevronRight, MoreVertical, MapPin, CheckCircle, Clock, XCircle, Wallet, Plus } from 'lucide-react'
 import toast from 'react-hot-toast'
 import api from '../api/client'
 
@@ -25,6 +25,31 @@ interface AgentUserStatus {
   error?: string
 }
 
+interface AgentFloatInfo {
+  exists: boolean
+  float?: {
+    floatId: string
+    balance: number
+    reservedBalance: number
+    availableBalance: number
+    currency: string
+    gpsLat: number | null
+    gpsLng: number | null
+  }
+}
+
+interface AgentFloatTransactions {
+  agentId: string
+  period: string
+  totalCount: number
+  totalVolume: number
+  byType: Array<{
+    type: string
+    count: number
+    volume: number
+  }>
+}
+
 export function Agents() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
@@ -36,15 +61,25 @@ export function Agents() {
   const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null)
   const [viewAgent, setViewAgent] = useState<Agent | null>(null)
   const [editAgent, setEditAgent] = useState<Agent | null>(null)
+  const [showCreateFloatModal, setShowCreateFloatModal] = useState(false)
+  const [createFloatAgentId, setCreateFloatAgentId] = useState<string | null>(null)
   const itemsPerPage = 6
 
-  const { data: agents = [] } = useQuery({
-    queryKey: ['agents'],
+  const { data: agentsResponse } = useQuery({
+    queryKey: ['agents-v3'], // Updated key for new API format
     queryFn: async () => {
-      const response = await api.getAgents()
-      return response as Agent[]
+      const response = await api.getAgents() // Use default pagination (page=0, size=20)
+      return response as {
+        agents: Agent[];
+        stats: { total: number; active: number; suspended: number; inactive: number };
+        page: number;
+        size: number
+      }
     }
   })
+
+  const agents = agentsResponse?.agents || []
+  const stats = agentsResponse?.stats || { total: 0, active: 0, suspended: 0, inactive: 0 }
 
   const { data: agentUserStatuses = [] } = useQuery({
     queryKey: ['agentUserStatuses'],
@@ -67,6 +102,56 @@ export function Agents() {
     return agentUserStatuses.find(s => s.agentId === agentId)
   }
 
+  const { data: agentFloats = {} as { [agentId: string]: AgentFloatInfo } } = useQuery<{ [agentId: string]: AgentFloatInfo }>({
+    queryKey: ['agentFloats'],
+    queryFn: async () => {
+      const floats: { [agentId: string]: AgentFloatInfo } = {}
+      for (const agent of agents) {
+        try {
+          const floatData = await api.getAgentFloat(agent.agentId)
+          floats[agent.agentId] = floatData as AgentFloatInfo
+        } catch {
+          floats[agent.agentId] = { exists: false }
+        }
+      }
+      return floats
+    },
+    enabled: agents.length > 0
+  })
+
+  const getAgentFloat = (agentId: string): AgentFloatInfo | undefined => {
+    return agentFloats[agentId]
+  }
+
+  const createAgentFloatMutation = useMutation({
+    mutationFn: ({ agentId, initialBalance, currency }: { agentId: string; initialBalance: number; currency: string }) =>
+      api.createAgentFloat(agentId, { initialBalance, currency }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['agentFloats'] })
+      setShowCreateFloatModal(false)
+      setCreateFloatAgentId(null)
+      toast.success('Agent float created successfully!')
+    },
+    onError: (error: any) => {
+      const errorData = error?.response?.data
+      const errorMessage = errorData?.error?.message || errorData?.message || error?.message || 'Unknown error'
+      toast.error(errorMessage)
+    }
+  })
+
+  const handleCreateFloat = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    const form = e.currentTarget
+    const formData = new FormData(form)
+    if (createFloatAgentId) {
+      createAgentFloatMutation.mutate({
+        agentId: createFloatAgentId,
+        initialBalance: parseFloat(formData.get('initialBalance') as string),
+        currency: formData.get('currency') as string
+      })
+    }
+  }
+
   const createAgentMutation = useMutation({
     mutationFn: (data: { agentCode: string; businessName: string; tier: string; phoneNumber: string; mykadNumber: string }) => 
       api.createAgent({
@@ -79,7 +164,7 @@ export function Agents() {
         phoneNumber: data.phoneNumber
       }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['agents'] })
+      queryClient.invalidateQueries({ queryKey: ['agents-v2'] })
       setShowAddModal(false)
       toast.success('Agent created successfully!')
     },
@@ -95,7 +180,7 @@ export function Agents() {
     mutationFn: ({ id, data }: { id: string; data: any }) => 
       api.updateAgent(id, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['agents'] })
+      queryClient.invalidateQueries({ queryKey: ['agents-v2'] })
       setEditAgent(null)
       toast.success('Agent updated successfully!')
     },
@@ -107,7 +192,7 @@ export function Agents() {
   const deactivateAgentMutation = useMutation({
     mutationFn: (id: string) => api.deactivateAgent(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['agents'] })
+      queryClient.invalidateQueries({ queryKey: ['agents-v2'] })
       toast.success('Agent deactivated successfully!')
     },
     onError: (error: any) => {
@@ -325,10 +410,10 @@ const filteredAgents = agents.filter(agent => {
       {/* Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
         {(() => {
-          const total = agents.length
-          const active = agents.filter(a => a.status === 'ACTIVE').length
-          const suspended = agents.filter(a => a.status === 'SUSPENDED').length
-          const inactive = agents.filter(a => a.status === 'INACTIVE').length
+          const total = stats.total
+          const active = stats.active
+          const suspended = stats.suspended
+          const inactive = stats.inactive
           return [
             { label: 'Total Agents', value: total.toString(), color: '#1e3a5f' },
             { label: 'Active', value: active.toString(), color: '#10b981' },
@@ -358,6 +443,7 @@ const filteredAgents = agents.filter(agent => {
                 <th>Location</th>
                 <th>Status</th>
                 <th>User Account</th>
+                <th>Float Balance</th>
                 <th>Tier</th>
                 <th>Actions</th>
               </tr>
@@ -446,6 +532,20 @@ const filteredAgents = agents.filter(agent => {
                       } else {
                         return <span style={{ color: '#64748b', fontSize: 12 }}>{status}</span>
                       }
+                    })()}
+                  </td>
+                  <td>
+                    {(() => {
+                      const float = getAgentFloat(agent.agentId)
+                      if (!float || !float.exists) {
+                        return <span style={{ color: '#94a3b8', fontSize: 12 }}>No Float</span>
+                      }
+                      return (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontWeight: 500, fontSize: 13, color: '#10b981' }}>
+                          <Wallet size={14} />
+                          RM {float.float?.balance.toLocaleString('en-MY', { minimumFractionDigits: 2 })}
+                        </div>
+                      )
                     })()}
                   </td>
                   <td>
@@ -539,6 +639,29 @@ const filteredAgents = agents.filter(agent => {
                               {getAgentUserStatus(agent.agentId)?.status === 'FAILED' 
                                 ? 'Retry User Creation' 
                                 : 'Create User Account'}
+                            </button>
+                          )}
+                          {!getAgentFloat(agent.agentId)?.exists && (
+                            <button 
+                              style={{
+                                display: 'block',
+                                width: '100%',
+                                padding: '10px 16px',
+                                textAlign: 'left',
+                                background: 'none',
+                                border: 'none',
+                                cursor: 'pointer',
+                                fontSize: 14,
+                                color: '#6366f1'
+                              }}
+                              onClick={() => {
+                                setCreateFloatAgentId(agent.agentId)
+                                setShowCreateFloatModal(true)
+                                setSelectedAgentId(null)
+                              }}
+                            >
+                              <Plus size={14} style={{ marginRight: 4 }} />
+                              Create AgentFloat
                             </button>
                           )}
                           <button 
@@ -849,6 +972,7 @@ const filteredAgents = agents.filter(agent => {
                   }
                 })()}
               </div>
+              <FloatDetailsSection agentId={viewAgent.agentId} onCreateFloat={() => { setCreateFloatAgentId(viewAgent.agentId); setShowCreateFloatModal(true); setViewAgent(null); }} />
             </div>
             <div style={{ padding: '0 24px 24px', display: 'flex', gap: 12 }}>
               <button className="btn btn-primary" onClick={() => { setEditAgent(viewAgent); setViewAgent(null); }} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
@@ -974,6 +1098,216 @@ const filteredAgents = agents.filter(agent => {
           </div>
         </div>
       )}
+      
+      {/* Create Agent Float Modal */}
+      {showCreateFloatModal && (
+        <div 
+          className="modal-overlay" 
+          onClick={() => { setShowCreateFloatModal(false); setCreateFloatAgentId(null); }}
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0,0,0,0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000
+          }}
+        >
+          <div 
+            className="modal" 
+            onClick={e => e.stopPropagation()}
+            style={{
+              backgroundColor: '#fff',
+              borderRadius: 8,
+              padding: 24,
+              width: '100%',
+              maxWidth: 400,
+              boxShadow: '0 4px 20px rgba(0,0,0,0.15)'
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+              <h3 style={{ margin: 0 }}>Create Agent Float</h3>
+              <button 
+                onClick={() => { setShowCreateFloatModal(false); setCreateFloatAgentId(null); }}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <form onSubmit={handleCreateFloat}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                <div>
+                  <label style={{ display: 'block', marginBottom: 6, fontWeight: 500, fontSize: 14 }}>Initial Balance</label>
+                  <input 
+                    type="number" 
+                    name="initialBalance" 
+                    className="input" 
+                    placeholder="e.g. 5000.00"
+                    step="0.01"
+                    min="0"
+                    required 
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      borderRadius: 6,
+                      border: '1px solid #e2e8f0',
+                      fontSize: 14,
+                      outline: 'none'
+                    }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', marginBottom: 6, fontWeight: 500, fontSize: 14 }}>Currency</label>
+                  <select 
+                    name="currency" 
+                    className="input" 
+                    defaultValue="MYR" 
+                    required
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      borderRadius: 6,
+                      border: '1px solid #e2e8f0',
+                      fontSize: 14,
+                      outline: 'none'
+                    }}
+                  >
+                    <option value="MYR">MYR - Malaysian Ringgit</option>
+                  </select>
+                </div>
+                <div style={{ display: 'flex', gap: 12, marginTop: 8 }}>
+                  <button 
+                    type="button" 
+                    className="btn btn-outline" 
+                    onClick={() => { setShowCreateFloatModal(false); setCreateFloatAgentId(null); }} 
+                    style={{ flex: 1 }}
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    type="submit" 
+                    className="btn btn-primary" 
+                    style={{ flex: 1 }} 
+                    disabled={createAgentFloatMutation.isPending}
+                  >
+                    {createAgentFloatMutation.isPending ? 'Creating...' : 'Create Float'}
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
+  )
+}
+
+function FloatDetailsSection({ agentId, onCreateFloat }: { agentId: string; onCreateFloat: () => void }) {
+  const { data: floatData, isLoading } = useQuery<AgentFloatInfo>({
+    queryKey: ['agentFloat', agentId],
+    queryFn: () => api.getAgentFloat(agentId) as Promise<AgentFloatInfo>,
+    enabled: !!agentId
+  })
+
+  const { data: transactionData } = useQuery<AgentFloatTransactions>({
+    queryKey: ['agentFloatTransactions', agentId],
+    queryFn: () => api.getAgentFloatTransactions(agentId) as Promise<AgentFloatTransactions>,
+    enabled: !!agentId && floatData?.exists
+  })
+
+  if (isLoading) {
+    return (
+      <div style={{ gridColumn: '1 / -1', background: '#f8fafc', padding: 16, borderRadius: 12 }}>
+        <label style={{ fontSize: 11, color: '#64748b', textTransform: 'uppercase', letterSpacing: 0.5, fontWeight: 600 }}>Agent Float</label>
+        <p style={{ fontWeight: 500, margin: '8px 0 0 0', fontSize: 14, color: '#64748b' }}>Loading...</p>
+      </div>
+    )
+  }
+
+  if (!floatData || !floatData.exists) {
+    return (
+      <div style={{ gridColumn: '1 / -1', background: '#f8fafc', padding: 16, borderRadius: 12 }}>
+        <label style={{ fontSize: 11, color: '#64748b', textTransform: 'uppercase', letterSpacing: 0.5, fontWeight: 600 }}>Agent Float</label>
+        <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <p style={{ fontWeight: 500, fontSize: 14, color: '#94a3b8' }}>No float provisioned</p>
+          <button className="btn btn-primary" onClick={onCreateFloat} style={{ padding: '6px 12px', fontSize: 12 }}>
+            <Plus size={14} style={{ marginRight: 4 }} />
+            Create AgentFloat
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  const float = floatData.float!
+
+  return (
+    <>
+      <div style={{ gridColumn: '1 / -1', background: '#f8fafc', padding: 16, borderRadius: 12 }}>
+        <label style={{ fontSize: 11, color: '#64748b', textTransform: 'uppercase', letterSpacing: 0.5, fontWeight: 600 }}>Agent Float</label>
+        <div style={{ marginTop: 8, display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
+          <div>
+            <p style={{ fontSize: 11, color: '#64748b', margin: 0 }}>Balance</p>
+            <p style={{ fontWeight: 600, fontSize: 15, color: '#10b981', margin: '4px 0 0 0' }}>
+              RM {float.balance.toLocaleString('en-MY', { minimumFractionDigits: 2 })}
+            </p>
+          </div>
+          <div>
+            <p style={{ fontSize: 11, color: '#64748b', margin: 0 }}>Reserved</p>
+            <p style={{ fontWeight: 600, fontSize: 15, margin: '4px 0 0 0' }}>
+              RM {float.reservedBalance.toLocaleString('en-MY', { minimumFractionDigits: 2 })}
+            </p>
+          </div>
+          <div>
+            <p style={{ fontSize: 11, color: '#64748b', margin: 0 }}>Available</p>
+            <p style={{ fontWeight: 600, fontSize: 15, margin: '4px 0 0 0' }}>
+              RM {float.availableBalance.toLocaleString('en-MY', { minimumFractionDigits: 2 })}
+            </p>
+          </div>
+        </div>
+        <div style={{ marginTop: 12, display: 'flex', gap: 24, fontSize: 12, color: '#64748b' }}>
+          <span>Currency: {float.currency}</span>
+          {float.gpsLat && float.gpsLng && (
+            <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              <MapPin size={12} />
+              {float.gpsLat}, {float.gpsLng}
+            </span>
+          )}
+        </div>
+      </div>
+
+      {transactionData && (
+        <div style={{ gridColumn: '1 / -1', background: '#f8fafc', padding: 16, borderRadius: 12 }}>
+          <label style={{ fontSize: 11, color: '#64748b', textTransform: 'uppercase', letterSpacing: 0.5, fontWeight: 600 }}>This Month's Transactions</label>
+          <div style={{ marginTop: 8, display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
+            <div>
+              <p style={{ fontSize: 11, color: '#64748b', margin: 0 }}>Total Transactions</p>
+              <p style={{ fontWeight: 600, fontSize: 15, margin: '4px 0 0 0' }}>{transactionData.totalCount}</p>
+            </div>
+            <div>
+              <p style={{ fontSize: 11, color: '#64748b', margin: 0 }}>Total Volume</p>
+              <p style={{ fontWeight: 600, fontSize: 15, margin: '4px 0 0 0' }}>
+                RM {transactionData.totalVolume.toLocaleString('en-MY', { minimumFractionDigits: 2 })}
+              </p>
+            </div>
+          </div>
+          {transactionData.byType.length > 0 && (
+            <div style={{ marginTop: 12 }}>
+              <p style={{ fontSize: 11, color: '#64748b', margin: '0 0 8px 0' }}>By Type</p>
+              {transactionData.byType.map((typeItem, idx) => (
+                <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, padding: '4px 0' }}>
+                  <span style={{ color: '#64748b' }}>{typeItem.type.replace('_', ' ')}</span>
+                  <span>{typeItem.count} / RM {typeItem.volume.toLocaleString('en-MY', { minimumFractionDigits: 2 })}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </>
   )
 }

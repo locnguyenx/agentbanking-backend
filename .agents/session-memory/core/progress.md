@@ -1,7 +1,7 @@
 # Session Memory - Progress
 
 **Project:** Agent Banking Platform  
-**Last Update:** 2026-04-14
+**Last Update:** 2026-04-15
 
 ## 📊 THE HISTORY
 
@@ -23,6 +23,20 @@
 | 2026-04-14 | BDD Test Alignment: Verify workflow selection, not just HTTP 202 | ✅ |
 | 2026-04-14 | Auth Security: Fix /api/v1/auth/** endpoint access | ✅ |
 | 2026-04-14 | Infrastructure: Create missing DB tables via Docker exec | ✅ |
+| 2026-04-15 | Backoffice UI: Fix "No workflows found" orchestrator issue | ✅ |
+| 2026-04-15 | Fix workflow PENDING status - 4 root causes resolved | ✅ |
+| 2026-04-15 | - Missing @ActivityImpl on PersistWorkflowResultActivityImpl | ✅ |
+| 2026-04-15 | - Duplicate activity type names in 7 Validate interfaces | ✅ |
+| 2026-04-15 | - Hardcoded short timeouts in 13 workflow implementations | ✅ |
+| 2026-04-15 | - NullPointerException in rules-service endpoints | ✅ |
+| 2026-04-15 | Switch-adapter service: Fix port 8083->8084 in default URL | ✅ |
+| 2026-04-15 | STP evaluation: Fix nullPointerException for null agentTier | ✅ |
+| 2026-04-15 | Backoffice UI: Fix Create Case button for COMPENSATING/PENDING | ✅ |
+| 2026-04-15 | Orphan case: Add isOrphan detection in ResolutionController | ✅ |
+| 2026-04-16 | Dashboard agent counts: Fix to use registered agents instead of transaction agents | ✅ |
+| 2026-04-16 | Agents page stats: Fix to calculate from complete dataset, not paginated results | ✅ |
+| 2026-04-16 | Frontend caching: Add no-cache headers, update React Query keys | ✅ |
+| 2026-04-16 | OpenAPI spec: Fix agentTier enum from TIER_1/2/3 to MICRO/STANDARD/PREMIER | ✅ |
 
 ### Key Discovery
 
@@ -38,6 +52,8 @@
 
 **Root Cause 6:** No unit tests for Kafka event consumers/publishers.
 
+**Root Cause 7:** Orchestrator test configuration had `ddl-auto: create-drop` and `flyway.enabled: false`, causing database tables to be dropped.
+
 ### Verification
 
 - Verified 45/45 tests passing in `SelfContainedOrchestratorE2ETest`.
@@ -45,6 +61,7 @@
 - Verified "Create User Account" works via curl test.
 - Verified balance API returns correct response.
 - Verified all 21 new Kafka event tests pass.
+- Verified backoffice UI now displays workflows created by E2E tests.
 
 ## 📈 Test Results
 
@@ -52,3 +69,4 @@
 - **Kafka Event Consumer Tests**: 10 tests, 0 failed
 - **Kafka Event Publisher Tests**: 11 tests, 0 failed
 - **Total New Tests**: 21 tests, all passing ✅
+- **Backoffice UI**: Now properly displays workflows ✅

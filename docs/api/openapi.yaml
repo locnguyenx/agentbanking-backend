@@ -1638,7 +1638,6 @@ components:
       - amount
       - serviceCode
       - fundingSource
-      - agentId
       type: object
       properties:
         serviceCode:
@@ -2190,7 +2189,7 @@ components:
           type: string
         tier:
           type: string
-          enum: [MICRO, STANDARD, PREMIUM]
+          enum: [MICRO, STANDARD, PREMIER]
         mykadNumber:
           type: string
         phoneNumber:
@@ -2298,7 +2297,7 @@ components:
           maxLength: 200
         tier:
           type: string
-          enum: [MICRO, STANDARD, PREMIUM]
+          enum: [MICRO, STANDARD, PREMIER]
           description: Agent tier level
         merchantGpsLat:
           type: number
@@ -2493,7 +2492,7 @@ components:
           type: string
         tier:
           type: string
-          enum: [MICRO, STANDARD, PREMIUM]
+          enum: [MICRO, STANDARD, PREMIER]
         status:
           type: string
           enum: [ACTIVE, INACTIVE, PENDING, SUSPENDED]
@@ -2633,7 +2632,7 @@ components:
     # Transaction Type Enum
     TransactionType:
       type: string
-      enum: [CASH_WITHDRAWAL, CASH_DEPOSIT, BILL_PAYMENT, DUITNOW_TRANSFER, CASHLESS_PAYMENT, PIN_BASED_PURCHASE, PREPAID_TOPUP, EWALLET_WITHDRAWAL, EWALLET_TOPUP, ESSP_PURCHASE, PIN_PURCHASE, RETAIL_SALE, HYBRID_CASHBACK, BALANCE_INQUIRY]
+      enum: [CASH_WITHDRAWAL, CASH_DEPOSIT, BILL_PAYMENT, DUITNOW_TRANSFER, CASHLESS_PAYMENT, PIN_BASED_PURCHASE, PREPAID_TOPUP, EWALLET_WITHDRAWAL, EWALLET_TOPUP, ESSP_PURCHASE, PIN_PURCHASE, RETAIL_SALE, HYBRID_CASHBACK]
       description: Type of transaction to initiate. BILL_PAYMENT includes JOMPAY, ASTRO_RPN, TM_RPN. PREPAID_TOPUP includes CELCOM_TOPUP, M1_TOPUP.
 
     # Transaction Start Request
@@ -2708,7 +2707,7 @@ components:
           description: Target bank BIN for routing
         agentTier:
           type: string
-          enum: [TIER_1, TIER_2, TIER_3]
+          enum: [MICRO, STANDARD, PREMIER]
           description: Agent tier level
 
     # Transaction Start Response
@@ -2770,19 +2769,16 @@ components:
     ForceResolveRequest:
       required:
       - action
-      - adminId
+      - reason
       type: object
       properties:
         action:
           type: string
-          enum: [RETRY, ABORT]
-          description: Action to take - RETRY to retry, ABORT to cancel
+          enum: [COMMIT, REVERSE]
+          description: Action to take - COMMIT to complete, REVERSE to cancel
         reason:
           type: string
           description: Reason for force resolve
-        adminId:
-          type: string
-          description: ID of the admin performing the action
 
     # Maker Proposal Request
     MakerProposalRequest:

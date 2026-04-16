@@ -1,6 +1,7 @@
 package com.agentbanking.onboarding.application.usecase;
 
 import com.agentbanking.onboarding.domain.model.AgentRecord;
+import com.agentbanking.onboarding.domain.model.AgentStatus;
 import com.agentbanking.onboarding.domain.port.in.ListAgentsUseCase;
 import com.agentbanking.onboarding.domain.service.AgentService;
 import org.springframework.stereotype.Service;
@@ -21,6 +22,16 @@ public class ListAgentsUseCaseImpl implements ListAgentsUseCase {
     @Override
     public List<AgentRecord> list(int page, int size) {
         return agentService.listAgents(page, size);
+    }
+
+    @Override
+    public long countAll() {
+        return agentService.countAll();
+    }
+
+    @Override
+    public long countByStatus(AgentStatus status) {
+        return agentService.countByStatus(status);
     }
 
     @Override

@@ -32,7 +32,7 @@ export interface User {
 
 export const api = {
   getDashboard: () => client.get('/backoffice/dashboard').then((r) => r.data),
-  
+
   // Agents
   getAgents: (params?: any) => client.get('/backoffice/agents', { params }).then((r) => r.data),
   createAgent: (data: any) => client.post('/backoffice/agents', data).then((r) => r.data),
@@ -53,6 +53,14 @@ export const api = {
     client.get(`/backoffice/agents/${agentId}/user-status`).then((r) => r.data),
   createAgentUser: (agentId: string, data: { phone?: string; email?: string; businessName?: string }) => 
     client.post(`/backoffice/agents/${agentId}/create-user`, data).then((r) => r.data),
+  
+  // Agent Float (ledger-service)
+  getAgentFloat: (agentId: string) => 
+    client.get(`/backoffice/agents/${agentId}/float`).then((r) => r.data),
+  getAgentFloatTransactions: (agentId: string) => 
+    client.get(`/backoffice/agents/${agentId}/float/transactions`).then((r) => r.data),
+  createAgentFloat: (agentId: string, data: { initialBalance: number; currency: string }) => 
+    client.post(`/backoffice/agents/${agentId}/float`, data).then((r) => r.data),
   
   // Ledger Transactions & Settlement
   getTransactions: (params?: any) => client.get('/backoffice/ledger-transactions', { params }).then((r) => r.data),

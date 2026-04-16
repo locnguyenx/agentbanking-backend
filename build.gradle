@@ -133,16 +133,63 @@ task loadAuthSeedData {
     }
 }
 
+// Task to recreate database schema using Flyway repair and migrate
+task recreateDatabaseSchema {
+    group = 'database'
+    description = 'Recreate database schema using Flyway repair and migrate'
+    
+    doLast {
+        println "Recreating database schema using Flyway..."
+        
+        // For each service database, clear Flyway history and force migration
+        def services = [
+            [name: 'orchestrator', db: 'orchestrator_db', user: 'postgres'],
+            [name: 'ledger', db: 'ledger_db', user: 'postgres'],
+            [name: 'rules', db: 'rules_db', user: 'postgres'],
+            [name: 'onboarding', db: 'onboarding_db', user: 'postgres'],
+            [name: 'biller', db: 'biller_db', user: 'postgres'],
+            [name: 'switch', db: 'switch_db', user: 'postgres'],
+            [name: 'audit', db: 'audit_db', user: 'postgres']
+        ]
+        
+        services.each { service ->
+            println "Recreating schema for ${service.name} database..."
+            
+            // Clear Flyway schema history to force migration
+            exec {
+                workingDir '.'
+                commandLine 'docker', 'compose', 'exec', '-T', "postgres-${service.name}", 'psql', '-U', service.user, '-d', service.db, '-c', 'DELETE FROM flyway_schema_history;'
+                ignoreExitValue = true
+            }
+        }
+        
+        println "Schema history cleared. Now restarting services to trigger Flyway migrations..."
+        
+        // Restart all services to trigger Flyway migrations
+        exec {
+            workingDir '.'
+            commandLine 'docker', 'compose', 'restart'
+            ignoreExitValue = true
+        }
+        
+        println "Waiting for services to restart and run Flyway migrations..."
+        sleep(45 * 1000) // Wait 45 seconds for all services to restart and complete migrations
+        
+        println "Database schema should be recreated!"
+    }
+}
+
 // Task to reset system completely
 task resetSystem {
     group = 'database'
-    description = 'Reset system completely - clean all data and load auth seed data'
+    description = 'Reset system completely - clean all data, recreate schema, and load auth seed data'
     
     dependsOn cleanAllData
+    dependsOn recreateDatabaseSchema
     dependsOn loadAuthSeedData
     
     doLast {
-        println "System reset complete! All data cleaned, auth seed data loaded."
+        println "System reset complete! All data cleaned, schema recreated, auth seed data loaded."
     }
 }
 

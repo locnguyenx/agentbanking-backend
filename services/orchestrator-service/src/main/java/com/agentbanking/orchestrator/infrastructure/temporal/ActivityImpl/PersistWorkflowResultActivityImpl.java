@@ -5,9 +5,11 @@ import com.agentbanking.orchestrator.domain.port.out.TransactionRecordRepository
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import io.temporal.spring.boot.ActivityImpl;
 import org.springframework.stereotype.Component;
 
 @Component
+@ActivityImpl(workers = "agent-banking-tasks")
 public class PersistWorkflowResultActivityImpl implements PersistWorkflowResultActivity {
 
     private static final Logger log = LoggerFactory.getLogger(PersistWorkflowResultActivityImpl.class);

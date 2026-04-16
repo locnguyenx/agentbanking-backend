@@ -20,7 +20,9 @@ import com.agentbanking.orchestrator.domain.model.WorkflowStatus;
 import com.agentbanking.orchestrator.domain.port.out.LedgerServicePort.*;
 
 import io.temporal.activity.ActivityOptions;
+import io.temporal.common.RetryOptions;
 import io.temporal.failure.ActivityFailure;
+import io.temporal.failure.CanceledFailure;
 import io.temporal.spring.boot.WorkflowImpl;
 import io.temporal.workflow.Workflow;
 import org.slf4j.Logger;
@@ -73,34 +75,44 @@ public class RetailSaleWorkflowImpl implements RetailSaleWorkflow {
     @SuppressWarnings("SpringJavaAutowiredMembersInspection")
     public RetailSaleWorkflowImpl() {
         this.calculateMDRActivity = Workflow.newActivityStub(CalculateMDRActivity.class, ActivityOptions.newBuilder()
-                .setStartToCloseTimeout(Duration.ofMinutes(1))
+                .setStartToCloseTimeout(Duration.ofSeconds(30))
+                .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(3).build())
                 .build());
         this.generateDynamicQRActivity = Workflow.newActivityStub(GenerateDynamicQRActivity.class, ActivityOptions.newBuilder()
-                .setStartToCloseTimeout(Duration.ofMinutes(2))
+                .setStartToCloseTimeout(Duration.ofSeconds(60))
+                .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(3).build())
                 .build());
         this.waitForQRPaymentActivity = Workflow.newActivityStub(WaitForQRPaymentActivity.class, ActivityOptions.newBuilder()
-                .setStartToCloseTimeout(Duration.ofMinutes(10))
+                .setStartToCloseTimeout(Duration.ofSeconds(60))
+                .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(3).build())
                 .build());
         this.sendRequestToPayActivity = Workflow.newActivityStub(SendRequestToPayActivity.class, ActivityOptions.newBuilder()
-                .setStartToCloseTimeout(Duration.ofMinutes(2))
+                .setStartToCloseTimeout(Duration.ofSeconds(60))
+                .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(3).build())
                 .build());
         this.waitForRTPApprovalActivity = Workflow.newActivityStub(WaitForRTPApprovalActivity.class, ActivityOptions.newBuilder()
-                .setStartToCloseTimeout(Duration.ofMinutes(10))
+                .setStartToCloseTimeout(Duration.ofSeconds(60))
+                .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(3).build())
                 .build());
         this.createMerchantTransactionRecordActivity = Workflow.newActivityStub(CreateMerchantTransactionRecordActivity.class, ActivityOptions.newBuilder()
-                .setStartToCloseTimeout(Duration.ofMinutes(2))
+                .setStartToCloseTimeout(Duration.ofSeconds(30))
+                .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(3).build())
                 .build());
         this.blockFloatActivity = Workflow.newActivityStub(BlockFloatActivity.class, ActivityOptions.newBuilder()
-                .setStartToCloseTimeout(Duration.ofMinutes(2))
+                .setStartToCloseTimeout(Duration.ofSeconds(30))
+                .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(3).build())
                 .build());
         this.commitFloatActivity = Workflow.newActivityStub(CommitFloatActivity.class, ActivityOptions.newBuilder()
-                .setStartToCloseTimeout(Duration.ofMinutes(2))
+                .setStartToCloseTimeout(Duration.ofSeconds(30))
+                .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(3).build())
                 .build());
         this.releaseFloatActivity = Workflow.newActivityStub(ReleaseFloatActivity.class, ActivityOptions.newBuilder()
-                .setStartToCloseTimeout(Duration.ofMinutes(2))
+                .setStartToCloseTimeout(Duration.ofSeconds(60))
+                .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(3).build())
                 .build());
         this.persistWorkflowResultActivity = Workflow.newActivityStub(PersistWorkflowResultActivity.class, ActivityOptions.newBuilder()
-                .setStartToCloseTimeout(Duration.ofMinutes(2))
+                .setStartToCloseTimeout(Duration.ofSeconds(30))
+                .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(3).build())
                 .build());
     }
 
@@ -254,6 +266,16 @@ public class RetailSaleWorkflowImpl implements RetailSaleWorkflow {
                     input.idempotencyKey(), "COMPLETED", null, null, reference, mdrResult.mdrAmount(), reference, null));
             return completedResult;
 
+        } catch (CanceledFailure e) {
+            log.error("Workflow timed out: {}", e.getMessage());
+            currentStatus = WorkflowStatus.FAILED;
+            try {
+                persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
+                        Workflow.getInfo().getWorkflowId(), "FAILED", "ERR_WORKFLOW_TIMEOUT", "Workflow timed out - maximum execution time exceeded", null, null, null, "Workflow timeout"));
+            } catch (Exception ex) {
+                log.warn("Failed to persist timeout status: {}", ex.getMessage());
+            }
+            throw e;
         } catch (Exception e) {
             log.error("RetailSale workflow failed: {}", e.getMessage());
             currentStatus = WorkflowStatus.FAILED;

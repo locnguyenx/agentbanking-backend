@@ -12,6 +12,7 @@ public interface AgentRepository {
     Optional<AgentRecord> findById(UUID agentId);
     Optional<AgentRecord> findByMykadNumber(String mykadNumber);
     List<AgentRecord> findAll(int page, int size);
+    long countAll();
     boolean hasPendingTransactions(UUID agentId);
     long countByStatus(AgentStatus status);
 }

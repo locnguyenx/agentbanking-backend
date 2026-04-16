@@ -22,9 +22,5 @@ public abstract class BaseGatewayIntegrationTest {
         registry.add("spring.data.redis.host", redis::getHost);
         registry.add("spring.data.redis.port",
                 () -> String.valueOf(redis.getMappedPort(6379)));
-        
-        // Disable other infrastructure explicitly just in case
-        registry.add("spring.datasource.url", () -> "jdbc:h2:mem:testdb");
-        registry.add("spring.kafka.bootstrap-servers", () -> "localhost:9092");
     }
 }

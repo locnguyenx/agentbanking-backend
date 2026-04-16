@@ -444,14 +444,22 @@ spring:
             - JwtAuth
             - RewritePath=/api/v1/kyc/biometric, /internal/biometric
 
-        # Backoffice routes
-        - id: backoffice-dashboard
+        # Backoffice routes - Note: /transactions must come BEFORE /float for routing to work correctly
+        - id: backoffice-agent-float-transactions
           uri: ${ledger-service.url:http://ledger-service:8082}
           predicates:
-            - Path=/api/v1/backoffice/dashboard
+            - Path=/api/v1/backoffice/agents/{agentId}/float/transactions
           filters:
             - JwtAuth
-            - RewritePath=/api/v1/backoffice/dashboard, /internal/backoffice/dashboard
+            - SetPath=/internal/backoffice/float/{agentId}/float/transactions
+
+        - id: backoffice-agent-float
+          uri: ${ledger-service.url:http://ledger-service:8082}
+          predicates:
+            - Path=/api/v1/backoffice/agents/{agentId}/float
+          filters:
+            - JwtAuth
+            - SetPath=/internal/backoffice/float/{agentId}
 
         - id: backoffice-agents-list
           uri: ${onboarding-service.url:http://onboarding-service:8083}
@@ -468,6 +476,14 @@ spring:
           filters:
             - JwtAuth
             - RewritePath=/api/v1/backoffice/agents/(?<segment>.*), /backoffice/agents/${segment}
+
+        - id: backoffice-dashboard
+          uri: ${ledger-service.url:http://ledger-service:8082}
+          predicates:
+            - Path=/api/v1/backoffice/dashboard
+          filters:
+            - JwtAuth
+            - RewritePath=/api/v1/backoffice/dashboard, /internal/backoffice/dashboard
 
         - id: backoffice-settlement-export
           uri: ${ledger-service.url:http://ledger-service:8082}

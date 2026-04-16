@@ -301,4 +301,155 @@ describe('Agents API Integration Tests (Real Backend)', () => {
       expect(data.status).toBe('FAILED')
     })
   })
+
+  describe('Agent Float (Ledger Service)', () => {
+    let testAgentId: string
+
+    beforeAll(async () => {
+      // Get an existing agent that might have float
+      const agentsResponse = await fetch(`${GATEWAY_URL}/api/v1/backoffice/agents`, {
+        headers: { Authorization: `Bearer ${authToken}` },
+      })
+      const agents = await agentsResponse.json()
+      
+      // Use the first agent from the list
+      testAgentId = agents[0]?.agentId
+    })
+
+    it('should get agent float details', async () => {
+      const response = await fetch(`${GATEWAY_URL}/api/v1/backoffice/agents/${testAgentId}/float`, {
+        headers: { Authorization: `Bearer ${authToken}` },
+      })
+
+      expect(response.ok).toBe(true)
+      const data = await response.json()
+      expect(data).toHaveProperty('exists')
+      // If float exists, verify structure
+      if (data.exists && data.float) {
+        expect(data.float).toHaveProperty('balance')
+        expect(data.float).toHaveProperty('reservedBalance')
+        expect(data.float).toHaveProperty('currency')
+        expect(data.float).toHaveProperty('floatId')
+        expect(data.float).toHaveProperty('availableBalance')
+      }
+    })
+
+    it('should get agent float transactions for current month', async () => {
+      const response = await fetch(`${GATEWAY_URL}/api/v1/backoffice/agents/${testAgentId}/float/transactions`, {
+        headers: { Authorization: `Bearer ${authToken}` },
+      })
+
+      expect(response.ok).toBe(true)
+      const data = await response.json()
+      expect(data).toHaveProperty('agentId')
+      expect(data).toHaveProperty('period')
+      expect(data).toHaveProperty('totalCount')
+      expect(data).toHaveProperty('totalVolume')
+      expect(data).toHaveProperty('byType')
+      expect(Array.isArray(data.byType)).toBe(true)
+    })
+
+    it('should create agent float for agent without float', async () => {
+      // First, find or create an agent without float
+      const agentsResponse = await fetch(`${GATEWAY_URL}/api/v1/backoffice/agents`, {
+        headers: { Authorization: `Bearer ${authToken}` },
+      })
+      const agents = await agentsResponse.json()
+
+      // Try to find an agent without float
+      let agentWithoutFloat: string | null = null
+      for (const agent of agents) {
+        const floatResponse = await fetch(`${GATEWAY_URL}/api/v1/backoffice/agents/${agent.agentId}/float`, {
+          headers: { Authorization: `Bearer ${authToken}` },
+        })
+        const floatData = await floatResponse.json()
+        if (!floatData.exists) {
+          agentWithoutFloat = agent.agentId
+          break
+        }
+      }
+
+      // If all agents have float, create a new one
+      if (!agentWithoutFloat) {
+        const uniqueId = Date.now().toString().slice(-8)
+        const newAgent = {
+          agentCode: `AGT${uniqueId}`,
+          businessName: 'Test Agent For Float',
+          tier: 'STANDARD',
+          merchantGpsLat: 3.139003,
+          merchantGpsLng: 101.686855,
+          mykadNumber: `900103${uniqueId}`,
+          phoneNumber: '+60123456789',
+        }
+
+        const createResponse = await fetch(`${GATEWAY_URL}/api/v1/backoffice/agents`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${authToken}`,
+          },
+          body: JSON.stringify(newAgent),
+        })
+        const createdAgent = await createResponse.json()
+        agentWithoutFloat = createdAgent.agentId
+      }
+
+      const floatData = {
+        initialBalance: 5000.00,
+        currency: 'MYR',
+      }
+
+      const response = await fetch(`${GATEWAY_URL}/api/v1/backoffice/agents/${agentWithoutFloat}/float`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${authToken}`,
+        },
+        body: JSON.stringify(floatData),
+      })
+
+      expect(response.ok).toBe(true)
+      const data = await response.json()
+      expect(data.exists).toBe(true)
+      expect(data.float).toHaveProperty('balance')
+      expect(Number(data.float.balance)).toBe(5000)
+      expect(data.float.currency).toBe('MYR')
+    })
+
+    it('should return 400 when creating float with invalid data', async () => {
+      const agentsResponse = await fetch(`${GATEWAY_URL}/api/v1/backoffice/agents`, {
+        headers: { Authorization: `Bearer ${authToken}` },
+      })
+      const agents = await agentsResponse.json()
+      const testAgent = agents[0]?.agentId
+
+      // Try with negative balance
+      const invalidData = {
+        initialBalance: -100,
+        currency: 'MYR',
+      }
+
+      const response = await fetch(`${GATEWAY_URL}/api/v1/backoffice/agents/${testAgent}/float`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${authToken}`,
+        },
+        body: JSON.stringify(invalidData),
+      })
+
+      // Should return error (400 or 500)
+      const data = await response.json()
+      expect(data.status).toBe('FAILED')
+    })
+
+    it('should return 401 without auth token', async () => {
+      const response = await fetch(`${GATEWAY_URL}/api/v1/backoffice/agents/${testAgentId}/float`)
+      
+      expect(response.status).toBe(401)
+      const data = await response.json()
+      expect(data.status).toBe('FAILED')
+      expect(data.error.code).toContain('ERR_AUTH')
+    })
+  })
 })

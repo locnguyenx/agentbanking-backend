@@ -45,13 +45,18 @@ public class AgentRepositoryImpl implements AgentRepository {
 
     @Override
     public List<AgentRecord> findAll(int page, int size) {
-        Page<AgentEntity> result = jpaRepository.findAll(PageRequest.of(page, size));
+        Page<AgentEntity> result = jpaRepository.findAllByOrderByCreatedAtDesc(PageRequest.of(page, size));
         return result.getContent().stream().map(agentMapper::toRecord).toList();
     }
 
     @Override
     public boolean hasPendingTransactions(UUID agentId) {
         return transactionQueryClient.hasPendingTransactions(agentId);
+    }
+
+    @Override
+    public long countAll() {
+        return jpaRepository.count();
     }
 
     @Override

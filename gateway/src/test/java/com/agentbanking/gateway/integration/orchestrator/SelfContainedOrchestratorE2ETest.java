@@ -269,16 +269,21 @@ class SelfContainedOrchestratorE2ETest {
                     .bodyValue(requestBody)
                     .exchange();
 
-            int httpStatus = response.expectBody(String.class).returnResult().getStatus().value();
-            String body = response.expectBody(String.class).returnResult().getResponseBody();
+            var result = response.expectBody(String.class).returnResult();
+            int httpStatus = result.getStatus().value();
+            String body = result.getResponseBody();
             if (httpStatus != 200 && httpStatus != 202) {
                 System.out.println("DEBUG: httpStatus=" + httpStatus + " body=" + body);
             }
             assertTrue(httpStatus == 200 || httpStatus == 202, "Should return 200 or 202 for async workflow start");
             assertNotNull(body, "Response body should not be null");
-            assertNotNull(body, "Response body should not be null");
-            assertNotNull(body, "Response body should not be null");
             JsonNode json = parseBody(body);
+            if (json == null) {
+                // Try parsing as error response
+                System.out.println("DEBUG: Failed to parse body as JSON: " + body);
+                fail("Response body should be valid JSON");
+                return;
+            }
             assertEquals("PENDING", json.get("status").asText());
             assertEquals(idempotencyKey, json.get("workflowId").asText());
             assertTrue(json.has("pollUrl"), "Response should contain pollUrl");
@@ -788,7 +793,10 @@ class SelfContainedOrchestratorE2ETest {
                     .bodyValue(requestBody)
                     .exchange();
 
-            assertEquals(200, response1.expectBody(String.class).returnResult().getStatus().value());
+            var response1Result = response1.expectBody(String.class).returnResult();
+            int response1ExpectStatus = response1Result.getStatus().value();
+            assertTrue(response1ExpectStatus == 200 || response1ExpectStatus == 202, 
+                "First request should return 200 or 202");
 
             var response2 = gatewayClient.post()
                     .uri("/api/v1/transactions")
@@ -798,7 +806,11 @@ class SelfContainedOrchestratorE2ETest {
                     .bodyValue(requestBody)
                     .exchange();
 
-            assertEquals(200, response2.expectBody(String.class).returnResult().getStatus().value());
+            var response2Result = response2.expectBody(String.class).returnResult();
+            int response2ExpectStatus = response2Result.getStatus().value();
+            // Idempotent request returns the same status (either 200 or 202)
+            assertTrue(response2ExpectStatus == 200 || response2ExpectStatus == 202,
+                    "Duplicate request should return 200 or 202, got: " + response2ExpectStatus);
         }
     }
 

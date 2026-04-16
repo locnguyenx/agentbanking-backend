@@ -87,12 +87,16 @@ class FeeCalculationServiceTest {
     }
 
     @Test
-    void calculate_withNoConfig_throwsException() {
+    void calculate_withNoConfig_returnsZero() {
         when(feeConfigRepository.findByTransactionTypeAndAgentTier(
             TransactionType.CASH_DEPOSIT, AgentTier.STANDARD, LocalDate.now()))
             .thenReturn(Optional.empty());
 
-        assertThrows(IllegalArgumentException.class, () -> 
-            feeCalculationService.calculate(new BigDecimal("100.00"), TransactionType.CASH_DEPOSIT, AgentTier.STANDARD));
+        FeeCalculationService.FeeCalculationResult result = feeCalculationService.calculate(
+            new BigDecimal("100.00"), TransactionType.CASH_DEPOSIT, AgentTier.STANDARD);
+
+        assertEquals(BigDecimal.ZERO, result.customerFee());
+        assertEquals(BigDecimal.ZERO, result.agentCommission());
+        assertEquals(BigDecimal.ZERO, result.bankShare());
     }
 }

@@ -153,6 +153,55 @@ public abstract class AbstractOrchestratorRealInfraIntegrationTest {
 }
 ```
 
+---
+
+## NEW: Temporal Database Volume Corruption Fix (2026-04-15)
+
+### Issue
+Temporal workflows stuck in PENDING with "shard status unknown" errors in logs:
+```
+{"level":"error","msg":"Queue reader unable to retrieve tasks","component":"timer-queue-processor","error":"shard status unknown"}
+```
+
+This occurred after multiple Temporal restarts/redeployments even with fresh database names.
+
+### Root Cause
+The Temporal PostgreSQL volume (`temporal-postgres-data`) retains stale/corrupted shard state data between deployments. Simply dropping the database is NOT sufficient - the volume persists the problematic data.
+
+### Solution
+**Must wipe the Docker volume entirely**, not just the database:
+
+```bash
+# 1. Stop Temporal services
+docker compose down temporal temporal-postgres temporal-ui
+
+# 2. Remove the volume (key step!)
+docker volume rm agentbanking-backend_temporal-postgres-data
+
+# 3. Deploy fresh Temporal
+docker compose up -d temporal-postgres temporal
+```
+
+### Verification
+After fresh deployment:
+- Temporal logs show: "Workflow started: Withdrawal"
+- Activities are executed (not "shard status unknown")
+- No queue processor errors
+
+### Key Lessons
+
+1. **Volume persistence** - Docker volumes persist data even when containers are removed. The "shard status unknown" error is caused by corrupted shard state in the persistent volume.
+
+2. **Database vs Volume** - Dropping the PostgreSQL database is NOT enough. The volume must be completely removed and recreated.
+
+3. **Fresh Temporal works** - Using `temporalio/auto-setup:latest` works correctly when starting with a fresh database volume.
+
+4. **No special configuration needed** - The standard auto-setup image works fine. The issue was purely stale volume data.
+
+5. **Image unchanged** - Still using `temporalio/auto-setup:latest` - no need to change Docker image. The fix is purely administrative (wiping the volume).
+
+---
+
 ## Files Changed
 
 ### Production Code (Auto-Discovery Pattern)

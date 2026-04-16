@@ -114,8 +114,11 @@ public class RulesController {
     @PostMapping("/check-velocity")
     public ResponseEntity<Map<String, Object>> checkVelocity(
             @RequestBody Map<String, Object> request) {
-        int transactionCountToday = (Integer) request.get("transactionCountToday");
-        BigDecimal amountToday = new BigDecimal(request.get("amountToday").toString());
+        int transactionCountToday = request.get("transactionCountToday") != null 
+            ? (Integer) request.get("transactionCountToday") : 0;
+        BigDecimal amountToday = request.get("amountToday") != null 
+            ? new BigDecimal(request.get("amountToday").toString()) 
+            : BigDecimal.ZERO;
 
         var result = velocityCheckUseCase.check(transactionCountToday, amountToday);
 

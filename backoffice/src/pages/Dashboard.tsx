@@ -25,20 +25,14 @@ interface Transaction {
 
 export function Dashboard() {
   const { data: dashboard, isLoading, error } = useQuery({
-    queryKey: ['dashboard'],
+    queryKey: ['dashboard-v4'],
     queryFn: async () => {
       const response = await api.getDashboard()
       return response as { totalVolume: number; totalTransactions: number; activeAgents: number; pendingKyc: number; totalAgents: number }
     }
   })
 
-  const { data: agents = [] } = useQuery({
-    queryKey: ['agents'],
-    queryFn: async () => {
-      const response = await api.getAgents()
-      return response as Array<{ status: string }>
-    }
-  })
+
 
   const { data: transactionsResponse } = useQuery({
     queryKey: ['transactions'],
@@ -66,8 +60,8 @@ export function Dashboard() {
     )
   }
 
-  const activeAgents = agents.filter(a => a.status === 'ACTIVE').length
-  const pendingKycCount = agents.filter(a => a.status !== 'ACTIVE').length
+  const activeAgents = dashboard?.activeAgents || 0
+  const pendingKycCount = dashboard?.pendingKyc || 0
   const transactions = transactionsResponse?.content || []
   
   const chartData = transactions.slice(0, 7).map((txn) => ({
@@ -112,10 +106,10 @@ export function Dashboard() {
         gap: 24 
       }}>
         {[
-          { 
-            label: 'Total Agents', 
-            value: agents.length.toString(), 
-            change: '+12.5%', 
+          {
+            label: 'Total Agents',
+            value: (dashboard?.totalAgents || 0).toString(),
+            change: '+12.5%',
             trend: 'up',
             icon: Users,
             color: '#1e3a5f'
@@ -288,7 +282,7 @@ export function Dashboard() {
           </h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
             {[
-              { label: 'Active Agents', value: activeAgents.toString(), sub: `${((activeAgents / (agents.length || 1)) * 100).toFixed(0)}% of total` },
+              { label: 'Active Agents', value: activeAgents.toString(), sub: `${((activeAgents / (dashboard?.totalAgents || 1)) * 100).toFixed(0)}% of total` },
               { label: 'Pending Review', value: pendingKycCount.toString(), sub: 'Requires attention' },
               { label: 'Successful Txns', value: `${((successfulTxns / (totalTxns || 1)) * 100).toFixed(1)}%`, sub: 'Last 24 hours' },
             ].map((item, index) => (

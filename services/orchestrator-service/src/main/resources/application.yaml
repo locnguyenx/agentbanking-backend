@@ -13,8 +13,13 @@ management:
 spring:
   application:
     name: orchestrator-service
+  jpa:
+    hibernate:
+      ddl-auto: none
   flyway:
-    enabled: false
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
   temporal:
     namespace: default
     connection:
@@ -35,7 +40,7 @@ ledger-service:
   url: ${LEDGER_SERVICE_URL:http://localhost:8082}
 
 switch-adapter-service:
-  url: ${SWITCH_ADAPTER_SERVICE_URL:http://localhost:8083}
+  url: ${SWITCH_ADAPTER_SERVICE_URL:http://localhost:8084}
 
 biller-service:
   url: ${BILLER_SERVICE_URL:http://localhost:8084}
@@ -148,6 +153,34 @@ resilience4j:
         failureRateThreshold: 50
         timeoutDurationSec: 30
         eventConsumerBufferSize: 10
+
+temporal:
+  activity:
+    timeouts:
+      check-velocity: ${TEMPORAL_ACTIVITY_TIMEOUT_CHECK_VELOCITY:60}
+      evaluate-stp: ${TEMPORAL_ACTIVITY_TIMEOUT_EVALUATE_STP:30}
+      calculate-fees: ${TEMPORAL_ACTIVITY_TIMEOUT_CALCULATE_FEES:30}
+      validate-account: ${TEMPORAL_ACTIVITY_TIMEOUT_VALIDATE_ACCOUNT:30}
+      validate-bill: ${TEMPORAL_ACTIVITY_TIMEOUT_VALIDATE_BILL:30}
+      validate-float: ${TEMPORAL_ACTIVITY_TIMEOUT_VALIDATE_FLOAT:30}
+      validate-ewallet: ${TEMPORAL_ACTIVITY_TIMEOUT_VALIDATE_EWALLET:30}
+      validate-phone: ${TEMPORAL_ACTIVITY_TIMEOUT_VALIDATE_PHONE:30}
+      validate-pin: ${TEMPORAL_ACTIVITY_TIMEOUT_VALIDATE_PIN:30}
+      validate-essp: ${TEMPORAL_ACTIVITY_TIMEOUT_VALIDATE_ESSP:30}
+      block-float: ${TEMPORAL_ACTIVITY_TIMEOUT_BLOCK_FLOAT:30}
+      commit-float: ${TEMPORAL_ACTIVITY_TIMEOUT_COMMIT_FLOAT:30}
+      release-float: ${TEMPORAL_ACTIVITY_TIMEOUT_RELEASE_FLOAT:30}
+      credit-float: ${TEMPORAL_ACTIVITY_TIMEOUT_CREDIT_FLOAT:30}
+      authorize-switch: ${TEMPORAL_ACTIVITY_TIMEOUT_AUTHORIZE_SWITCH:60}
+      reversal-switch: ${TEMPORAL_ACTIVITY_TIMEOUT_REVERSAL_SWITCH:60}
+      post-cbs: ${TEMPORAL_ACTIVITY_TIMEOUT_POST_CBS:60}
+      publish-event: ${TEMPORAL_ACTIVITY_TIMEOUT_PUBLISH_EVENT:30}
+      save-resolution: ${TEMPORAL_ACTIVITY_TIMEOUT_SAVE_RESOLUTION:30}
+      persist-result: ${TEMPORAL_ACTIVITY_TIMEOUT_PERSIST_RESULT:30}
+    retries:
+      max-attempts: ${TEMPORAL_ACTIVITY_RETRY_MAX_ATTEMPTS:3}
+  workflow:
+    execution-timeout: ${TEMPORAL_WORKFLOW_EXECUTION_TIMEOUT:1}
 
 logging:
   level:

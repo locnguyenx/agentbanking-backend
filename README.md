@@ -33,13 +33,7 @@ docker compose up -d
 docker compose --profile all up -d
 ```
 
-### 3. Run Integration Tests
-
-```bash
-./scripts/integration-tests.sh
-```
-
-### 4. Start Backoffice UI (development)
+### 3. Start Backoffice UI (development)
 
 ```bash
 cd backoffice
@@ -101,13 +95,6 @@ npm run dev
 
 ```bash
 ./gradlew :services:rules-service:bootRun
-```
-
-### Run tests
-
-```bash
-./gradlew test
-./scripts/integration-tests.sh
 ```
 
 **Test flow:**

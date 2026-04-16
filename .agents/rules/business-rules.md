@@ -2,6 +2,9 @@
 trigger: model_decision
 description: Use this rule when implement business logic for domain entity and service
 ---
+## Business Rules
+Business logic of the system must comply the specs mentioned in section `1.3. Documentation & Context Map`
+In particular, transaction workflows must comply the `Platform Design`
 
 ## Banking-Specific Guidelines
 ### Money Handling

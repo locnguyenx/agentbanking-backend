@@ -170,6 +170,14 @@ public class AgentService {
         return agentRepository.findAll(page, size);
     }
 
+    public long countAll() {
+        return agentRepository.countAll();
+    }
+
+    public long countByStatus(AgentStatus status) {
+        return agentRepository.countByStatus(status);
+    }
+
     public Optional<AgentRecord> findById(UUID agentId) {
         return agentRepository.findById(agentId);
     }

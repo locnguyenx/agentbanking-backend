@@ -204,3 +204,60 @@ Gateway filters can be unit tested without starting the full Spring context usin
 | Response transformation | Implementation |
 | DataBuffer handling | Implementation |
 | Unit testing approach | Testing |
+
+---
+
+## 11. Gateway Route Patterns with Alpine JRE in Docker
+
+### Issue
+Gateway fails to start in Docker with Alpine JRE when route configuration has conflicting or complex path patterns.
+
+### Symptom
+Gateway container crashes immediately after start with error:
+```
+java.util.regex.PatternSyntaxException: Illegal repetition near index 27
+```
+
+### Root Cause
+- Spring Cloud Gateway compiles path predicates to regex patterns
+- Alpine JRE has stricter regex compilation than Zulu JRE (used locally)
+- When multiple similar routes exist with different patterns (`/*` AND `/{id}`), the regex compilation fails
+- The error occurs during **application startup**, not runtime routing
+
+### Bad Configuration (causes crash)
+```yaml
+# Both routes together cause regex error in Docker Alpine JRE
+- id: backoffice-agent-float
+  predicates:
+    - Path=/api/v1/backoffice/agents/*/float
+  filters:
+    - RewritePath=/api/v1/backoffice/agents/(?<agentId>.*)/float, /internal/backoffice/agents/${agentId}/float
+
+- id: backoffice-agent-float-detail
+  predicates:
+    - Path=/api/v1/backoffice/agents/{id}/float
+  filters:
+    - JwtAuth
+```
+
+### Working Configuration
+```yaml
+# Use /* pattern only (no {id} variable)
+- id: backoffice-agent-float
+  uri: ${ledger-service.url:http://ledger-service:8082}
+  predicates:
+    - Path=/api/v1/backoffice/agents/*/float
+  filters:
+    - JwtAuth
+    - RewritePath=/api/v1/backoffice/agents/(?<agentId>.*)/float, /internal/backoffice/agents/${agentId}/float
+```
+
+### Why It Works Locally
+- Local JVM: Zulu JDK 21 - more permissive regex compilation
+- Docker Alpine JRE: stricter regex that fails on certain patterns
+
+### Lesson
+- Avoid having both `/*` and `/{id}` matching the same endpoint path
+- Use single consistent pattern (`/*` or `/{segment}` but not both)
+- Test gateway in Docker before deploying
+- The error shows up at startup, not during routing

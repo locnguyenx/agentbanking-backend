@@ -113,7 +113,7 @@ public class StartTransactionUseCaseImpl implements StartTransactionUseCase {
                     command.targetBIN());
             case PIN_BASED_PURCHASE -> new PinBasedPurchaseWorkflow.PinBasedPurchaseInput(
                     command.agentId(),
-                    "DEFAULT",
+                    "PINEZ",
                     command.amount(),
                     1,
                     command.customerMykad(),
@@ -124,7 +124,7 @@ public class StartTransactionUseCaseImpl implements StartTransactionUseCase {
                     command.targetBIN());
             case PREPAID_TOPUP -> new PrepaidTopupWorkflow.PrepaidTopupInput(
                     command.agentId(),
-                    "DEFAULT",
+                    "CELCOM",
                     command.proxyValue(),
                     command.amount(),
                     command.idempotencyKey(),
@@ -134,7 +134,7 @@ public class StartTransactionUseCaseImpl implements StartTransactionUseCase {
                     command.targetBIN());
             case EWALLET_WITHDRAWAL -> new EWalletWithdrawalWorkflow.EWalletWithdrawalInput(
                     command.agentId(),
-                    "DEFAULT",
+                    "GRABPAY",
                     command.proxyValue(),
                     command.amount(),
                     command.idempotencyKey(),
@@ -144,7 +144,7 @@ public class StartTransactionUseCaseImpl implements StartTransactionUseCase {
                     command.targetBIN());
             case EWALLET_TOPUP -> new EWalletTopupWorkflow.EWalletTopupInput(
                     command.agentId(),
-                    "DEFAULT",
+                    "GRABPAY",
                     command.proxyValue(),
                     command.amount(),
                     command.idempotencyKey(),
@@ -163,7 +163,7 @@ public class StartTransactionUseCaseImpl implements StartTransactionUseCase {
                     command.targetBIN());
             case PIN_PURCHASE -> new PINPurchaseWorkflow.PINPurchaseInput(
                     command.agentId(),
-                    "DEFAULT",
+                    "PINEZ",
                     command.amount(),
                     1,
                     command.idempotencyKey(),

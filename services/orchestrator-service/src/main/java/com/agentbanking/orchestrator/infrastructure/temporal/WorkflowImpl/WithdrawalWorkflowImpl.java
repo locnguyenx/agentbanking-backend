@@ -9,8 +9,10 @@ import com.agentbanking.orchestrator.domain.port.out.EventPublisherPort.Transact
 import com.agentbanking.orchestrator.domain.port.out.LedgerServicePort.*;
 import com.agentbanking.orchestrator.domain.port.out.RulesServicePort.*;
 import com.agentbanking.orchestrator.domain.port.out.SwitchAdapterPort.*;
+import io.temporal.failure.CanceledFailure;
 
 import io.temporal.activity.ActivityOptions;
+import io.temporal.common.RetryOptions;
 import io.temporal.failure.ActivityFailure;
 import io.temporal.spring.boot.WorkflowImpl;
 import io.temporal.workflow.Workflow;
@@ -66,38 +68,106 @@ public class WithdrawalWorkflowImpl implements WithdrawalWorkflow {
 
     @SuppressWarnings("SpringJavaAutowiredMembersInspection")
     public WithdrawalWorkflowImpl() {
+        // CheckVelocity: StartToClose 3s | Retry 1x (for testing)
         this.checkVelocityActivity = Workflow.newActivityStub(CheckVelocityActivity.class, ActivityOptions.newBuilder()
-                .setStartToCloseTimeout(Duration.ofMinutes(5))
+                .setStartToCloseTimeout(Duration.ofSeconds(30))
+                .setRetryOptions(RetryOptions.newBuilder()
+                        .setMaximumAttempts(3)
+                        .build())
                 .build());
+
+        // EvaluateStp: StartToClose 2s | Retry 1x (for testing)
         this.evaluateStpActivity = Workflow.newActivityStub(EvaluateStpActivity.class, ActivityOptions.newBuilder()
-                .setStartToCloseTimeout(Duration.ofMinutes(3))
+                .setStartToCloseTimeout(Duration.ofSeconds(30))
+                .setRetryOptions(RetryOptions.newBuilder()
+                        .setMaximumAttempts(3)
+                        .build())
                 .build());
+
+        // CalculateFees: StartToClose 2s | Retry 1x (for testing)
         this.calculateFeesActivity = Workflow.newActivityStub(CalculateFeesActivity.class, ActivityOptions.newBuilder()
-                .setStartToCloseTimeout(Duration.ofMinutes(1))
+                .setStartToCloseTimeout(Duration.ofSeconds(30))
+                .setRetryOptions(RetryOptions.newBuilder()
+                        .setMaximumAttempts(3)
+                        .build())
                 .build());
+
+        // BlockFloat: StartToClose 3s | Retry 0x (financial, idempotent - fail fast)
         this.blockFloatActivity = Workflow.newActivityStub(BlockFloatActivity.class, ActivityOptions.newBuilder()
-                .setStartToCloseTimeout(Duration.ofMinutes(2))
+                .setStartToCloseTimeout(Duration.ofSeconds(30))
+                .setRetryOptions(RetryOptions.newBuilder()
+                        .setMaximumAttempts(3)
+                        .build())
                 .build());
+
+        // CommitFloat: StartToClose 3s | Retry 1x (for testing)
         this.commitFloatActivity = Workflow.newActivityStub(CommitFloatActivity.class, ActivityOptions.newBuilder()
-                .setStartToCloseTimeout(Duration.ofMinutes(2))
+                .setStartToCloseTimeout(Duration.ofSeconds(30))
+                .setRetryOptions(RetryOptions.newBuilder()
+                        .setMaximumAttempts(3)
+                        .build())
                 .build());
+
+        // ReleaseFloat: StartToClose 3s | Retry 1x (for testing)
         this.releaseFloatActivity = Workflow.newActivityStub(ReleaseFloatActivity.class, ActivityOptions.newBuilder()
-                .setStartToCloseTimeout(Duration.ofMinutes(2))
+                .setStartToCloseTimeout(Duration.ofSeconds(30))
+                .setRetryOptions(RetryOptions.newBuilder()
+                        .setMaximumAttempts(3)
+                        .build())
                 .build());
+
+        // AuthorizeAtSwitch: StartToClose 5s | Retry 0x (financial)
         this.authorizeAtSwitchActivity = Workflow.newActivityStub(AuthorizeAtSwitchActivity.class, ActivityOptions.newBuilder()
-                .setStartToCloseTimeout(Duration.ofMinutes(3))
+                .setStartToCloseTimeout(Duration.ofSeconds(30))
+                .setRetryOptions(RetryOptions.newBuilder()
+                        .setMaximumAttempts(3)
+                        .build())
                 .build());
+
+        // SendReversalToSwitch: StartToClose 10s, ScheduleToClose 60s | Retry infinite, 60s interval (Store & Forward)
         this.sendReversalToSwitchActivity = Workflow.newActivityStub(SendReversalToSwitchActivity.class, ActivityOptions.newBuilder()
-                .setStartToCloseTimeout(Duration.ofMinutes(3))
+                .setStartToCloseTimeout(Duration.ofSeconds(60))
+                .setScheduleToCloseTimeout(Duration.ofSeconds(60))
+                .setRetryOptions(RetryOptions.newBuilder()
+                        .setInitialInterval(Duration.ofSeconds(60))
+                        .setMaximumInterval(Duration.ofSeconds(60))
+                        .setBackoffCoefficient(1)
+                        .setMaximumAttempts(Integer.MAX_VALUE) // Infinite retry until PayNet acknowledges
+                        .build())
                 .build());
+
+        // PublishKafkaEvent: StartToClose 3s | Retry 3x (1s→2s→4s)
+        // Non-critical: log and continue on failure - don't block workflow completion
         this.publishKafkaEventActivity = Workflow.newActivityStub(PublishKafkaEventActivity.class, ActivityOptions.newBuilder()
-                .setStartToCloseTimeout(Duration.ofMinutes(1))
+                .setStartToCloseTimeout(Duration.ofSeconds(30))
+                .setRetryOptions(RetryOptions.newBuilder()
+                        .setInitialInterval(Duration.ofSeconds(1))
+                        .setMaximumInterval(Duration.ofSeconds(2))
+                        .setBackoffCoefficient(2)
+                        .setMaximumAttempts(3) // Only 1 attempt - fail fast, don't retry
+                        .build())
                 .build());
+
+        // SaveResolutionCase: StartToClose 2s | Retry 3x (1s→2s→4s)
         this.saveResolutionCaseActivity = Workflow.newActivityStub(SaveResolutionCaseActivity.class, ActivityOptions.newBuilder()
-                .setStartToCloseTimeout(Duration.ofMinutes(2))
+                .setStartToCloseTimeout(Duration.ofSeconds(30))
+                .setRetryOptions(RetryOptions.newBuilder()
+                        .setInitialInterval(Duration.ofSeconds(1))
+                        .setMaximumInterval(Duration.ofSeconds(4))
+                        .setBackoffCoefficient(2)
+                        .setMaximumAttempts(3)
+                        .build())
                 .build());
+
+        // PersistWorkflowResult: StartToClose 2s | Retry 3x (1s→2s→4s) - critical for status updates
         this.persistWorkflowResultActivity = Workflow.newActivityStub(PersistWorkflowResultActivity.class, ActivityOptions.newBuilder()
-                .setStartToCloseTimeout(Duration.ofMinutes(2))
+                .setStartToCloseTimeout(Duration.ofSeconds(30))
+                .setRetryOptions(RetryOptions.newBuilder()
+                        .setInitialInterval(Duration.ofSeconds(1))
+                        .setMaximumInterval(Duration.ofSeconds(4))
+                        .setBackoffCoefficient(2)
+                        .setMaximumAttempts(3)
+                        .build())
                 .build());
     }
 
@@ -238,6 +308,16 @@ public class WithdrawalWorkflowImpl implements WithdrawalWorkflow {
                     authResult.referenceCode(), fees.customerFee(), authResult.referenceCode(), null));
             return completedResult;
 
+        } catch (CanceledFailure e) {
+            log.error("Workflow timed out: {}", e.getMessage());
+            currentStatus = WorkflowStatus.FAILED;
+            try {
+                persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
+                        Workflow.getInfo().getWorkflowId(), "FAILED", "ERR_WORKFLOW_TIMEOUT", "Workflow timed out - maximum execution time exceeded", null, null, null, "Workflow timeout"));
+            } catch (Exception ex) {
+                log.warn("Failed to persist timeout status: {}", ex.getMessage());
+            }
+            throw e;
         } catch (Exception e) {
             log.error("Workflow failed with exception: {}", e.getMessage());
             currentStatus = WorkflowStatus.FAILED;

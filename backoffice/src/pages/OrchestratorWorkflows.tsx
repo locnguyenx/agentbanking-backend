@@ -331,6 +331,11 @@ export function OrchestratorWorkflows() {
                         </button>
                         {(() => {
                           const case_ = getResolutionCase(workflow.workflowId)
+                          const needsResolution = workflow.status === 'COMPENSATING' || 
+                            (workflow.status === 'PENDING' && !!workflow.pendingReason);
+                          if (!needsResolution) {
+                            return null;
+                          }
                           if (case_) {
                             return (
                               <button 
@@ -410,6 +415,8 @@ export function OrchestratorWorkflows() {
           }}
           hasExistingCase={!!getResolutionCase(selectedWorkflow.workflowId)}
           resolutionCase={getResolutionCase(selectedWorkflow.workflowId)}
+          needsResolution={selectedWorkflow.status === 'COMPENSATING' || 
+            (selectedWorkflow.status === 'PENDING' && !!selectedWorkflow.pendingReason)}
         />
       )}
       
