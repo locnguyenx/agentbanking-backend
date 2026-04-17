@@ -90,9 +90,13 @@ protected RulesServiceClient rulesServiceClient;
   - RulesService, LedgerService, SwitchAdapter, BillerService, OnboardingService are **INTERNAL** microservices
   - Only downstream systems (core banking, card system) are external → mocked via `mock-server`
 - **Architecture Layers:**
-  - 🔴 NOT Mocked: Internal microservice Feign clients (rules-service, ledger-service, switch-adapter-service, etc.)
-  - ✅ OK to Mock: External downstream systems (core banking, card network via mock-server)
-  - ❌ NOT Mocked: JPA repositories, Temporal workflows, business logic
+  - ✅ Testcontainers: PostgreSQL, Redis, Kafka (automatic)
+  - ✅ Docker for Temporal: `docker compose up -d temporal temporal-postgres`
+  - 🔴 NOT Mocked: Internal microservice Feign clients (rules-service, ledger-service, switch-adapter-service)
+  - 🔴 NOT Mocked: JPA repositories, Temporal workflows, business logic
+- **Test Base Class Mocking:**
+  - Only 1 @MockBean for WorkflowFactory (Temporal engine, not business logic)
+  - All internal service Feign clients call real endpoints
 - **BDD scenarios in `*-bdd.md` are the acceptance criteria** - all tests must align with these specifications
 
 ### Test Implementation Standards
