@@ -31,6 +31,19 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
+/**
+ * Ledger Service Integration Tests.
+ *
+ * per .agents/rules/testing-debugging.md:
+ * - Testcontainers: PostgreSQL, Redis, Kafka (automatic)
+ * - Docker required: None (no Temporal in this service)
+ * - Internal services (rules, switch, onboarding) should NOT be mocked
+ *
+ * KNOWN ISSUE: This test file has 14 @MockBean for internal services
+ * which violates testing rule "NEVER write tests that mock internal behavior".
+ * This needs to be fixed to use real service calls with docker compose.
+ * See: orchestrator-service fix as reference implementation.
+ */
 @org.springframework.test.context.jdbc.Sql(statements = "UPDATE agent_float SET merchant_gps_lat = 3.1390, merchant_gps_lng = 101.6869 WHERE agent_id = 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11'")
 class LedgerIntegrationTest extends AbstractIntegrationTest {
 
