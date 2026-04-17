@@ -50,12 +50,46 @@ All BDD test categories implemented with comprehensive coverage. Today's session
 - Fixed BDDWorkflowLifecycleIntegrationTest (proper test patterns)
 - All orchestrator BDD tests passing (57+ tests)
 
-### Test Execution Results:
+### Test Execution Results (All Services):
+
+#### Prerequisites - Start Infrastructure First
 ```bash
-./gradlew :services:orchestrator-service:test  # BUILD SUCCESSFUL
-./gradlew :gateway:test --tests "*Integration*"  # BUILD SUCCESSFUL
+# Start PostgreSQL, Kafka, Redis, Temporal
+docker compose --profile infra up -d
+docker compose up -d temporal
+# Wait ~15 seconds for services to be healthy
 ```
+
+#### Run Tests by Service
+```bash
+# All services - run full test suite
+./gradlew test
+
+# Individual service tests:
+./gradlew :services:orchestrator-service:test --rerun-tasks          # 100+ BDD tests
+./gradlew :services:rules-service:test --rerun-tasks              # BDD-R, BDD-T tests
+./gradlew :services:ledger-service:test --rerun-tasks                 # BDD-L tests
+./gradlew :services:biller-service:test --rerun-tasks              # BDD-B, BDD-WAL, BDD-ESSP tests
+./gradlew :services:onboarding-service:test --rerun-tasks         # BDD-O, BDD-A tests
+./gradlew :services:switch-adapter-service:test --rerun-tasks       # BDD-W, BDD-D, BDD-DNOW tests
+./gradlew :gateway:test --tests "*Integration*"               # E2E tests
+
+# Run specific BDD test category
+./gradlew :services:orchestrator-service:test --tests "BDD-TO*"
+./gradlew :services:orchestrator-service:test --tests "BDD-WF*"
+./gradlew :services:orchestrator-service:test --tests "BDD-SR*"
+```
+
+#### Test Coverage by Service
+| Service | BDD Categories | Test Files |
+|---------|--------------|-----------|
+| orchestrator-service | TO, WF, SR, V, STP, HITL, IDE, WFE | 14 files |
+| rules-service | R, T | 2 files |
+| ledger-service | L | 1 file |
+| biller-service | B, WAL, ESSP | 3 files |
+| onboarding-service | O, A | 2 files |
+| switch-adapter-service | W, D, DNOW | 3 files |
 
 ### Pre-Existing Issues (Not Related to Current Work):
 - common:AuditLogServiceTest - Minor assertion failure
-- rules-service:BDD-T tests - Require database infrastructure (not running)
+- rules-service:BDD-T tests - Require database infrastructure

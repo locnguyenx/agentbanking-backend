@@ -22,6 +22,29 @@ The comprehensive BDD test implementation for the Agent Banking Platform has bee
 - **Error Scenarios:** 100% - Compensation and failure recovery tested
 - **Testing Standards Compliance:** 100% - No mocked behavior in E2E tests
 
+### Test Execution Commands
+
+#### Prerequisites - Start Infrastructure
+```bash
+docker compose --profile infra up -d
+docker compose up -d temporal
+```
+
+#### Run Tests by Service
+```bash
+# All services
+./gradlew test
+
+# Individual services
+./gradlew :services:orchestrator-service:test --rerun-tasks
+./gradlew :services:rules-service:test --rerun-tasks
+./gradlew :services:ledger-service:test --rerun-tasks
+./gradlew :services:biller-service:test --rerun-tasks
+./gradlew :services:onboarding-service:test --rerun-tasks
+./gradlew :services:switch-adapter-service:test --rerun-tasks
+./gradlew :gateway:test --tests "*Integration*"
+```
+
 ---
 
 ## Traceability Matrix

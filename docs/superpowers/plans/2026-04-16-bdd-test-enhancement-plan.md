@@ -38,10 +38,13 @@
 - **NEVER write tests that "test" mocked behavior** - BDD tests must verify real business logic, not mock interactions
 - **NEVER implement mocks in end-to-end tests** - E2E tests always use real data and real APIs
 - **Integration tests MUST test actual endpoints without mocking repositories** - verify repository calls are compatible with transaction context
-- **Integration tests MAY mock external Feign/HTTP clients** - calling real external services makes tests flaky and slow. The key is domain logic (workflows, business rules) is real.
-- **External vs Internal distinction:**
-  - ❌ NOT Mocked: JPA repositories (database), Temporal workflows, business logic
-  - ✅ OK to Mock: External Feign HTTP clients (SwitchAdapter, LedgerService, RulesService)
+- **Internal Services are NOT External:**
+  - RulesService, LedgerService, SwitchAdapter, BillerService, OnboardingService are **INTERNAL** microservices
+  - Only downstream systems (core banking, card system) are external → mocked via `mock-server`
+- **Architecture Layers:**
+  - 🔴 NOT Mocked: Internal microservice Feign clients (rules-service, ledger-service, switch-adapter-service, etc.)
+  - ✅ OK to Mock: External downstream systems (core banking, card network via mock-server)
+  - ❌ NOT Mocked: JPA repositories, Temporal workflows, business logic
 - **BDD scenarios in `*-bdd.md` are the acceptance criteria** - all tests must align with these specifications
 
 ### Test Implementation Standards
@@ -68,22 +71,36 @@
 - **HYPOTHESIS TESTING:** Form single hypothesis, test minimally, verify before continuing
 
 ### Test Execution Commands
+
+#### Prerequisites - Start ALL Internal Services First
 ```bash
-# Run all integration tests (requires Temporal running)
+# Start ALL internal microservices + infrastructure
+docker compose --profile all up -d
+# Wait ~30 seconds for all services to be healthy
+docker compose ps
+```
+
+#### Run Integration Tests (with real internal services, NO mocks)
+```bash
+# All services
 ./gradlew test
 
-# Run specific service BDD tests
-./gradlew :services:orchestrator-service:test --tests "BDD*"
+# Individual services (tests verify API contracts between services)
+./gradlew :services:orchestrator-service:test --rerun-tasks          # Uses real rules/ledger/switch
+./gradlew :services:rules-service:test --rerun-tasks
+./gradlew :services:ledger-service:test --rerun-tasks
+./gradlew :services:biller-service:test --rerun-tasks
+./gradlew :services:onboarding-service:test --rerun-tasks
+./gradlew :services:switch-adapter-service:test --rerun-tasks
 
-# Run e2e tests (requires all services via docker compose - NO MOCKS)
-./gradlew :gateway:e2eTest --no-daemon
-
-# Run with real backend services
-./gradlew test -PtestProfile=local
-
-# Run tests with coverage
-./gradlew test jacocoTestReport
+# Gateway E2E tests (full stack, NO mocks)
+./gradlew :gateway:test --tests "*Integration*"
 ```
+
+#### Current Issue to Fix
+- Integration tests currently mock internal Feign clients (rules, ledger, switch)
+- This misses API contract verification between services
+- Need to: Remove @MockBean for internal services, use docker-compose services
 
 ### Test Failure Handling (SYSTEMATIC DEBUGGING REQUIRED)
 - **REPRODUCE CONSISTENTLY** before investigating any test failure
