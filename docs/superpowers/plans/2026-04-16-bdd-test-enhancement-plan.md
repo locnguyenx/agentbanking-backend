@@ -1,9 +1,56 @@
 # Plan: Complete BDD Test Coverage - Activity Verification & Full Scenario Assertions
 
 **Date:** 2026-04-16
-**Status:** IMPLEMENTATION COMPLETE (Updated 2026-04-17)
+**Status:** ARCHITECTURE FIX REQUIRED (Updated 2026-04-17)
 **Based on:** `docs/analysis/20260414-10-bdd-test-complete-verification-gap-analysis.md`
 **Related:** BDDAlignedTransactionIntegrationTest, OrchestratorControllerIntegrationTest, SelfContainedOrchestratorE2ETest
+
+---
+
+## 🚨 CRITICAL ISSUE - Tests Testing Mocked Behavior (Must Fix)
+
+**Problem:** Current "integration" tests use `@MockBean` for internal Feign clients - this violates the core rule "NEVER write tests that test mocked behavior".
+
+**Location:** `AbstractOrchestratorRealInfraIntegrationTest.java`
+
+**What's Wrong:**
+```java
+@MockBean  // ❌ VIOLATES RULE - Internal service should NOT be mocked
+protected SwitchAdapterClient switchAdapterClient;
+
+@MockBean  // ❌ Internal service
+protected LedgerServiceClient ledgerServiceClient;
+
+@MockBean  // ❌ Internal service
+protected RulesServiceClient rulesServiceClient;
+```
+
+**Impact:**
+- API contracts between services are NOT verified
+- Business logic in downstream services never executes in tests
+- Tests provide FALSE CONFIDENCE
+
+**Solution:** Use Spring Cloud Contract (SCC) for contract testing.
+
+---
+
+## Architecture Fix - Spring Cloud Contract Approach
+
+### Spring Cloud Contract vs Current Mock Approach
+
+| Aspect | Current (WRONG) | Spring Cloud Contract |
+|--------|-----------------|-----------------|
+| Internal Services | Mocked via @MockBean | Real API via stubs |
+| Contract Verified | ❌ No | ✅ Producer defines, Consumer verifies |
+| Business Logic | Own service only | All services execute |
+| Required Infra | PostgreSQL via Docker | Stub Runner (lightweight) |
+| API Verification | None | Full contract checks |
+
+### SCC Workflow:
+1. **Producer** defines contracts in `src/test/resources/contracts/`
+2. SCC generates verification tests + stubs JAR
+3. **Consumer** uses `StubRunner` to download and run stubs
+4. Tests verify against real stubs (no mocks!)
 
 ---
 
@@ -14,6 +61,7 @@
 **Critical Discovery:** Happy Path tests exist but are **SUPERFICIAL**. They verify only HTTP 202 + workflow start, providing **FALSE CONFIDENCE**.
 
 **Current State (as of 2026-04-17):**
+- ⚠️ **ARCHITECTURE ISSUE:** Integration tests mock internal services (violates rule)
 - ✅ **IMPLEMENTATION COMPLETE:** All 18 BDD categories implemented with comprehensive verification
 - ✅ **Safety Tests Complete:** BDD-SR, BDD-V, BDD-WF-EC fully implemented with activity verification
 - ✅ **Phase 1 Complete:** BDD alignment fixes implemented for existing workflow tests (HTTP 202 → comprehensive workflow verification)
@@ -22,7 +70,7 @@
 - ✅ **Side Effects:** TransactionRecord, AgentFloat, JournalEntry changes **verified** in all implemented categories
 - ✅ **E2E Verification:** Poll-and-verify patterns implemented with real API calls to backend services
 
-**Result:** Tests now provide **COMPREHENSIVE assurance** that workflows execute correctly for ALL implemented categories with real business logic verification.
+**Result (AFTER FIX):** Tests will provide **COMPREHENSIVE assurance** that workflows execute correctly for ALL implemented categories with real business logic verification.
 
 ---
 
@@ -70,37 +118,127 @@
 - **TEST FAILURES:** Never delete failing tests - raise issues with Loc instead
 - **HYPOTHESIS TESTING:** Form single hypothesis, test minimally, verify before continuing
 
-### Test Execution Commands
+### Test Execution Commands (Spring Cloud Contract)
 
-#### Prerequisites - Start ALL Internal Services First
+#### Prerequisites - Producer Side (Define Contracts)
 ```bash
-# Start ALL internal microservices + infrastructure
+# Each service defines contracts in src/test/resources/contracts/
+# Run SCC verifier to generate stubs JAR
+./gradlew :services:orchestrator-service:publishContractStubs  # Publish to local Maven
+```
+
+#### Consumer Side - Run Tests with StubRunner
+```bash
+# StubRunner automatically starts stubs for required services
+./gradlew :services:orchestrator-service:test --rerun-tasks
+# StubRunner downloads and runs in-memory stubs for: rules-service, ledger-service, etc.
+```
+
+#### Alternative - Run with Real Services (Docker Compose)
+```bash
+# When full integration needed
 docker compose --profile all up -d
-# Wait ~30 seconds for all services to be healthy
-docker compose ps
-```
-
-#### Run Integration Tests (with real internal services, NO mocks)
-```bash
-# All services
 ./gradlew test
-
-# Individual services (tests verify API contracts between services)
-./gradlew :services:orchestrator-service:test --rerun-tasks          # Uses real rules/ledger/switch
-./gradlew :services:rules-service:test --rerun-tasks
-./gradlew :services:ledger-service:test --rerun-tasks
-./gradlew :services:biller-service:test --rerun-tasks
-./gradlew :services:onboarding-service:test --rerun-tasks
-./gradlew :services:switch-adapter-service:test --rerun-tasks
-
-# Gateway E2E tests (full stack, NO mocks)
-./gradlew :gateway:test --tests "*Integration*"
 ```
 
-#### Current Issue to Fix
+---
+
+## Implementation: Migrate to Spring Cloud Contract
+
+### Step 1: Add SCC Dependencies to Services
+```groovy
+// In build.gradle for each service
+plugins {
+    id 'spring-cloud-contract' version '4.1.2'
+}
+
+// Producer side (generates contracts)
+contracts回流 {
+    packageWithBaseClasses = 'com.agentbanking.orchestrator.contract'
+}
+```
+
+### Step 2: Define Contracts
+Each service creates contract files in `src/test/resources/contracts/`:
+```groovy
+// rules-service/src/test/resources/contracts/rules-service.yaml
+request:
+  method: POST
+  url: /internal/rules/velocity-check
+  body:
+    agentId: "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11"
+response:
+  status: 200
+  body:
+    approved: true
+```
+
+### Step 3: Configure StubRunner in Consumer Tests
+```java
+// In orchestrator-service integration tests
+@SpringBootTest
+@AutoConfigureStubRunner(
+    stubsMode = StubRunnerProperties.StubsMode.LOCAL,
+    consumerName = "rules-service"
+)
+class BDDVelocityCheckTest {
+    // Tests automatically use stubs - no @MockBean needed!
+}
+```
+
+### Step 4: Generate Stubs and Publish
+```bash
+# Producer publishes stubs to local Maven
+./gradlew :services:rules-service:publishContractStubsToMavenLocal
+./gradlew :services:ledger-service:publishContractStubsToMavenLocal
+```
+
+### Test Classes After Migration
+
+| Before (WRONG) | After (CORRECT) |
+|----------------|----------------|
+| @MockBean internal clients | @AutoConfigureStubRunner |
+| MockMvc only own service | Real stub server runs |
+| Own business logic | All services execute |
+| No contract verification | Full contract verification |
+
+---
+
+## Technical Details
+
+### Dependencies Required
+```groovy
+// Producer (services that expose APIs)
+implementation 'org.springframework.cloud:spring-cloud-starter-contract-verifier'
+
+// Consumer (services that call others)
+testImplementation 'org.springframework.cloud:spring-cloud-starter-contract-stub-runner'
+testImplementation 'org.springframework.cloud:spring-cloud-contract-stub-runner-elide:4.1.2'
+```
+
+### File Structure After Migration
+```
+services/
+├── orchestrator-service/
+│   └── src/test/
+│       ├── java/.../OrchestratorContractTest.java  # New contract tests
+│       └── resources/
+│           └── contracts/                 # Producer contracts
+│               └── velocity-check.yaml
+├── rules-service/
+│   └── src/test/
+│       ├── java/.../RulesContractTest.java  # Generated
+│       └── resources/
+│           └── contracts/
+│               └── velocity-check.yaml    # Contract definition
+```
+
+---
+
+## Current Issue to Fix
 - Integration tests currently mock internal Feign clients (rules, ledger, switch)
 - This misses API contract verification between services
-- Need to: Remove @MockBean for internal services, use docker-compose services
+- Need to: Migrate to Spring Cloud Contract approach
 
 ### Test Failure Handling (SYSTEMATIC DEBUGGING REQUIRED)
 - **REPRODUCE CONSISTENTLY** before investigating any test failure

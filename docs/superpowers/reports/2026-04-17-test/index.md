@@ -52,15 +52,24 @@ All BDD test categories implemented with comprehensive coverage. Today's session
 
 ### Test Execution Results (All Services):
 
-#### Prerequisites - Start Infrastructure First
+#### ⚠️ ARCHITECTURE NOTE - Internal vs External Services
+
+**Internal Services (NOT mocked in tests):**
+- rules-service, ledger-service, switch-adapter-service, biller-service, onboarding-service
+- These are business core microservices - must verify API contracts between them
+
+**External Systems (mocked):**
+- mock-server for downstream systems (core banking, card network)
+
+#### Prerequisites - Start ALL Services First
 ```bash
-# Start PostgreSQL, Kafka, Redis, Temporal
-docker compose --profile infra up -d
-docker compose up -d temporal
-# Wait ~15 seconds for services to be healthy
+# Start ALL internal microservices + infrastructure
+docker compose --profile all up -d
+# Wait ~30 seconds for all services to be healthy
+docker compose ps
 ```
 
-#### Run Tests by Service
+#### Run Tests by Service (Real Internal Services, NO Mocks)
 ```bash
 # All services - run full test suite
 ./gradlew test
@@ -72,7 +81,7 @@ docker compose up -d temporal
 ./gradlew :services:biller-service:test --rerun-tasks              # BDD-B, BDD-WAL, BDD-ESSP tests
 ./gradlew :services:onboarding-service:test --rerun-tasks         # BDD-O, BDD-A tests
 ./gradlew :services:switch-adapter-service:test --rerun-tasks       # BDD-W, BDD-D, BDD-DNOW tests
-./gradlew :gateway:test --tests "*Integration*"               # E2E tests
+./gradlew :gateway:test --tests "*Integration*"               # E2E tests - full stack
 
 # Run specific BDD test category
 ./gradlew :services:orchestrator-service:test --tests "BDD-TO*"
