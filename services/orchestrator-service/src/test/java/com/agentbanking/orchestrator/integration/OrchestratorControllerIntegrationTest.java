@@ -3,7 +3,6 @@ package com.agentbanking.orchestrator.integration;
 import com.agentbanking.orchestrator.integration.AbstractOrchestratorRealInfraIntegrationTest;
 import com.agentbanking.orchestrator.domain.model.TransactionType;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.springframework.boot.test.mock.mockito.MockBean;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -17,10 +16,6 @@ import org.springframework.test.web.servlet.MvcResult;
 import java.math.BigDecimal;
 import java.util.UUID;
 
-import com.agentbanking.orchestrator.domain.port.out.SwitchAdapterPort;
-import com.agentbanking.orchestrator.domain.port.out.EventPublisherPort;
-import org.springframework.kafka.core.KafkaTemplate;
-
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.verify;
@@ -31,14 +26,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @DisplayName("Orchestrator API Integration Tests")
 class OrchestratorControllerIntegrationTest extends AbstractOrchestratorRealInfraIntegrationTest {
 
-    @MockBean
-    private SwitchAdapterPort switchAdapterPort;
-
-    @MockBean
-    private EventPublisherPort eventPublisherPort;
-
-    @MockBean
-    private KafkaTemplate<String, Object> kafkaTemplate;
+    // NOTE: No @MockBean for domain ports (SwitchAdapterPort, EventPublisherPort)
+    // They call real services when docker compose is running
+    // Feign fallback handles unavailability gracefully
 
     @Autowired
     private MockMvc mockMvc;

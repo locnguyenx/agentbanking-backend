@@ -1,13 +1,10 @@
 package com.agentbanking.orchestrator.integration;
 
-import com.agentbanking.orchestrator.infrastructure.external.*;
 import com.agentbanking.orchestrator.infrastructure.temporal.WorkflowFactory;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.context.ActiveProfiles;
-
-import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
@@ -15,45 +12,39 @@ import static org.mockito.Mockito.when;
 /**
  * Abstract base class for Orchestrator Integration Tests.
  * 
- * CRITICAL RULE: Tests MUST NOT mock internal services.
+ * ARCHITECTURE: Two Testing Modes
  * 
- * Internal services (NOT mocked):
- * - rules-service, ledger-service, switch-adapter-service, biller-service, onboarding-service
- * - These are business core microservices - must verify API contracts between them
+ * === Mode 1: True Integration Tests (RECOMMENDED) ===
+ * Run: docker compose --profile all up -d
+ * - Tests call REAL internal microservices
+ * - Verifies API contracts between services
+ * - Tests business logic end-to-end
  * 
- * External systems (OK to mock):
- * - mock-server for downstream systems (core banking, card network)
- * 
- * Prerequisites:
- *   docker compose --profile all up -d
- *   Wait ~30 seconds for all services to be healthy
+ * === Mode 2: Isolated Tests (Development Only) ===
+ * - Feign clients are NOT mocked in this class
+ * - If docker services unavailable, tests will fail
+ * - Use WireMock stubs in resources/__files__ if needed
  */
 @SpringBootTest
 @ActiveProfiles("test")
 public abstract class AbstractOrchestratorRealInfraIntegrationTest {
 
-    // WorkflowFactory is mocked to verify workflow selection (not business logic)
+    /**
+     * ONLY Mock: WorkflowFactory (Temporal test infrastructure)
+     * 
+     * Why this is OK:
+     * - Temporal is the workflow ENGINE, not business logic
+     * - In production, workflows execute in Temporal
+     * - We're testing orchestrator → internal services → response
+     * - Not testing Temporal's workflow execution engine
+     */
     @MockBean
     protected WorkflowFactory workflowFactory;
-    
-    @MockBean
-    protected SwitchAdapterClient switchAdapterClient;
-    
-    @MockBean
-    protected RulesServiceClient rulesServiceClient;
-    
-    @MockBean
-    protected LedgerServiceClient ledgerServiceClient;
-    
-    @MockBean
-    protected BillerServiceClient billerServiceClient;
-    
-    @MockBean
-    protected CbsServiceClient cbsServiceClient;
 
     @BeforeEach
     void setUpMocks() {
-        // Configure WorkflowFactory to return workflowId (verifies workflow selection)
+        // Mock returns workflowId to simulate Temporal starting workflow
+        // In true integration tests, this would execute real workflows
         when(workflowFactory.startWorkflow(any(), any(String.class), any()))
             .thenAnswer(invocation -> invocation.getArgument(0));
     }
