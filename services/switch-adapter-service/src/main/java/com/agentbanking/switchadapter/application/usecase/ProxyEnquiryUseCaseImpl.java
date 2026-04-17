@@ -3,7 +3,9 @@ package com.agentbanking.switchadapter.application.usecase;
 import com.agentbanking.common.security.ErrorCodes;
 import com.agentbanking.switchadapter.domain.port.in.ProxyEnquiryUseCase;
 import com.agentbanking.switchadapter.domain.port.out.DuitNowProxyGateway;
+import org.springframework.stereotype.Service;
 
+@Service
 public class ProxyEnquiryUseCaseImpl implements ProxyEnquiryUseCase {
 
     private final DuitNowProxyGateway duitNowProxyGateway;

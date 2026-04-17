@@ -11,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -41,28 +42,30 @@ public class TransactionRecordRepositoryImpl implements TransactionRecordReposit
         jpaRepository.save(entity);
     }
 
-    @Override
-    @Transactional
-    public void updateStatus(String workflowId, String status, String errorCode,
-                             String errorMessage, String externalReference,
-                             BigDecimal customerFee, String referenceNumber, 
-                             String pendingReason, String errorDetails) {
-        jpaRepository.findByWorkflowId(workflowId).ifPresent(entity -> {
-            entity.setStatus(status);
-            entity.setErrorCode(errorCode);
-            entity.setErrorMessage(errorMessage);
-            entity.setExternalReference(externalReference);
-            entity.setCustomerFee(customerFee);
-            entity.setReferenceNumber(referenceNumber);
-            entity.setPendingReason(truncateTo100(pendingReason));
-            entity.setErrorDetails(truncateTo4000(errorDetails));
-            entity.setUpdatedAt(Instant.now());
-            if ("COMPLETED".equals(status)) {
-                entity.setCompletedAt(Instant.now());
-            }
-            jpaRepository.save(entity);
-        });
-    }
+@Override
+@Transactional
+public void updateStatus(String workflowId, String status, String errorCode,
+String errorMessage, String externalReference,
+BigDecimal customerFee, String referenceNumber,
+String pendingReason, String errorDetails, LocalDateTime completedAt) {
+jpaRepository.findByWorkflowId(workflowId).ifPresent(entity -> {
+entity.setStatus(status);
+entity.setErrorCode(errorCode);
+entity.setErrorMessage(errorMessage);
+entity.setExternalReference(externalReference);
+entity.setCustomerFee(customerFee);
+entity.setReferenceNumber(referenceNumber);
+entity.setPendingReason(truncateTo100(pendingReason));
+entity.setErrorDetails(truncateTo4000(errorDetails));
+entity.setUpdatedAt(Instant.now());
+if (completedAt != null) {
+entity.setCompletedAt(Instant.from(completedAt));
+} else if ("COMPLETED".equals(status)) {
+entity.setCompletedAt(Instant.now());
+}
+jpaRepository.save(entity);
+});
+}
 
     private String truncateTo100(String value) {
         if (value == null) return null;

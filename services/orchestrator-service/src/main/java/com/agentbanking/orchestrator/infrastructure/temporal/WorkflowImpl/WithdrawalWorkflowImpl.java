@@ -266,7 +266,7 @@ public class WithdrawalWorkflowImpl implements WithdrawalWorkflow {
                         new FloatReleaseInput(input.agentId(), totalAmount, transactionId));
 
                 if ("TIMEOUT".equals(authResult.responseCode())) {
-                    triggerSafetyReversal(transactionId);
+                    triggerSafetyReversal(transactionId, input.agentId(), totalAmount);
                 }
 
                 String errorCode = authResult.errorCode() != null ? authResult.errorCode() : "ERR_SWITCH_DECLINED";
@@ -281,7 +281,7 @@ public class WithdrawalWorkflowImpl implements WithdrawalWorkflow {
             FloatCommitResult commitResult = commitFloatActivity.commitFloat(
                     new FloatCommitInput(input.agentId(), input.amount(), transactionId));
             if (!commitResult.success()) {
-                triggerSafetyReversal(transactionId);
+                triggerSafetyReversal(transactionId, input.agentId(), totalAmount);
                 releaseFloatActivity.releaseFloat(
                         new FloatReleaseInput(input.agentId(), totalAmount, transactionId));
                 currentStatus = WorkflowStatus.FAILED;
@@ -305,7 +305,8 @@ public class WithdrawalWorkflowImpl implements WithdrawalWorkflow {
                     input.amount(), fees.customerFee());
             persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
                     Workflow.getInfo().getWorkflowId(), "COMPLETED", null, null,
-                    authResult.referenceCode(), fees.customerFee(), authResult.referenceCode(), null));
+                    authResult.referenceCode(), fees.customerFee(), authResult.referenceCode(), null,
+                    java.time.LocalDateTime.now()));
             return completedResult;
 
         } catch (CanceledFailure e) {
@@ -332,13 +333,33 @@ public class WithdrawalWorkflowImpl implements WithdrawalWorkflow {
         }
     }
 
-    private void triggerSafetyReversal(UUID transactionId) {
+    private void triggerSafetyReversal(UUID transactionId, UUID agentId, BigDecimal amount) {
         log.info("Triggering safety reversal for transaction: {}", transactionId);
         currentStatus = WorkflowStatus.COMPENSATING;
         try {
-            sendReversalToSwitchActivity.sendReversal(new SwitchReversalInput(transactionId));
+            var result = sendReversalToSwitchActivity.sendReversalWithRetry(new SwitchReversalInput(transactionId));
+            if (result.success()) {
+                log.info("Safety reversal succeeded for transaction: {}", transactionId);
+                // Proceed with float release
+                releaseFloatActivity.releaseFloat(new FloatReleaseInput(agentId, amount, transactionId));
+                // Update transaction status to FAILED
+                persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
+                    Workflow.getInfo().getWorkflowId(), "FAILED", null, null, null, null, null, "Safety reversal completed"));
+                currentStatus = WorkflowStatus.FAILED;
+            } else if (result.flaggedForManualIntervention()) {
+                log.warn("Safety reversal flagged for manual intervention for transaction: {}", transactionId);
+                // Flag for manual intervention - keep in COMPENSATING status
+                persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
+                    Workflow.getInfo().getWorkflowId(), "REVERSAL_STUCK", "REVERSAL_TIMEOUT",
+                    "Safety reversal failed after 24 hours", null, null, null, "Requires manual intervention"));
+            } else {
+                log.error("Safety reversal failed after {} retries for transaction: {}",
+                    result.retryCount(), transactionId);
+                // Keep in COMPENSATING status for retry
+            }
         } catch (Exception e) {
-            log.error("Safety reversal failed: {}", e.getMessage());
+            log.error("Safety reversal threw exception for transaction {}: {}", transactionId, e.getMessage());
+            // Keep in COMPENSATING status
         }
     }
 

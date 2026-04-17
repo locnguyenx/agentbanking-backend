@@ -22,8 +22,8 @@ public class PersistWorkflowResultActivityImpl implements PersistWorkflowResultA
 
     @Override
     public void persistResult(Input input) {
-        log.info("Persisting workflow result: workflowId={}, status={}, referenceNumber={}, pendingReason={}",
-                input.workflowId(), input.status(), input.referenceNumber(), input.pendingReason());
+        log.info("Persisting workflow result: workflowId={}, status={}, referenceNumber={}, pendingReason={}, completedAt={}",
+                input.workflowId(), input.status(), input.referenceNumber(), input.pendingReason(), input.completedAt());
         transactionRecordRepository.updateStatus(
                 input.workflowId(),
                 input.status(),
@@ -33,7 +33,8 @@ public class PersistWorkflowResultActivityImpl implements PersistWorkflowResultA
                 input.customerFee(),
                 input.referenceNumber(),
                 input.pendingReason(),
-                input.errorMessage()
+                input.errorMessage(),
+                input.completedAt()
         );
     }
 }

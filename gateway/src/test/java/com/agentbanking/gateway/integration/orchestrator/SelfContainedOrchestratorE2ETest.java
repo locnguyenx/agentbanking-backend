@@ -7,6 +7,8 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.reactive.server.WebTestClient;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -937,12 +939,15 @@ class SelfContainedOrchestratorE2ETest {
     class WithdrawalHappyPath {
 
         @Test
-        @DisplayName("BDD-WF-HP-W01: Off-Us withdrawal starts WithdrawalWorkflow")
-        void offUsWithdrawal_shouldStartWorkflow() {
+        @DisplayName("BDD-WF-HP-W01: Off-Us withdrawal completes successfully")
+        void offUsWithdrawal_shouldCompleteSuccessfully() {
             assumeTrue(agentToken != null, "Agent token required");
 
             String idempotencyKey = "e2e-hp-withdraw-offus-" + UUID.randomUUID();
             String requestBody = buildWithdrawalRequest(idempotencyKey, "0123");
+
+            // Get initial balance before transaction
+            BigDecimal initialBalance = getAgentFloatBalance(getEffectiveAgentId());
 
             String body = gatewayClient.post()
                     .uri("/api/v1/transactions")
@@ -958,6 +963,28 @@ class SelfContainedOrchestratorE2ETest {
             assertNotNull(body);
             JsonNode json = parseBody(body);
             assertEquals("PENDING", json.get("status").asText());
+
+            // Poll until workflow completes
+            WorkflowDetails details = waitForWorkflowCompletion(idempotencyKey);
+            
+            // Verify workflow completed successfully
+            assertEquals("COMPLETED", details.status(), 
+                "Workflow should complete successfully, but was: " + details.status() + 
+                (details.errorCode() != null ? " Error: " + details.errorCode() : ""));
+            
+            // Verify transaction details
+            assertEquals(new BigDecimal("100.00"), details.amount());
+            assertNotNull(details.customerFee());
+            
+            // Verify side effects - AgentFloat balance decreased
+            BigDecimal finalBalance = getAgentFloatBalance(getEffectiveAgentId());
+            BigDecimal expectedDeduction = new BigDecimal("100.00").add(details.customerFee());
+            assertEquals(initialBalance.subtract(expectedDeduction), finalBalance,
+                "Agent float should be deducted by amount + fee");
+            
+            // Verify JournalEntry records exist
+            List<JsonNode> journalEntries = getJournalEntries(details.workflowId());
+            assertEquals(2, journalEntries.size(), "Should have 2 journal entries (debit + credit)");
         }
 
         @Test
@@ -1002,6 +1029,9 @@ class SelfContainedOrchestratorE2ETest {
             String idempotencyKey = "e2e-ec-no-float-" + UUID.randomUUID();
             String requestBody = buildWithdrawalRequestLarge(idempotencyKey, "0123");
 
+            // Get initial balance before transaction
+            BigDecimal initialBalance = getAgentFloatBalance(getEffectiveAgentId());
+
             String body = gatewayClient.post()
                     .uri("/api/v1/transactions")
                     .header("Authorization", "Bearer " + agentToken)
@@ -1014,6 +1044,25 @@ class SelfContainedOrchestratorE2ETest {
                     .getResponseBody();
 
             assertNotNull(body);
+            JsonNode json = parseBody(body);
+            assertEquals("PENDING", json.get("status").asText());
+
+            // Poll until workflow fails
+            WorkflowDetails details = waitForWorkflowCompletion(idempotencyKey);
+            
+            // Verify workflow failed
+            assertEquals("FAILED", details.status(), 
+                "Workflow should fail due to insufficient float");
+            assertNotNull(details.errorCode(), "Should have error code for insufficient float");
+            
+            // Verify no side effects - AgentFloat balance unchanged
+            BigDecimal finalBalance = getAgentFloatBalance(getEffectiveAgentId());
+            assertEquals(initialBalance, finalBalance,
+                "Agent float should remain unchanged when transaction fails");
+            
+            // Verify no JournalEntry records created
+            List<JsonNode> journalEntries = getJournalEntries(details.workflowId());
+            assertEquals(0, journalEntries.size(), "No journal entries should exist for failed transaction");
         }
 
         @Test
@@ -1049,12 +1098,15 @@ class SelfContainedOrchestratorE2ETest {
     class DepositWorkflow {
 
         @Test
-        @DisplayName("BDD-WF-HP-D01: Cash deposit starts DepositWorkflow")
-        void deposit_shouldStartWorkflow() {
+        @DisplayName("BDD-WF-HP-D01: Cash deposit completes successfully")
+        void deposit_shouldCompleteSuccessfully() {
             assumeTrue(agentToken != null, "Agent token required");
 
             String idempotencyKey = "e2e-hp-deposit-" + UUID.randomUUID();
             String requestBody = buildDepositRequest(idempotencyKey);
+
+            // Get initial balance before transaction
+            BigDecimal initialBalance = getAgentFloatBalance(getEffectiveAgentId());
 
             String body = gatewayClient.post()
                     .uri("/api/v1/transactions")
@@ -1070,6 +1122,28 @@ class SelfContainedOrchestratorE2ETest {
             assertNotNull(body);
             JsonNode json = parseBody(body);
             assertEquals("PENDING", json.get("status").asText());
+
+            // Poll until workflow completes
+            WorkflowDetails details = waitForWorkflowCompletion(idempotencyKey);
+            
+            // Verify workflow completed successfully
+            assertEquals("COMPLETED", details.status(), 
+                "Deposit workflow should complete successfully, but was: " + details.status() + 
+                (details.errorCode() != null ? " Error: " + details.errorCode() : ""));
+            
+            // Verify transaction details
+            assertEquals(new BigDecimal("500.00"), details.amount());
+            assertNotNull(details.customerFee());
+            
+            // Verify side effects - AgentFloat balance increased
+            BigDecimal finalBalance = getAgentFloatBalance(getEffectiveAgentId());
+            BigDecimal expectedIncrease = new BigDecimal("500.00").subtract(details.customerFee());
+            assertEquals(initialBalance.add(expectedIncrease), finalBalance,
+                "Agent float should be increased by amount minus fee");
+            
+            // Verify JournalEntry records exist
+            List<JsonNode> journalEntries = getJournalEntries(details.workflowId());
+            assertEquals(2, journalEntries.size(), "Should have 2 journal entries (debit + credit)");
         }
 
         @Test
@@ -1127,12 +1201,15 @@ class SelfContainedOrchestratorE2ETest {
     class BillPaymentWorkflow {
 
         @Test
-        @DisplayName("BDD-WF-HP-BP01: Bill payment starts BillPaymentWorkflow")
-        void billPayment_shouldStartWorkflow() {
+        @DisplayName("BDD-WF-HP-BP01: Bill payment completes successfully")
+        void billPayment_shouldCompleteSuccessfully() {
             assumeTrue(agentToken != null, "Agent token required");
 
             String idempotencyKey = "e2e-hp-billpay-" + UUID.randomUUID();
             String requestBody = buildBillPaymentRequest(idempotencyKey);
+
+            // Get initial balance before transaction
+            BigDecimal initialBalance = getAgentFloatBalance(getEffectiveAgentId());
 
             String body = gatewayClient.post()
                     .uri("/api/v1/transactions")
@@ -1148,6 +1225,28 @@ class SelfContainedOrchestratorE2ETest {
             assertNotNull(body);
             JsonNode json = parseBody(body);
             assertEquals("PENDING", json.get("status").asText());
+
+            // Poll until workflow completes
+            WorkflowDetails details = waitForWorkflowCompletion(idempotencyKey);
+            
+            // Verify workflow completed successfully
+            assertEquals("COMPLETED", details.status(), 
+                "Bill payment workflow should complete successfully, but was: " + details.status() + 
+                (details.errorCode() != null ? " Error: " + details.errorCode() : ""));
+            
+            // Verify transaction details
+            assertEquals(new BigDecimal("150.00"), details.amount());
+            assertNotNull(details.customerFee());
+            
+            // Verify side effects - AgentFloat balance decreased
+            BigDecimal finalBalance = getAgentFloatBalance(getEffectiveAgentId());
+            BigDecimal expectedDeduction = new BigDecimal("150.00").add(details.customerFee());
+            assertEquals(initialBalance.subtract(expectedDeduction), finalBalance,
+                "Agent float should be deducted by amount + fee");
+            
+            // Verify JournalEntry records exist
+            List<JsonNode> journalEntries = getJournalEntries(details.workflowId());
+            assertEquals(2, journalEntries.size(), "Should have 2 journal entries (debit + credit)");
         }
 
         @Test
@@ -1183,12 +1282,15 @@ class SelfContainedOrchestratorE2ETest {
     class DuitNowWorkflow {
 
         @Test
-        @DisplayName("BDD-WF-HP-DN01: DuitNow transfer via mobile proxy")
-        void duitNowTransfer_mobileProxy_shouldStart() {
+        @DisplayName("BDD-WF-HP-DN01: DuitNow transfer via mobile proxy completes successfully")
+        void duitNowTransfer_mobileProxy_shouldCompleteSuccessfully() {
             assumeTrue(agentToken != null, "Agent token required");
 
             String idempotencyKey = "e2e-hp-duitnow-" + UUID.randomUUID();
             String requestBody = buildDuitNowRequest(idempotencyKey, "MOBILE", "0123456789");
+
+            // Get initial balance before transaction
+            BigDecimal initialBalance = getAgentFloatBalance(getEffectiveAgentId());
 
             String body = gatewayClient.post()
                     .uri("/api/v1/transactions")
@@ -1204,6 +1306,28 @@ class SelfContainedOrchestratorE2ETest {
             assertNotNull(body);
             JsonNode json = parseBody(body);
             assertEquals("PENDING", json.get("status").asText());
+
+            // Poll until workflow completes
+            WorkflowDetails details = waitForWorkflowCompletion(idempotencyKey);
+            
+            // Verify workflow completed successfully
+            assertEquals("COMPLETED", details.status(), 
+                "DuitNow workflow should complete successfully, but was: " + details.status() + 
+                (details.errorCode() != null ? " Error: " + details.errorCode() : ""));
+            
+            // Verify transaction details
+            assertEquals(new BigDecimal("100.00"), details.amount());
+            assertNotNull(details.customerFee());
+            
+            // Verify side effects - AgentFloat balance decreased
+            BigDecimal finalBalance = getAgentFloatBalance(getEffectiveAgentId());
+            BigDecimal expectedDeduction = new BigDecimal("100.00").add(details.customerFee());
+            assertEquals(initialBalance.subtract(expectedDeduction), finalBalance,
+                "Agent float should be deducted by amount + fee");
+            
+            // Verify JournalEntry records exist
+            List<JsonNode> journalEntries = getJournalEntries(details.workflowId());
+            assertEquals(2, journalEntries.size(), "Should have 2 journal entries (debit + credit)");
         }
 
         @Test
@@ -1696,5 +1820,48 @@ class SelfContainedOrchestratorE2ETest {
             json.has("errorCode") ? json.get("errorCode").asText() : null,
             json.has("details") ? json.get("details") : null
         );
+    }
+
+    /**
+     * Retrieves current agent float balance from ledger service.
+     */
+    private BigDecimal getAgentFloatBalance(String agentId) {
+        try {
+            String response = ledgerClient.get()
+                    .uri("/internal/agents/" + agentId + "/float")
+                    .exchange()
+                    .expectBody(String.class)
+                    .returnResult()
+                    .getResponseBody();
+            
+            JsonNode json = parseBody(response);
+            return json.has("balance") ? new BigDecimal(json.get("balance").asText()) : BigDecimal.ZERO;
+        } catch (Exception e) {
+            System.out.println("Failed to get agent float balance: " + e.getMessage());
+            return BigDecimal.ZERO;
+        }
+    }
+
+    /**
+     * Retrieves journal entries for a transaction from ledger service.
+     */
+    private List<JsonNode> getJournalEntries(String workflowId) {
+        List<JsonNode> entries = new ArrayList<>();
+        try {
+            String response = ledgerClient.get()
+                    .uri("/internal/journal?workflowId=" + workflowId)
+                    .exchange()
+                    .expectBody(String.class)
+                    .returnResult()
+                    .getResponseBody();
+            
+            JsonNode json = parseBody(response);
+            if (json.isArray()) {
+                json.forEach(entries::add);
+            }
+        } catch (Exception e) {
+            System.out.println("Failed to get journal entries: " + e.getMessage());
+        }
+        return entries;
     }
 }

@@ -26,8 +26,13 @@ public final class ErrorCodes {
     public static final String ERR_INSUFFICIENT_FLOAT = "ERR_BIZ_INSUFFICIENT_FLOAT";
     public static final String ERR_LIMIT_EXCEEDED = "ERR_BIZ_LIMIT_EXCEEDED";
     public static final String ERR_COUNT_LIMIT_EXCEEDED = "ERR_BIZ_COUNT_LIMIT_EXCEEDED";
+    // Legacy velocity error codes (deprecated - use ERR_VELOCITY_* versions)
     public static final String ERR_VELOCITY_COUNT_EXCEEDED = "ERR_BIZ_VELOCITY_COUNT_EXCEEDED";
     public static final String ERR_VELOCITY_AMOUNT_EXCEEDED = "ERR_BIZ_VELOCITY_AMOUNT_EXCEEDED";
+
+    // Corrected velocity error codes per BDD specification
+    public static final String ERR_VELOCITY_COUNT_EXCEEDED_CORRECT = "ERR_VELOCITY_COUNT_EXCEEDED";
+    public static final String ERR_VELOCITY_AMOUNT_EXCEEDED_CORRECT = "ERR_VELOCITY_AMOUNT_EXCEEDED";
     public static final String ERR_FLOAT_CAP_EXCEEDED = "ERR_BIZ_FLOAT_CAP_EXCEEDED";
     public static final String ERR_GEOFENCE_VIOLATION = "ERR_BIZ_GEOFENCE_VIOLATION";
     public static final String ERR_GPS_UNAVAILABLE = "ERR_BIZ_GPS_UNAVAILABLE";

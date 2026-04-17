@@ -21,10 +21,10 @@ public class VelocityCheckService {
                 continue;
             }
             if (transactionCountToday >= rule.maxTransactionsPerDay()) {
-                return new VelocityCheckResult(false, ErrorCodes.ERR_VELOCITY_COUNT_EXCEEDED);
+                return new VelocityCheckResult(false, ErrorCodes.ERR_VELOCITY_COUNT_EXCEEDED_CORRECT);
             }
             if (amountToday.compareTo(rule.maxAmountPerDay()) > 0) {
-                return new VelocityCheckResult(false, ErrorCodes.ERR_VELOCITY_AMOUNT_EXCEEDED);
+                return new VelocityCheckResult(false, ErrorCodes.ERR_VELOCITY_AMOUNT_EXCEEDED_CORRECT);
             }
         }
         return new VelocityCheckResult(true, null);

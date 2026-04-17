@@ -2,6 +2,7 @@ package com.agentbanking.onboarding.application.usecase;
 
 import com.agentbanking.common.audit.AuditAction;
 import com.agentbanking.common.audit.AuditLogRecord;
+import com.agentbanking.common.audit.AuditOutcome;
 import com.agentbanking.onboarding.domain.port.out.AuditLogRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -43,7 +44,14 @@ class AuditLogServiceImplTest {
             "admin@bank.com",
             "{\"name\": \"John Doe\"}",
             "192.168.1.1",
-            timestamp
+            timestamp,
+            AuditOutcome.SUCCESS,
+            null, // failureReason
+            "trace-123", // traceId
+            "session-456", // sessionId
+            "onboarding-service", // serviceName
+            "web", // deviceInfo
+            "KL" // geographicLocation
         );
 
         when(auditLogRepository.save(any(AuditLogRecord.class))).thenAnswer(invocation -> invocation.getArgument(0));
@@ -71,7 +79,14 @@ class AuditLogServiceImplTest {
             "admin@bank.com",
             "{\"name\": \"Jane Doe\"}",
             "10.0.0.1",
-            null
+            LocalDateTime.now(),
+            AuditOutcome.SUCCESS,
+            null, // failureReason
+            "trace-456", // traceId
+            "session-789", // sessionId
+            "onboarding-service", // serviceName
+            "web", // deviceInfo
+            "KL" // geographicLocation
         );
 
         when(auditLogRepository.save(any(AuditLogRecord.class))).thenAnswer(invocation -> invocation.getArgument(0));
@@ -96,7 +111,14 @@ class AuditLogServiceImplTest {
             "agent@bank.com",
             "{\"amount\": 1000.00, \"currency\": \"MYR\"}",
             "192.168.1.100",
-            timestamp
+            timestamp,
+            AuditOutcome.SUCCESS,
+            null, // failureReason
+            "trace-789", // traceId
+            "session-012", // sessionId
+            "onboarding-service", // serviceName
+            "mobile", // deviceInfo
+            "Penang" // geographicLocation
         );
 
         when(auditLogRepository.save(any(AuditLogRecord.class))).thenReturn(inputRecord);
@@ -126,7 +148,14 @@ class AuditLogServiceImplTest {
             "agent@bank.com",
             "{\"amount\": 500.00}",
             "10.0.0.50",
-            LocalDateTime.now()
+            LocalDateTime.now(),
+            AuditOutcome.SUCCESS,
+            null, // failureReason
+            "trace-wdl", // traceId
+            "session-wdl", // sessionId
+            "onboarding-service", // serviceName
+            "pos", // deviceInfo
+            "Johor" // geographicLocation
         );
 
         AuditLogRecord billPaymentRecord = new AuditLogRecord(
@@ -137,7 +166,14 @@ class AuditLogServiceImplTest {
             "agent@bank.com",
             "{\"biller\": \"TM\", \"amount\": 150.00}",
             "10.0.0.50",
-            LocalDateTime.now()
+            LocalDateTime.now(),
+            AuditOutcome.SUCCESS,
+            null, // failureReason
+            "trace-bill", // traceId
+            "session-bill", // sessionId
+            "onboarding-service", // serviceName
+            "mobile", // deviceInfo
+            "Selangor" // geographicLocation
         );
 
         AuditLogRecord committedRecord = new AuditLogRecord(
@@ -147,8 +183,15 @@ class AuditLogServiceImplTest {
             AuditAction.TRANSACTION_COMMITTED,
             "system",
             "{\"status\": \"COMMITTED\"}",
-            null,
-            LocalDateTime.now()
+            "127.0.0.1", // ipAddress
+            LocalDateTime.now(),
+            AuditOutcome.SUCCESS,
+            null, // failureReason
+            "trace-commit", // traceId
+            "session-commit", // sessionId
+            "onboarding-service", // serviceName
+            "system", // deviceInfo
+            "DC" // geographicLocation
         );
 
         AuditLogRecord rolledBackRecord = new AuditLogRecord(
@@ -158,8 +201,15 @@ class AuditLogServiceImplTest {
             AuditAction.TRANSACTION_ROLLED_BACK,
             "system",
             "{\"status\": \"ROLLED_BACK\", \"reason\": \"timeout\"}",
-            null,
-            LocalDateTime.now()
+            "127.0.0.1", // ipAddress
+            LocalDateTime.now(),
+            AuditOutcome.FAILURE,
+            "timeout", // failureReason
+            "trace-rollback", // traceId
+            "session-rollback", // sessionId
+            "onboarding-service", // serviceName
+            "system", // deviceInfo
+            "DC" // geographicLocation
         );
 
         when(auditLogRepository.save(any(AuditLogRecord.class)))

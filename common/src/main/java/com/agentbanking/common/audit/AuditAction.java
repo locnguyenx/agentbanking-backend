@@ -65,7 +65,12 @@ public enum AuditAction {
     SAGA_COMPLETED,
     SAGA_FAILED,
     SAGA_COMPENSATED,
-    
+
+    // Safety Reversal
+    SAFETY_REVERSAL_SUCCESS,
+    SAFETY_REVERSAL_FAILED,
+    SAFETY_REVERSAL_STUCK,
+
     // Additional financial actions
     BILL_PAYMENT,
     TRANSACTION_COMMITTED,

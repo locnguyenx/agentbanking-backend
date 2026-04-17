@@ -4,6 +4,7 @@ import com.agentbanking.orchestrator.domain.model.TransactionType;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -15,8 +16,8 @@ public interface TransactionRecordRepository {
 
     void updateStatus(String workflowId, String status, String errorCode,
                       String errorMessage, String externalReference,
-                      BigDecimal customerFee, String referenceNumber, 
-                      String pendingReason, String errorDetails);
+                      BigDecimal customerFee, String referenceNumber,
+                      String pendingReason, String errorDetails, LocalDateTime completedAt);
 
     Optional<TransactionRecordDTO> findByWorkflowId(String workflowId);
     

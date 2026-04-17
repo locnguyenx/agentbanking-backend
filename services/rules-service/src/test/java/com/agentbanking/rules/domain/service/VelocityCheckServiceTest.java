@@ -79,7 +79,7 @@ class VelocityCheckServiceTest {
             velocityCheckService.check(11, new BigDecimal("500.00"));
 
         assertFalse(result.passed());
-        assertEquals("ERR_BIZ_VELOCITY_COUNT_EXCEEDED", result.errorCode());
+        assertEquals("ERR_VELOCITY_COUNT_EXCEEDED", result.errorCode());
     }
 
     @Test
@@ -119,7 +119,7 @@ class VelocityCheckServiceTest {
             velocityCheckService.check(5, new BigDecimal("15000.00"));
 
         assertFalse(result.passed());
-        assertEquals("ERR_BIZ_VELOCITY_AMOUNT_EXCEEDED", result.errorCode());
+        assertEquals("ERR_VELOCITY_AMOUNT_EXCEEDED", result.errorCode());
     }
 
     @Test

@@ -37,6 +37,9 @@
 | 2026-04-16 | Agents page stats: Fix to calculate from complete dataset, not paginated results | ✅ |
 | 2026-04-16 | Frontend caching: Add no-cache headers, update React Query keys | ✅ |
 | 2026-04-16 | OpenAPI spec: Fix agentTier enum from TIER_1/2/3 to MICRO/STANDARD/PREMIER | ✅ |
+| 2026-04-17 | BDD Test Enhancement: Phase 1B Safety Reversal & Store & Forward | ✅ |
+| 2026-04-17 | Compilation fix: PersistWorkflowResultActivity.Input backward-compatible constructor | ✅ |
+| 2026-04-17 | Compilation fix: TransactionRecordRepositoryImpl.updateStatus signature (PARTIAL) | 🚧 |
 
 ### Key Discovery
 
