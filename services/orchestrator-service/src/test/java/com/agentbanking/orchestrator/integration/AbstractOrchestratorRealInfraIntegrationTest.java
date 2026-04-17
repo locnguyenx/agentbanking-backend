@@ -11,40 +11,34 @@ import static org.mockito.Mockito.when;
 
 /**
  * Abstract base class for Orchestrator Integration Tests.
- * 
- * ARCHITECTURE: Two Testing Modes
- * 
- * === Mode 1: True Integration Tests (RECOMMENDED) ===
- * Run: docker compose --profile all up -d
- * - Tests call REAL internal microservices
- * - Verifies API contracts between services
- * - Tests business logic end-to-end
- * 
- * === Mode 2: Isolated Tests (Development Only) ===
- * - Feign clients are NOT mocked in this class
- * - If docker services unavailable, tests will fail
- * - Use WireMock stubs in resources/__files__ if needed
+ *
+ * per .agents/rules/testing-debugging.md:
+ * - Testcontainers: PostgreSQL, Redis, Kafka (automatic)
+ * - Docker required: Temporal only (`docker compose up -d temporal`)
+ * - NOT mocked: Internal services (rules, ledger, switch, biller)
+ *
+ * Architecture:
+ * - Tests test REAL business logic via internal service calls
+ * - Feign fallback factories handle service unavailability
+ * - 1 mock for WorkflowFactory (Temporal mock doesn't work properly)
  */
 @SpringBootTest
 @ActiveProfiles("test")
 public abstract class AbstractOrchestratorRealInfraIntegrationTest {
 
     /**
-     * ONLY Mock: WorkflowFactory (Temporal test infrastructure)
-     * 
-     * Why this is OK:
-     * - Temporal is the workflow ENGINE, not business logic
-     * - In production, workflows execute in Temporal
-     * - We're testing orchestrator → internal services → response
-     * - Not testing Temporal's workflow execution engine
+     * WHY MOCKED: Temporal mock doesn't work properly
+     *
+     * - Tried mocking Temporal before, didn't work properly
+     * - Temporal is workflow ENGINE, not business logic
+     * - We test orchestrator → internal services → response
+     * - NOT testing Temporal workflow execution
      */
     @MockBean
     protected WorkflowFactory workflowFactory;
 
     @BeforeEach
     void setUpMocks() {
-        // Mock returns workflowId to simulate Temporal starting workflow
-        // In true integration tests, this would execute real workflows
         when(workflowFactory.startWorkflow(any(), any(String.class), any()))
             .thenAnswer(invocation -> invocation.getArgument(0));
     }

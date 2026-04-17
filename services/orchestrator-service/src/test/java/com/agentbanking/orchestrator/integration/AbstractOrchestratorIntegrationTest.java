@@ -11,21 +11,16 @@ import static org.mockito.Mockito.when;
 
 /**
  * Base class for orchestrator integration tests.
- * 
- * ARCHITECTURE: Two Testing Modes
- * 
- * === Mode 1: True Integration Tests (RECOMMENDED) ===
- * Prerequisites: docker compose --profile all up -d
- * - Tests call REAL internal microservices (rules, ledger, switch, biller, etc.)
- * - Verifies API contracts between services
- * - Tests full business logic end-to-end
- * 
- * === Mode 2: Isolated Tests (Development Only) ===  
- * - Without docker services, tests will fail (expected)
- * - No mocks in this class - proper fallback handling via Feign
- * 
- * External mocked in tests (NOT internal):
- * - mock-server for core banking, card network (via docker-compose)
+ *
+ * per .agents/rules/testing-debugging.md:
+ * - Testcontainers: PostgreSQL, Redis, Kafka (automatic)
+ * - Docker required: Temporal only (`docker compose up -d temporal`)
+ * - NOT mocked: Internal services (rules, ledger, switch, biller, etc.)
+ *
+ * Architecture:
+ * - Extends AbstractIntegrationTest (PostgreSQL, Redis, Kafka via Testcontainers)
+ * - Tests test REAL business logic via internal service calls
+ * - 1 mock for WorkflowFactory (Temporal mock doesn't work properly)
  */
 @SpringBootTest(properties = {
     "spring.datasource.driver-class-name=org.postgresql.Driver"
@@ -34,18 +29,14 @@ import static org.mockito.Mockito.when;
 public abstract class AbstractOrchestratorIntegrationTest extends AbstractIntegrationTest {
 
     /**
-     * ONLY Mock: WorkflowFactory (Temporal test infrastructure)
-     * 
-     * Why this is OK:
-     * - Temporal is the workflow ENGINE, not business logic
-     * - We're testing orchestrator responses, not Temporal engine
-     * - Real workflows would execute with docker compose
+     * WHY MOCKED: Temporal mock doesn't work properly
+     *
+     * - Tried mocking Temporal before, didn't work properly
+     * - Temporal is workflow ENGINE, not business logic
+     * - We test orchestrator responses, not Temporal engine
      */
     @MockBean
     protected WorkflowFactory workflowFactory;
 
     // NO mocks for Feign clients - they call real internal services
-    // If services unavailable, Feign fallback factory handles gracefully
-    
-    // No manual test configuration needed - using auto-configured infrastructure
 }
