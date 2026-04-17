@@ -38,6 +38,10 @@
 - **NEVER write tests that "test" mocked behavior** - BDD tests must verify real business logic, not mock interactions
 - **NEVER implement mocks in end-to-end tests** - E2E tests always use real data and real APIs
 - **Integration tests MUST test actual endpoints without mocking repositories** - verify repository calls are compatible with transaction context
+- **Integration tests MAY mock external Feign/HTTP clients** - calling real external services makes tests flaky and slow. The key is domain logic (workflows, business rules) is real.
+- **External vs Internal distinction:**
+  - ❌ NOT Mocked: JPA repositories (database), Temporal workflows, business logic
+  - ✅ OK to Mock: External Feign HTTP clients (SwitchAdapter, LedgerService, RulesService)
 - **BDD scenarios in `*-bdd.md` are the acceptance criteria** - all tests must align with these specifications
 
 ### Test Implementation Standards
