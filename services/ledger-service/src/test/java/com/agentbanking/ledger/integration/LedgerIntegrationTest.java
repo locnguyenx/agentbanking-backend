@@ -1,25 +1,24 @@
 package com.agentbanking.ledger.integration;
 
-import com.agentbanking.common.efm.EfmEventPublisher;
 import com.agentbanking.common.exception.LedgerException;
 import com.agentbanking.common.test.AbstractIntegrationTest;
-import com.agentbanking.ledger.domain.port.in.CustomerBalanceInquiryUseCase;
 import com.agentbanking.ledger.domain.port.in.ProcessWithdrawalUseCase;
-import com.agentbanking.ledger.domain.port.out.*;
-import com.agentbanking.ledger.domain.service.MerchantTransactionService;
-import com.agentbanking.ledger.infrastructure.external.RulesServiceFeignClient;
-import com.agentbanking.ledger.infrastructure.messaging.ReversalEventPublisher;
-import com.agentbanking.ledger.infrastructure.messaging.TransactionEventPublisher;
+import com.agentbanking.ledger.domain.port.out.IdempotencyCache;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.jdbc.Sql;
+import org.testcontainers.containers.GenericContainer;
+import org.testcontainers.containers.Network;
+import org.testcontainers.containers.wait.strategy.Wait;
+import org.testcontainers.utility.DockerImageName;
 
 import java.math.BigDecimal;
 import java.time.Duration;
@@ -28,24 +27,63 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.when;
 
 /**
  * Ledger Service Integration Tests.
  *
- * per .agents/rules/testing-debugging.md:
- * - Testcontainers: PostgreSQL, Redis, Kafka (automatic)
- * - Docker required: None (no Temporal in this service)
- * - Internal services (rules, switch, onboarding) should NOT be mocked
+ * DEPENDENCIES:
+ * - Testcontainers: PostgreSQL, Redis, Kafka (automatic via AbstractIntegrationTest)
+ * - Docker Services (via static containers):
+ *   - rules-service (port 8081) - for velocity check, fee calculation
+ *   - switch-adapter-service (port 8083) - for balance inquiry, transaction processing
  *
- * KNOWN ISSUE: This test file has 14 @MockBean for internal services
- * which violates testing rule "NEVER write tests that mock internal behavior".
- * This needs to be fixed to use real service calls with docker compose.
- * See: orchestrator-service fix as reference implementation.
+ * per .agents/rules/testing-debugging.md:
+ * - Internal services are tested via real Feign calls using Testcontainers
  */
-@org.springframework.test.context.jdbc.Sql(statements = "UPDATE agent_float SET merchant_gps_lat = 3.1390, merchant_gps_lng = 101.6869 WHERE agent_id = 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11'")
+@Sql(statements = "UPDATE agent_float SET merchant_gps_lat = 3.1390, merchant_gps_lng = 101.6869 WHERE agent_id = 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11'")
 class LedgerIntegrationTest extends AbstractIntegrationTest {
+
+    static final Network NETWORK = Network.newNetwork();
+
+    static GenericContainer<?> rulesService = new GenericContainer<>(
+            DockerImageName.parse("agentbanking/rules-service:latest")
+    )
+            .withNetwork(NETWORK)
+            .withNetworkAliases("rules-service")
+            .withExposedPorts(8081)
+            .withEnv("SERVER_PORT", "8081")
+            .withEnv("SPRING_PROFILES_ACTIVE", "test")
+            .withEnv("POSTGRES_HOST", "postgres")
+            .withEnv("POSTGRES_PORT", "5432")
+            .withEnv("KAFKA_HOST", "kafka")
+            .withEnv("KAFKA_PORT", "9092")
+            .waitingFor(Wait.forHttp("/actuator/health").withStartupTimeout(Duration.ofSeconds(120)))
+            .withStartupTimeout(Duration.ofSeconds(180));
+
+    static GenericContainer<?> switchAdapterService = new GenericContainer<>(
+            DockerImageName.parse("agentbanking/switch-adapter-service:latest")
+    )
+            .withNetwork(NETWORK)
+            .withNetworkAliases("switch-adapter-service")
+            .withExposedPorts(8083)
+            .withEnv("SERVER_PORT", "8083")
+            .withEnv("SPRING_PROFILES_ACTIVE", "test")
+            .withEnv("POSTGRES_HOST", "postgres")
+            .withEnv("POSTGRES_PORT", "5432")
+            .waitingFor(Wait.forHttp("/actuator/health").withStartupTimeout(Duration.ofSeconds(60)))
+            .withStartupTimeout(Duration.ofSeconds(120));
+
+    static {
+        rulesService.start();
+        switchAdapterService.start();
+    }
+
+    @DynamicPropertySource
+    static void registerProperties(DynamicPropertyRegistry registry) {
+        registry.add("rules-service.url", () -> "http://rules-service:8081");
+        registry.add("switch-adapter-service.url", () -> "http://switch-adapter-service:8083");
+        registry.add("switch-adapter.url", () -> "http://switch-adapter-service:8083");
+    }
 
     @TestConfiguration
     static class TestConfig {
@@ -84,65 +122,10 @@ class LedgerIntegrationTest extends AbstractIntegrationTest {
     @Autowired
     private ProcessWithdrawalUseCase processWithdrawalUseCase;
 
-    @MockBean
-    private RulesServiceFeignClient rulesServiceFeignClient;
-
-    @MockBean
-    private com.agentbanking.ledger.infrastructure.external.SwitchAdapterFeignClient switchAdapterFeignClient;
-
-    @MockBean
-    private com.agentbanking.ledger.infrastructure.external.SwitchAdapterBalanceClient switchAdapterBalanceClient;
-
-    @MockBean
-    private com.agentbanking.ledger.infrastructure.external.OnboardingServiceFeignClient onboardingServiceFeignClient;
-
-    @MockBean
-    private TransactionEventPublisher transactionEventPublisher;
-
-    @MockBean
-    private ReversalEventPublisher reversalEventPublisher;
-
-    @MockBean
-    private SwitchServicePort switchServicePort;
-
-    @MockBean
-    private AgentRepository agentRepository;
-
-    @MockBean
-    private MerchantTransactionService merchantTransactionService;
-
-    @MockBean
-    private EfmEventPublisher efmEventPublisher;
-
-    @MockBean
-    private com.agentbanking.ledger.domain.port.out.DiscrepancyCaseRepository discrepancyCaseRepository;
-
-    @MockBean
-    private com.agentbanking.ledger.domain.service.SettlementService settlementService;
-
-    @MockBean
-    private com.agentbanking.ledger.domain.service.ReconciliationService reconciliationService;
-
-    @MockBean
-    private CustomerBalanceInquiryUseCase customerBalanceInquiryUseCase;
-
     private static final UUID AGENT_ID = UUID.fromString("a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11");
-
-    private void stubSwitchSuccess() {
-        when(switchServicePort.debitAccount(any(), any(), any()))
-                .thenReturn(Map.of("success", true, "responseCode", "00", "switchReference", "REF123", "referenceNumber", "RN123"));
-    }
-
-    private void stubVelocityCheck() {
-        when(rulesServiceFeignClient.checkVelocity(org.mockito.ArgumentMatchers.any()))
-                .thenReturn(Map.of("passed", true));
-    }
 
     @Test
     void shouldProcessWithdrawalEndToEnd() {
-        stubVelocityCheck();
-        stubSwitchSuccess();
-
         Map<String, Object> result = processWithdrawalUseCase.processWithdrawal(
                 AGENT_ID,
                 new BigDecimal("500.00"),
@@ -162,9 +145,6 @@ class LedgerIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void shouldReturnCachedResponseOnIdempotency() {
-        stubVelocityCheck();
-        stubSwitchSuccess();
-
         String idempotencyKey = "integ-idem-" + UUID.randomUUID();
 
         Map<String, Object> result1 = processWithdrawalUseCase.processWithdrawal(
@@ -200,8 +180,6 @@ class LedgerIntegrationTest extends AbstractIntegrationTest {
     @Test
     @Sql(statements = "UPDATE agent_float SET merchant_gps_lat = 3.1390, merchant_gps_lng = 101.6869 WHERE agent_id = 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11'")
     void shouldRejectWithdrawalOutsideGeofence() {
-        stubVelocityCheck();
-
         LedgerException ex = Assertions.assertThrows(LedgerException.class,
                 () -> processWithdrawalUseCase.processWithdrawal(
                         AGENT_ID,
