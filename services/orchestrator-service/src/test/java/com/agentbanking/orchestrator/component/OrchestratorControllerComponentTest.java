@@ -1,4 +1,4 @@
-package com.agentbanking.orchestrator.integration;
+package com.agentbanking.orchestrator.component;
 
 import com.agentbanking.orchestrator.integration.AbstractOrchestratorRealInfraIntegrationTest;
 import com.agentbanking.orchestrator.domain.model.TransactionType;
@@ -23,8 +23,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @AutoConfigureMockMvc
-@DisplayName("Orchestrator API Integration Tests")
-class OrchestratorControllerIntegrationTest extends AbstractOrchestratorRealInfraIntegrationTest {
+@DisplayName("Orchestrator API Component Tests")
+class OrchestratorControllerComponentTest extends AbstractOrchestratorRealInfraIntegrationTest {
 
     // NOTE: No @MockBean for domain ports (SwitchAdapterPort, EventPublisherPort)
     // They call real services when docker compose is running
