@@ -37,7 +37,6 @@ secrets/
 
 # Worktrees
 .worktrees/
-gradle/
 .grepai/
 
 # Build artifacts
