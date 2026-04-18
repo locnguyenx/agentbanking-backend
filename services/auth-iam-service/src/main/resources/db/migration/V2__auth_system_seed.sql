@@ -4,9 +4,9 @@
 
 -- Insert admin user (password: password)
 INSERT INTO users (
-    user_id, username, email, password_hash, full_name, status, 
-    failed_login_attempts, password_changed_at, password_expires_at, 
-    created_at, updated_at, created_by, user_type
+    user_id, username, email, password_hash, full_name, status,
+    failed_login_attempts, password_changed_at, password_expires_at,
+    created_at, updated_at, created_by
 ) VALUES (
     'a0000000-0000-0000-0000-000000000001',
     'admin',
@@ -19,8 +19,7 @@ INSERT INTO users (
     CURRENT_TIMESTAMP + INTERVAL '90 days',
     CURRENT_TIMESTAMP,
     CURRENT_TIMESTAMP,
-    'system',
-    'INTERNAL'
+    'system'
 ) ON CONFLICT (username) DO NOTHING;
 
 -- Insert base roles
