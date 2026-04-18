@@ -340,6 +340,11 @@ public class LedgerController {
         return ResponseEntity.ok(Map.of("exists", exists));
     }
 
+    @GetMapping("/journal")
+    public ResponseEntity<List<com.agentbanking.ledger.domain.model.JournalEntryRecord>> getJournalEntries(@RequestParam UUID workflowId) {
+        return ResponseEntity.ok(transactionQueryUseCase.findJournalEntriesByTransactionId(workflowId));
+    }
+
     @GetMapping("/backoffice/settlement/export")
     public ResponseEntity<byte[]> exportSettlement(@RequestParam String date) {
         LocalDate settlementDate = LocalDate.parse(date);

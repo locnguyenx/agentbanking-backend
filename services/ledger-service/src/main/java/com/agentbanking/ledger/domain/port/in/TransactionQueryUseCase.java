@@ -16,4 +16,5 @@ public interface TransactionQueryUseCase {
     long countAllTransactions();
     BigDecimal sumSuccessfulTransactionAmount();
     long countDistinctAgents();
+    List<com.agentbanking.ledger.domain.model.JournalEntryRecord> findJournalEntriesByTransactionId(UUID transactionId);
 }

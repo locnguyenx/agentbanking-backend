@@ -16,9 +16,12 @@ import java.util.UUID;
 public class TransactionQueryUseCaseImpl implements TransactionQueryUseCase {
 
     private final TransactionRepository transactionRepository;
+    private final com.agentbanking.ledger.domain.port.out.JournalEntryRepository journalEntryRepository;
 
-    public TransactionQueryUseCaseImpl(TransactionRepository transactionRepository) {
+    public TransactionQueryUseCaseImpl(TransactionRepository transactionRepository,
+                                       com.agentbanking.ledger.domain.port.out.JournalEntryRepository journalEntryRepository) {
         this.transactionRepository = transactionRepository;
+        this.journalEntryRepository = journalEntryRepository;
     }
 
     @Override
@@ -64,5 +67,11 @@ public class TransactionQueryUseCaseImpl implements TransactionQueryUseCase {
     @Transactional(readOnly = true)
     public boolean existsByAgentIdAndStatusIn(UUID agentId, List<TransactionStatus> statuses) {
         return transactionRepository.existsByAgentIdAndStatusIn(agentId, statuses);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<com.agentbanking.ledger.domain.model.JournalEntryRecord> findJournalEntriesByTransactionId(UUID transactionId) {
+        return journalEntryRepository.findByTransactionId(transactionId);
     }
 }

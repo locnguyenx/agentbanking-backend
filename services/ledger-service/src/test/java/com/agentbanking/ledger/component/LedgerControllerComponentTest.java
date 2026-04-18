@@ -144,6 +144,16 @@ class LedgerControllerComponentTest extends AbstractIntegrationTest {
     }
 
     @Test
+    void getJournalEntries_shouldReturnEntries() throws Exception {
+        String workflowId = UUID.randomUUID().toString();
+        
+        mockMvc.perform(get("/internal/journal")
+                        .param("workflowId", workflowId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isArray());
+    }
+
+    @Test
     void postDebit_shouldProcessWithdrawal() throws Exception {
         stubSwitchSuccess();
         stubVelocityCheck();
