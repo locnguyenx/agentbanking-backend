@@ -1,4 +1,4 @@
-package com.agentbanking.auth.integration;
+package com.agentbanking.auth.component;
 
 import com.agentbanking.common.test.AbstractIntegrationTest;
 import org.junit.jupiter.api.Test;
@@ -18,12 +18,12 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 /**
- * Integration test for AuthController that tests actual HTTP endpoints
+ * Component test for AuthController that tests actual HTTP endpoints
  * Uses Testcontainers for PostgreSQL, Redis, and Kafka
  */
 @AutoConfigureMockMvc
-@Import(AuthControllerIntegrationTest.TestConfig.class)
-class AuthControllerIntegrationTest extends AbstractIntegrationTest {
+@Import(AuthControllerComponentTest.TestConfig.class)
+class AuthControllerComponentTest extends AbstractIntegrationTest {
 
     @TestConfiguration
     static class TestConfig {

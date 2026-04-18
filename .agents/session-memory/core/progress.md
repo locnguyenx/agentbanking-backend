@@ -1,7 +1,7 @@
 # Session Memory - Progress
 
 **Project:** Agent Banking Platform  
-**Last Update:** 2026-04-15
+**Last Update:** 2026-04-18
 
 ## 📊 THE HISTORY
 
@@ -39,7 +39,11 @@
 | 2026-04-16 | OpenAPI spec: Fix agentTier enum from TIER_1/2/3 to MICRO/STANDARD/PREMIER | ✅ |
 | 2026-04-17 | BDD Test Enhancement: Phase 1B Safety Reversal & Store & Forward | ✅ |
 | 2026-04-17 | Compilation fix: PersistWorkflowResultActivity.Input backward-compatible constructor | ✅ |
-| 2026-04-17 | Compilation fix: TransactionRecordRepositoryImpl.updateStatus signature (PARTIAL) | 🚧 |
+| 2026-04-18 | Test Architecture: Rename *IntegrationTest to *ComponentTest | ✅ |
+| 2026-04-18 | BillerController: Add null validation for required fields | ✅ |
+| 2026-04-18 | Auth-iam: Fix Flyway V2 migration (remove user_type column) | ✅ |
+| 2026-04-18 | componentTest Gradle task: Run all tests sequentially | ✅ |
+| 2026-04-18 | TEST_ARCHITECTURE.md: Document test design | ✅ |
 
 ### Key Discovery
 

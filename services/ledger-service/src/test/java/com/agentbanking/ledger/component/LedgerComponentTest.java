@@ -1,4 +1,4 @@
-package com.agentbanking.ledger.integration;
+package com.agentbanking.ledger.component;
 
 import com.agentbanking.common.exception.LedgerException;
 import com.agentbanking.common.test.AbstractIntegrationTest;
@@ -29,19 +29,17 @@ import java.util.concurrent.ConcurrentHashMap;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Ledger Service Integration Tests.
+ * Ledger Service Component Tests.
  *
- * DEPENDENCIES:
- * - Testcontainers: PostgreSQL, Redis, Kafka (automatic via AbstractIntegrationTest)
- * - Docker Services (via static containers):
- *   - rules-service (port 8081) - for velocity check, fee calculation
- *   - switch-adapter-service (port 8083) - for balance inquiry, transaction processing
+ * This is a COMPONENT TEST (not Integration Test) per testing rules:
+ * - Uses real infrastructure: PostgreSQL, Redis, Kafka via testcontainers
+ * - Mocks internal service calls: RulesService, SwitchAdapter, OnboardingService
  *
- * per .agents/rules/testing-debugging.md:
- * - Internal services are tested via real Feign calls using Testcontainers
+ * Rationale: Testing ledger-service in isolation with real DB/Redis/Kafka
+ * but mocked internal service calls provides fast, reliable test coverage.
  */
-@Sql(statements = "UPDATE agent_float SET merchant_gps_lat = 3.1390, merchant_gps_lng = 101.6869 WHERE agent_id = 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11'")
-class LedgerIntegrationTest extends AbstractIntegrationTest {
+@org.springframework.test.context.jdbc.Sql(statements = "UPDATE agent_float SET merchant_gps_lat = 3.1390, merchant_gps_lng = 101.6869 WHERE agent_id = 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11'")
+class LedgerComponentTest extends AbstractIntegrationTest {
 
     static final Network NETWORK = Network.newNetwork();
 

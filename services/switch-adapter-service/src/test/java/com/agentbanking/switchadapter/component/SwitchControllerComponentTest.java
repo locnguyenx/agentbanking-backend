@@ -1,4 +1,4 @@
-package com.agentbanking.biller.integration;
+package com.agentbanking.switchadapter.component;
 
 import com.agentbanking.common.test.AbstractIntegrationTest;
 import org.junit.jupiter.api.Test;
@@ -11,91 +11,86 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @AutoConfigureMockMvc
-class BillerControllerIntegrationTest extends AbstractIntegrationTest {
+class SwitchControllerComponentTest extends AbstractIntegrationTest {
 
     @Autowired
     private MockMvc mockMvc;
 
     @Test
-    void validateRef_withValidData_shouldReturnValidation() throws Exception {
+    void cardAuth_withValidData_shouldReturnResult() throws Exception {
         String requestBody = """
             {
-                "billerCode": "TEST123",
-                "ref1": "1234567890"
+                "internalTransactionId": "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
+                "pan": "4111111111111111",
+                "amount": 100.00
             }
             """;
 
-        mockMvc.perform(post("/internal/validate-ref")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(requestBody))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.valid").exists())
-                .andExpect(jsonPath("$.billerCode").exists());
-    }
-
-    @Test
-    void payBill_withValidData_shouldReturnResult() throws Exception {
-        String requestBody = """
-            {
-                "billerCode": "TEST123",
-                "ref1": "1234567890",
-                "amount": "100.00",
-                "internalTransactionId": "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11"
-            }
-            """;
-
-        mockMvc.perform(post("/internal/pay-bill")
+        mockMvc.perform(post("/internal/auth")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
                 .andExpect(jsonPath("$").exists());
     }
 
     @Test
-    void topup_withValidData_shouldReturnResult() throws Exception {
+    void reversal_withValidData_shouldReturnResult() throws Exception {
         String requestBody = """
             {
-                "telco": "CELCOM",
-                "phoneNumber": "0123456789",
-                "amount": "50.00"
+                "originalTransactionId": "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
+                "originalReference": "REF123",
+                "amount": 100.00
             }
             """;
 
-        mockMvc.perform(post("/internal/topup")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(requestBody))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").exists())
-                .andExpect(jsonPath("$.topupId").exists());
-    }
-
-    @Test
-    void jomPay_withValidData_shouldReturnResult() throws Exception {
-        String requestBody = """
-            {
-                "billerCode": "TEST123",
-                "billerName": "Test Biller",
-                "ref1": "1234567890",
-                "ref2": "",
-                "amount": "100.00",
-                "currency": "MYR"
-            }
-            """;
-
-        mockMvc.perform(post("/internal/billpayment/jompay")
+        mockMvc.perform(post("/internal/reversal")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
                 .andExpect(jsonPath("$").exists());
     }
 
     @Test
-    void validateRef_withMissingBillerCode_shouldReturn400() throws Exception {
+    void duitNowTransfer_withValidData_shouldReturnResult() throws Exception {
         String requestBody = """
             {
-                "ref1": "1234567890"
+                "internalTransactionId": "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
+                "proxyType": "PHONE",
+                "proxyValue": "0123456789",
+                "amount": 50.00
             }
             """;
 
-        mockMvc.perform(post("/internal/validate-ref")
+        mockMvc.perform(post("/internal/duitnow")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody))
+                .andExpect(jsonPath("$").exists());
+    }
+
+    @Test
+    void balanceInquiry_withValidData_shouldReturnResult() throws Exception {
+        String requestBody = """
+            {
+                "encryptedCardData": "encrypted123",
+                "pinBlock": "pin123"
+            }
+            """;
+
+        mockMvc.perform(post("/internal/balance-inquiry")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody))
+                .andExpect(jsonPath("$").exists());
+    }
+
+    @Test
+    void cardAuth_withInvalidPan_shouldReturn400() throws Exception {
+        String requestBody = """
+            {
+                "internalTransactionId": "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
+                "pan": "123",
+                "amount": 100.00
+            }
+            """;
+
+        mockMvc.perform(post("/internal/auth")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
                 .andExpect(status().isBadRequest())
@@ -103,15 +98,15 @@ class BillerControllerIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
-    void payBill_withMissingAmount_shouldReturn400() throws Exception {
+    void cardAuth_withMissingAmount_shouldReturn400() throws Exception {
         String requestBody = """
             {
-                "billerCode": "TEST123",
-                "ref1": "1234567890"
+                "internalTransactionId": "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
+                "pan": "4111111111111111"
             }
             """;
 
-        mockMvc.perform(post("/internal/pay-bill")
+        mockMvc.perform(post("/internal/auth")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
                 .andExpect(status().isBadRequest())
@@ -119,16 +114,17 @@ class BillerControllerIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
-    void topup_withInvalidTelco_shouldReturn400() throws Exception {
+    void duitNowTransfer_withInvalidProxyValue_shouldReturnError() throws Exception {
         String requestBody = """
             {
-                "telco": "INVALID_TELCO",
-                "phoneNumber": "0123456789",
-                "amount": "50.00"
+                "internalTransactionId": "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
+                "proxyType": "PHONE",
+                "proxyValue": "",
+                "amount": 50.00
             }
             """;
 
-        mockMvc.perform(post("/internal/topup")
+        mockMvc.perform(post("/internal/duitnow")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
                 .andExpect(status().isBadRequest())

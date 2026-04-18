@@ -10,6 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -40,6 +41,13 @@ public class BillerController {
         String billerCode = request.get("billerCode");
         String ref1 = request.get("ref1");
 
+        if (billerCode == null || billerCode.isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of(
+                "status", "FAILED",
+                "error", Map.of("code", "ERR_MISSING_BILLER_CODE", "message", "billerCode is required")
+            ));
+        }
+
         ValidateBillUseCase.ValidateBillResult result = validateBillUseCase.validateBill(billerCode, ref1);
 
         return ResponseEntity.ok(Map.of(
@@ -56,8 +64,26 @@ public class BillerController {
         try {
             String billerCode = (String) request.get("billerCode");
             String ref1 = (String) request.get("ref1");
-            BigDecimal amount = new BigDecimal(request.get("amount").toString());
-            UUID internalTxId = UUID.fromString((String) request.get("internalTransactionId"));
+            Object amountObj = request.get("amount");
+
+            if (billerCode == null || billerCode.isBlank()) {
+                return ResponseEntity.badRequest().body(Map.of(
+                    "status", "FAILED",
+                    "error", Map.of("code", "ERR_MISSING_BILLER_CODE", "message", "billerCode is required")
+                ));
+            }
+
+            if (amountObj == null) {
+                return ResponseEntity.badRequest().body(Map.of(
+                    "status", "FAILED",
+                    "error", Map.of("code", "ERR_MISSING_AMOUNT", "message", "amount is required")
+                ));
+            }
+
+            BigDecimal amount = new BigDecimal(amountObj.toString());
+            UUID internalTxId = request.containsKey("internalTransactionId") && request.get("internalTransactionId") != null
+                ? UUID.fromString((String) request.get("internalTransactionId"))
+                : UUID.randomUUID();
 
             PayBillUseCase.PayBillResult payment = payBillUseCase.payBill(billerCode, ref1, amount, internalTxId);
 
@@ -81,8 +107,31 @@ public class BillerController {
         try {
             String telco = (String) request.get("telco");
             String phoneNumber = (String) request.get("phoneNumber");
-            BigDecimal amount = new BigDecimal(request.get("amount").toString());
-            
+            Object amountObj = request.get("amount");
+
+            if (telco == null || telco.isBlank()) {
+                return ResponseEntity.badRequest().body(Map.of(
+                    "status", "FAILED",
+                    "error", Map.of("code", "ERR_MISSING_TELCO", "message", "telco is required")
+                ));
+            }
+
+            if (!List.of("CELCOM", "MAXIS", "DIGI", "U MOBILE", "YINL", "TUNE").contains(telco.toUpperCase())) {
+                return ResponseEntity.badRequest().body(Map.of(
+                    "status", "FAILED",
+                    "error", Map.of("code", "ERR_INVALID_TELCO", "message", "Invalid telco: " + telco)
+                ));
+            }
+
+            if (amountObj == null) {
+                return ResponseEntity.badRequest().body(Map.of(
+                    "status", "FAILED",
+                    "error", Map.of("code", "ERR_MISSING_AMOUNT", "message", "amount is required")
+                ));
+            }
+
+            BigDecimal amount = new BigDecimal(amountObj.toString());
+
             UUID internalTxId;
             if (request.containsKey("idempotencyKey") && request.get("idempotencyKey") != null) {
                 String idempotencyKey = (String) request.get("idempotencyKey");

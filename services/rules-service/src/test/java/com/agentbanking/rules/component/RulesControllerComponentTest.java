@@ -1,4 +1,4 @@
-package com.agentbanking.rules.integration;
+package com.agentbanking.rules.component;
 
 import com.agentbanking.common.test.AbstractIntegrationTest;
 import org.junit.jupiter.api.Test;
@@ -11,7 +11,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @AutoConfigureMockMvc
-class RulesControllerIntegrationTest extends AbstractIntegrationTest {
+class RulesControllerComponentTest extends AbstractIntegrationTest {
 
     @Autowired
     private MockMvc mockMvc;

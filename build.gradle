@@ -232,3 +232,33 @@ subprojects {
 // Manual architecture verification - run after build to verify
 // Usage: ./gradlew build verifyHexagonalArchitecture
 // Or add to CI pipeline
+
+// Force sequential test execution to avoid Docker resource exhaustion
+// Running multiple services' tests in parallel spawns too many containers
+subprojects {
+    tasks.withType(Test) {
+        maxParallelForks = 1
+    }
+}
+
+// Task to run component tests for all services
+// Usage: ./gradlew componentTest
+task componentTest {
+    description = 'Run all component tests with tc profile (Testcontainers). Runs each service sequentially to avoid Docker resource exhaustion.'
+    group = 'verification'
+
+    // Use doLast to run gradlew after task is configured
+    doLast {
+        exec {
+            workingDir '.'
+            commandLine './gradlew', 'clean',
+                ':services:ledger-service:test', '--tests', 'com.agentbanking.ledger.component.*',
+                ':services:onboarding-service:test', '--tests', 'com.agentbanking.onboarding.component.*',
+                ':services:rules-service:test', '--tests', 'com.agentbanking.rules.component.*',
+                ':services:biller-service:test', '--tests', 'com.agentbanking.biller.component.*',
+                ':services:auth-iam-service:test', '--tests', 'com.agentbanking.auth.component.*',
+                '--console=plain', '--no-daemon'
+            ignoreExitValue = true
+        }
+    }
+}

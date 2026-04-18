@@ -1,4 +1,4 @@
-package com.agentbanking.onboarding.integration;
+package com.agentbanking.onboarding.component;
 
 import com.agentbanking.common.test.AbstractIntegrationTest;
 import com.agentbanking.onboarding.infrastructure.external.AmlScreeningFeignClient;
@@ -13,8 +13,12 @@ import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+/**
+ * Onboarding Service Component Tests.
+ * Uses real infra (PostgreSQL, Redis) with mocked external service (AmlScreening).
+ */
 @AutoConfigureMockMvc
-class OnboardingControllerIntegrationTest extends AbstractIntegrationTest {
+class OnboardingControllerComponentTest extends AbstractIntegrationTest {
 
     @Autowired
     private MockMvc mockMvc;

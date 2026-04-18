@@ -1,4 +1,4 @@
-package com.agentbanking.ledger.integration;
+package com.agentbanking.ledger.component;
 
 import com.agentbanking.common.efm.EfmEventPublisher;
 import com.agentbanking.common.test.AbstractIntegrationTest;
@@ -34,7 +34,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @AutoConfigureMockMvc
 @org.springframework.test.context.jdbc.Sql(statements = "UPDATE agent_float SET merchant_gps_lat = 3.1390, merchant_gps_lng = 101.6869 WHERE agent_id = 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11'")
-class LedgerControllerIntegrationTest extends AbstractIntegrationTest {
+class LedgerControllerComponentTest extends AbstractIntegrationTest {
 
     @TestConfiguration
     static class TestConfig {
