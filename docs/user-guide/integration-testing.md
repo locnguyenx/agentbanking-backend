@@ -1,214 +1,63 @@
+# Integration Testing Guide
 
-# Services testing
-## Problem
-Services were rebuilt from code that had missing configuration, exposing pre-existing bugs.
+This guide explains how to run and maintain the integration and E2E testing suite for the Agent Banking Platform.
 
-## Root Causes
-1. Missing bean wiring: StpDecisionService, ReconciliationService were added to code but not registered in DomainServiceConfig
-2. Missing annotations: DiscrepancyCaseRepositoryAdapter had no @Repository, BillerService had no @Service
-3. Configuration mismatch: Feign clients referenced properties not in application.yaml
-4. Dependency conflict: ledger-service packaged onboarding-service jar, causing Flyway version collision
-5. Missing component scan: EfmEventPublisher in common package not scanned
+## Test Architecture
 
-## Why It Worked Before
-Old Docker images were built from an earlier commit. New code was added in commit 342e310 without wiring to Spring.
+The platform uses a multi-layered testing approach:
+1. **Unit Tests**: JUnit 5 + Mockito for individual component logic.
+2. **Integration Tests**: Spring Boot Test + Testcontainers for service-level integration with real databases and messaging.
+3. **End-to-End (E2E) Tests**: Full system verification using Docker Compose services.
 
-## Lessons Learned
-1. Build ≠ runs: Code compiles but Spring won't start without proper wiring
-2. New classes need registration: Every @Service, @Repository, @Component must be scannable
-3. Cross-service dependencies are fragile: ledger-service depending on onboarding-service caused Flyway conflict
-4. Test Docker builds after every commit: Don't assume "it compiled, it works"
-5. Don't touch working services when fixing unrelated issues (like OpenAPI specs)
+## Prerequisites
 
-## How to detect these issues?
+- **Docker Desktop**: Must be running.
+- **MacOS Native DNS**: For local Mac execution, ensure the following dependency is in `gateway/build.gradle`:
+  ```gradle
+  testImplementation 'io.netty:netty-resolver-dns-native-macos:4.1.109.Final:osx-aarch_64'
+  ```
+- **Temporal**: Must be running in Docker.
 
-Let me think about alternatives:
-1. Docker build - Yes, but slow and heavy
-2. Local Gradle build + manual start - Faster but still manual
-3. Integration tests with Testcontainers - Can catch some issues but not all
-4. Gradle bootRun task - Can test Spring context loading
-5. Static analysis / custom checks - Could catch config mismatches
+## Running Tests
 
-Let me suggest practical alternatives that are faster than full Docker build.
-
-Not necessarily. Faster alternatives:
-|	Method |	What It Detects |	Speed |
-|	./gradlew bootRun |	Missing beans, config errors, Flyway conflicts |	~10s per service |
-|	./gradlew bootTestRun |	Spring context loading failures |	~15s per service |
-|	Spring Boot test with @SpringBootTest |	Full context startup |	~30s |
-|	Docker build + run |	Everything |	~60s per service |
-
-**Recommended workflow:**
+### 1. Start Infrastructure
 ```bash
-# Fastest - test Spring context loads
-./gradlew :services:ledger-service:bootRun --no-daemon &
-sleep 10
-curl -f http://localhost:8082/actuator/health || echo "FAILED"
-kill %1
+docker compose --profile infra --profile backend up -d
 ```
 
-Or add to CI pipeline:
+### 2. Run Integration Tests (Testcontainers)
 ```bash
-# In .github/workflows or CI script
-./gradlew :services:*:bootJar
-# Then test each service starts
-for svc in rules ledger onboarding biller; do
-  timeout 30 java -jar services/${svc}-service/build/libs/*.jar &
-  sleep 15
-  curl -f http://localhost:808*/actuator/health || exit 1
-  kill %1
-done
-```
-
-
-# Integration tests for gateway
-
-## Overview
-
-Integration tests use **TestContainers** which automatically manages Docker containers for test dependencies:
-- **PostgreSQL**: Started automatically per test class
-- **Redis**: Started automatically per test class  
-- **Kafka**: Started automatically per test class
-
-The only exception is **Temporal** (workflow engine) which requires manual Docker setup.
-
-## Required Docker Services
-Temporal is required for orchestrator-service tests
-
-| Service | Purpose | Port | Reason |
-|---------|---------|------|--------|
-| Temporal | Workflow engine | 7233 | Not available as TestContainers |
-
-### Starting Temporal for Testing
-```bash
-# Start Temporal
-docker compose up -d temporal temporal-postgres
-# or with ui
-docker compose up -d temporal temporal-postgres temporal-ui
-
-# Verify Temporal is running
-docker ps | grep temporal
-```
-
-## TestContainers (Automatic)
-
-Most infrastructure is handled automatically:
-
-```java
-// common/src/testFixtures/java/com/agentbanking/common/test/AbstractIntegrationTest.java
-static final PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16-alpine");
-static final GenericContainer<?> redis = new GenericContainer<>("redis:7-alpine");
-static final KafkaContainer kafka = new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:7.5.0"));
-```
-
-**Note:** TestContainers requires Docker to be running. If tests fail with "Cannot connect to Docker daemon", ensure Docker Desktop is running.
-
-### Test Profile Configuration
-
-Tests use the `tc` (TestContainers) profile:
-
-```yaml
-# services/*/src/test/resources/application-tc.yaml
-spring:
-  main:
-    allow-bean-definition-overriding: true
-  jpa:
-    hibernate:
-      ddl-auto: none
-  flyway:
-    enabled: true
-    locations: filesystem:src/main/resources/db/migration
-```
-
-## Infra dependencies for integration test
-
-- Default option: user Testcontainers for Postgresql + Redis + Kafka
-- Fall back to Postgresql container (i.e in Windows):
-
-**Usage:**
-- ./gradlew test → uses tc profile (Testcontainers, default)
-- ./gradlew test -PtestProfile=local → uses test profile (localhost Docker Compose)
-
-```bash
-# Fallback to localhost Docker Compose
-./gradlew test -PtestProfile=local
-```
----
-
-## **Integration tests for EXTERNAL APIs**
-
-Test class: ExternalApiIntegrationTest.java
-
-External API Tests:
-- balance-inquiry ✓
-- agent-balance ✓
-- kyc-verify ✓
-- kyc-biometric ✓
-- ...
-
-Backoffice Tests:
-- dashboard ✓
-- agents-list ✓
-- ledger-transactions ✓
-- settlement ✓
-- kyc-review-queue ✓
-- audit-logs ✓
-- backoffice transactions
-API Docs Tests:
-- openapi-specs ✓
-- openapi-specs-trailing-slash ✓
-
-**To run tests:**
-
-```bash
-# Run tests
-./gradlew :gateway:test --tests "ExternalApiIntegrationTest"
-```
-
-## End to end Integration Testing
-
-### Test scopes
-- All external APIs in gateway
-- Transactions: via orchestrator-service 
-
-### Running Integration Tests
-
-```bash
-# Run all integration tests (TestContainers + Temporal must be running)
 ./gradlew test
-
-# Run specific service tests
-./gradlew :services:orchestrator-service:test
-
-# Run orchestrator tests only (requires Temporal)
-./gradlew :services:orchestrator-service:test --tests "*Orchestrator*"
-
-# Run tests with coverage
-./gradlew test jacocoTestReport
-
-# Run e2e integration tests and automatically runs cleanup first via cleanE2eTestData
-# e2e tests required all services running in docker containers
-./gradlew :gateway:e2eTest --no-daemon
-# can runt only SelfContainedOrchestratorE2ETest to test transaction
 ```
 
-## Troubleshooting Docker for Tests
-
+### 3. Run E2E Tests (Real Services)
+Ensure all services are healthy, then run:
 ```bash
-# Check if Docker is running
-docker info
-
-# Verify Temporal is running
-docker ps | grep temporal
-
-# View Temporal logs
-docker logs agentbanking-backend-temporal-1
+./gradlew :gateway:e2eTest -PtestProfile=local
 ```
 
-### Clean Up
+> [!TIP]
+> Use `-PtestProfile=local` to force tests to use the real Docker Compose services instead of Testcontainers.
 
+### 4. Resetting the Environment
+If data becomes inconsistent, use the reset task:
 ```bash
-# Remove Temporal containers
-docker compose down temporal temporal-postgres temporal-ui
+./gradlew resetSystem
 ```
----
+
+## Debugging Failures
+
+### HTML Reports
+Test reports are generated at:
+- `gateway/build/reports/tests/e2eTest/index.html`
+- `services/[service-name]/build/reports/tests/test/index.html`
+
+### Common Issues
+- **Connection Refused**: Verify the service is running and the port mapping (e.g., 18082 for ledger) is correct.
+- **DNS Resolution (Mac)**: Use `127.0.0.1` instead of `localhost` in `WebTestClient` configuration if resolution fails.
+- **JWT Errors**: Ensure the `JWT_SECRET` in `application.yaml` matches the one expected by the gateway.
+
+## Adding New BDD Scenarios
+1. Define the scenario in `*-bdd.md`.
+2. Implement the test method in `SelfContainedOrchestratorE2ETest.java`.
+3. Annotate with `@Test` and use `BDD-` prefix for display name consistency.
