@@ -26,6 +26,7 @@ public class WithdrawalOnUsWorkflowImpl implements WithdrawalOnUsWorkflow {
 
     private static final Logger log = Workflow.getLogger(WithdrawalOnUsWorkflowImpl.class);
 
+    private GetDailyMetricsActivity getDailyMetricsActivity;
     private CheckVelocityActivity checkVelocityActivity;
     private EvaluateStpActivity evaluateStpActivity;
     private CalculateFeesActivity calculateFeesActivity;
@@ -39,6 +40,7 @@ public class WithdrawalOnUsWorkflowImpl implements WithdrawalOnUsWorkflow {
     private WorkflowStatus currentStatus = WorkflowStatus.PENDING;
 
     public WithdrawalOnUsWorkflowImpl(
+            GetDailyMetricsActivity getDailyMetricsActivity,
             CheckVelocityActivity checkVelocityActivity,
             EvaluateStpActivity evaluateStpActivity,
             CalculateFeesActivity calculateFeesActivity,
@@ -48,6 +50,7 @@ public class WithdrawalOnUsWorkflowImpl implements WithdrawalOnUsWorkflow {
             PostToCBSActivity postToCBSActivity,
             PublishKafkaEventActivity publishKafkaEventActivity,
             PersistWorkflowResultActivity persistWorkflowResultActivity) {
+        this.getDailyMetricsActivity = getDailyMetricsActivity;
         this.checkVelocityActivity = checkVelocityActivity;
         this.evaluateStpActivity = evaluateStpActivity;
         this.calculateFeesActivity = calculateFeesActivity;
@@ -61,6 +64,10 @@ public class WithdrawalOnUsWorkflowImpl implements WithdrawalOnUsWorkflow {
 
     @SuppressWarnings("SpringJavaAutowiredMembersInspection")
     public WithdrawalOnUsWorkflowImpl() {
+        this.getDailyMetricsActivity = Workflow.newActivityStub(GetDailyMetricsActivity.class, ActivityOptions.newBuilder()
+                .setStartToCloseTimeout(Duration.ofSeconds(30))
+                .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(3).build())
+                .build());
         this.checkVelocityActivity = Workflow.newActivityStub(CheckVelocityActivity.class, ActivityOptions.newBuilder()
                 .setStartToCloseTimeout(Duration.ofSeconds(30))
                 .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(3).build())
@@ -105,11 +112,21 @@ public class WithdrawalOnUsWorkflowImpl implements WithdrawalOnUsWorkflow {
         currentStatus = WorkflowStatus.RUNNING;
 
         try {
+            // Task: Fetch metrics
+            DailyMetricsResult metrics = getDailyMetricsActivity.getDailyMetrics(input.agentId());
+
             // Step 1: Check velocity
             VelocityCheckResult velocityResult;
             try {
                 velocityResult = checkVelocityActivity.checkVelocity(
-                        new VelocityCheckInput(input.agentId(), input.amount(), input.customerMykad()));
+                        new VelocityCheckInput(
+                            input.agentId(), 
+                            "CASH_WITHDRAWAL",
+                            input.amount(), 
+                            input.customerMykad(),
+                            metrics.transactionCountToday(),
+                            metrics.amountToday()
+                        ));
             } catch (ActivityFailure e) {
                 log.error("Activity_failure in checkVelocity: {}", e.getMessage());
                 currentStatus = WorkflowStatus.FAILED;
@@ -126,7 +143,28 @@ public class WithdrawalOnUsWorkflowImpl implements WithdrawalOnUsWorkflow {
                 return failResult;
             }
 
-            // Step 2: Calculate fees (evaluateSTP)
+            // Step 2: Evaluate STP
+            StpDecision stpDecision = evaluateStpActivity.evaluateStp(
+                    new EvaluateStpActivity.Input(
+                            "CASH_WITHDRAWAL",
+                            input.agentId().toString(),
+                            input.amount().toString(),
+                            input.customerMykad(),
+                            input.agentTier(),
+                            metrics.transactionCountToday(),
+                            metrics.amountToday().toString(),
+                            metrics.todayTotalAmount().toString()
+                    )
+            );
+            if (!stpDecision.approved()) {
+                currentStatus = WorkflowStatus.PENDING_REVIEW;
+                WorkflowResult reviewResult = WorkflowResult.failed("ERR_STP_REVIEW", stpDecision.reason(), "REVIEW");
+                persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
+                        Workflow.getInfo().getWorkflowId(), "PENDING_REVIEW", reviewResult.errorCode(), reviewResult.errorMessage(), null, null, null, stpDecision.reason()));
+                return reviewResult;
+            }
+
+            // Calculate fees
             FeeCalculationResult fees;
             try {
                 fees = calculateFeesActivity.calculateFees(
@@ -157,7 +195,8 @@ public class WithdrawalOnUsWorkflowImpl implements WithdrawalOnUsWorkflow {
                                 input.geofenceLat(),
                                 input.geofenceLng(),
                                 input.agentTier(),
-                                input.targetBin()
+                                input.targetBin(),
+                                "CASH_WITHDRAWAL"
                         )
                 );
             } catch (ActivityFailure e) {
@@ -177,7 +216,7 @@ public class WithdrawalOnUsWorkflowImpl implements WithdrawalOnUsWorkflow {
             }
             UUID transactionId = blockResult.transactionId();
 
-            // Step 4: Authorize at CBS (no safety reversal — CBS returns definitive result)
+            // Step 4: Authorize at CBS
             CbsPostResult cbsResult;
             try {
                 cbsResult = postToCBSActivity.postToCbs(
@@ -227,7 +266,7 @@ public class WithdrawalOnUsWorkflowImpl implements WithdrawalOnUsWorkflow {
                 return failResult;
             }
 
-            // Step 6: Publish event (non-critical)
+            // Step 6: Publish event
             try {
                 publishKafkaEventActivity.publishCompleted(new TransactionCompletedEvent(
                         transactionId, input.agentId(), input.amount(), fees.customerFee(),

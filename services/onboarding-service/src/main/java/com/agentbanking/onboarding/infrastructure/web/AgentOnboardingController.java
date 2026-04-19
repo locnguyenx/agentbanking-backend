@@ -25,15 +25,18 @@ public class AgentOnboardingController {
     private final EvaluateMicroAgentOnboardingUseCase evaluateMicroAgentOnboardingUseCase;
     private final StartStandardPremierOnboardingUseCase startStandardPremierOnboardingUseCase;
     private final SubmitApplicationUseCase submitApplicationUseCase;
+    private final com.agentbanking.onboarding.domain.service.AgentService agentService;
 
     public AgentOnboardingController(StartMicroAgentOnboardingUseCase startMicroAgentOnboardingUseCase,
                                      EvaluateMicroAgentOnboardingUseCase evaluateMicroAgentOnboardingUseCase,
                                      StartStandardPremierOnboardingUseCase startStandardPremierOnboardingUseCase,
-                                     SubmitApplicationUseCase submitApplicationUseCase) {
+                                     SubmitApplicationUseCase submitApplicationUseCase,
+                                     com.agentbanking.onboarding.domain.service.AgentService agentService) {
         this.startMicroAgentOnboardingUseCase = startMicroAgentOnboardingUseCase;
         this.evaluateMicroAgentOnboardingUseCase = evaluateMicroAgentOnboardingUseCase;
         this.startStandardPremierOnboardingUseCase = startStandardPremierOnboardingUseCase;
         this.submitApplicationUseCase = submitApplicationUseCase;
+        this.agentService = agentService;
     }
 
     /**
@@ -159,5 +162,11 @@ public class AgentOnboardingController {
                 "error", Map.of("code", "ERR_ONBOARDING_START_FAILED", "message", e.getMessage())
             ));
         }
+    }
+
+    @DeleteMapping("/agents/{id}")
+    public ResponseEntity<Void> deleteAgent(@PathVariable UUID id) {
+        agentService.hardDeleteAgent(id);
+        return ResponseEntity.noContent().build();
     }
 }

@@ -22,4 +22,11 @@ public class JpaVelocityRuleRepository implements VelocityRuleRepository {
             .map(VelocityRuleMapper::toDomain)
             .toList();
     }
+
+    @Override
+    public VelocityRuleRecord save(VelocityRuleRecord rule) {
+        var entity = VelocityRuleMapper.toEntity(rule);
+        var saved = jpaRepository.save(entity);
+        return VelocityRuleMapper.toDomain(saved);
+    }
 }

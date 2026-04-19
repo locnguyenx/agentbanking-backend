@@ -12,6 +12,7 @@ import com.agentbanking.orchestrator.application.workflow.EWalletWithdrawalWorkf
 import com.agentbanking.orchestrator.domain.model.WorkflowResult;
 import com.agentbanking.orchestrator.domain.model.WorkflowStatus;
 import com.agentbanking.orchestrator.domain.port.out.LedgerServicePort.*;
+import com.agentbanking.orchestrator.domain.port.out.RulesServicePort.*;
 
 import io.temporal.activity.ActivityOptions;
 import io.temporal.common.RetryOptions;
@@ -30,6 +31,9 @@ public class EWalletWithdrawalWorkflowImpl implements EWalletWithdrawalWorkflow 
 
     private static final Logger log = Workflow.getLogger(EWalletWithdrawalWorkflowImpl.class);
 
+    private GetDailyMetricsActivity getDailyMetricsActivity;
+    private CheckVelocityActivity checkVelocityActivity;
+    private EvaluateStpActivity evaluateStpActivity;
     private ValidateEWalletActivity validateEWalletActivity;
     private WithdrawFromEWalletActivity withdrawFromEWalletActivity;
     private BlockFloatActivity blockFloatActivity;
@@ -41,6 +45,9 @@ public class EWalletWithdrawalWorkflowImpl implements EWalletWithdrawalWorkflow 
     private WorkflowStatus currentStatus = WorkflowStatus.PENDING;
 
     public EWalletWithdrawalWorkflowImpl(
+            GetDailyMetricsActivity getDailyMetricsActivity,
+            CheckVelocityActivity checkVelocityActivity,
+            EvaluateStpActivity evaluateStpActivity,
             ValidateEWalletActivity validateEWalletActivity,
             WithdrawFromEWalletActivity withdrawFromEWalletActivity,
             BlockFloatActivity blockFloatActivity,
@@ -48,6 +55,9 @@ public class EWalletWithdrawalWorkflowImpl implements EWalletWithdrawalWorkflow 
             ReleaseFloatActivity releaseFloatActivity,
             CreditAgentFloatActivity creditAgentFloatActivity,
             PersistWorkflowResultActivity persistWorkflowResultActivity) {
+        this.getDailyMetricsActivity = getDailyMetricsActivity;
+        this.checkVelocityActivity = checkVelocityActivity;
+        this.evaluateStpActivity = evaluateStpActivity;
         this.validateEWalletActivity = validateEWalletActivity;
         this.withdrawFromEWalletActivity = withdrawFromEWalletActivity;
         this.blockFloatActivity = blockFloatActivity;
@@ -59,6 +69,18 @@ public class EWalletWithdrawalWorkflowImpl implements EWalletWithdrawalWorkflow 
 
     @SuppressWarnings("SpringJavaAutowiredMembersInspection")
     public EWalletWithdrawalWorkflowImpl() {
+        this.getDailyMetricsActivity = Workflow.newActivityStub(GetDailyMetricsActivity.class, ActivityOptions.newBuilder()
+                .setStartToCloseTimeout(Duration.ofSeconds(30))
+                .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(3).build())
+                .build());
+        this.checkVelocityActivity = Workflow.newActivityStub(CheckVelocityActivity.class, ActivityOptions.newBuilder()
+                .setStartToCloseTimeout(Duration.ofSeconds(30))
+                .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(3).build())
+                .build());
+        this.evaluateStpActivity = Workflow.newActivityStub(EvaluateStpActivity.class, ActivityOptions.newBuilder()
+                .setStartToCloseTimeout(Duration.ofSeconds(30))
+                .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(3).build())
+                .build());
         this.validateEWalletActivity = Workflow.newActivityStub(ValidateEWalletActivity.class, ActivityOptions.newBuilder()
                 .setStartToCloseTimeout(Duration.ofSeconds(30))
                 .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(3).build())
@@ -95,6 +117,49 @@ public class EWalletWithdrawalWorkflowImpl implements EWalletWithdrawalWorkflow 
         currentStatus = WorkflowStatus.RUNNING;
 
         try {
+            // Task: Fetch metrics
+            DailyMetricsResult metrics = getDailyMetricsActivity.getDailyMetrics(input.agentId());
+
+            // Step 1: Check velocity
+            VelocityCheckResult velocityResult = checkVelocityActivity.checkVelocity(
+                    new VelocityCheckInput(
+                        input.agentId(), 
+                        "SARAWAK_PAY_WITHDRAWAL",
+                        input.amount(), 
+                        "UNKNOWN",
+                        metrics.transactionCountToday(),
+                        metrics.amountToday()
+                    ));
+            
+            if (!velocityResult.passed()) {
+                currentStatus = WorkflowStatus.FAILED;
+                WorkflowResult failResult = WorkflowResult.failed(velocityResult.errorCode(), "Velocity check failed", "DECLINE");
+                persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
+                        Workflow.getInfo().getWorkflowId(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null, "Velocity check failed"));
+                return failResult;
+            }
+
+            // Step 2: Evaluate STP
+            StpDecision stpDecision = evaluateStpActivity.evaluateStp(
+                    new EvaluateStpActivity.Input(
+                            "SARAWAK_PAY_WITHDRAWAL",
+                            input.agentId().toString(),
+                            input.amount().toString(),
+                            "UNKNOWN",
+                            input.agentTier(),
+                            metrics.transactionCountToday(),
+                            metrics.amountToday().toString(),
+                            metrics.todayTotalAmount().toString()
+                    )
+            );
+            if (!stpDecision.approved()) {
+                currentStatus = WorkflowStatus.PENDING_REVIEW;
+                WorkflowResult reviewResult = WorkflowResult.failed("ERR_STP_REVIEW", stpDecision.reason(), "REVIEW");
+                persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
+                        Workflow.getInfo().getWorkflowId(), "PENDING_REVIEW", reviewResult.errorCode(), reviewResult.errorMessage(), null, null, null, stpDecision.reason()));
+                return reviewResult;
+            }
+
             var validationResult = validateEWalletActivity.validate(input.provider(), input.walletId());
             if (!validationResult.valid()) {
                 currentStatus = WorkflowStatus.FAILED;
@@ -118,7 +183,8 @@ public class EWalletWithdrawalWorkflowImpl implements EWalletWithdrawalWorkflow 
                                 input.geofenceLat(),
                                 input.geofenceLng(),
                                 input.agentTier(),
-                                input.targetBin()
+                                input.targetBin(),
+                                "SARAWAK_PAY_WITHDRAWAL"
                         )
                 );
             } catch (ActivityFailure e) {
@@ -176,7 +242,8 @@ public class EWalletWithdrawalWorkflowImpl implements EWalletWithdrawalWorkflow 
                                 input.targetBin(),
                                 withdrawResult.ewalletReference(),
                                 input.geofenceLat(),
-                                input.geofenceLng()
+                                input.geofenceLng(),
+                                "SARAWAK_PAY_WITHDRAWAL"
                         )
                 );
                 currentStatus = WorkflowStatus.COMPLETED;
@@ -200,7 +267,8 @@ public class EWalletWithdrawalWorkflowImpl implements EWalletWithdrawalWorkflow 
                                 input.targetBin(),
                                 withdrawResult.ewalletReference(),
                                 input.geofenceLat(),
-                                input.geofenceLng()
+                                input.geofenceLng(),
+                                "SARAWAK_PAY_WITHDRAWAL"
                         )
                 );
             } catch (ActivityFailure e) {

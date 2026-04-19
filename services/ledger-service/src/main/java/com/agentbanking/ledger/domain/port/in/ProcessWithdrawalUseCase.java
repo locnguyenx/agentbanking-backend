@@ -10,5 +10,6 @@ public interface ProcessWithdrawalUseCase {
                                           BigDecimal bankShare, String idempotencyKey,
                                           String customerCardMasked,
                                           BigDecimal geofenceLat, BigDecimal geofenceLng,
-                                          String agentTier, String targetBin);
+                                          String agentTier, String targetBin,
+                                          String transactionType);
 }

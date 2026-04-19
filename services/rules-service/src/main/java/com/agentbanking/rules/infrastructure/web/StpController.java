@@ -23,6 +23,7 @@ public class StpController {
     public ResponseEntity<Map<String, Object>> evaluateStp(
             @RequestBody Map<String, Object> request) {
         String transactionType = (String) request.get("transactionType");
+        String agentId = (String) request.get("agentId");
         String customerMykad = (String) request.get("customerMykad");
         BigDecimal amount = request.get("amount") != null
             ? new BigDecimal(request.get("amount").toString())
@@ -39,7 +40,7 @@ public class StpController {
                 ? new BigDecimal(request.get("todayTotalAmount").toString()) : BigDecimal.ZERO;
 
         StpEvaluationUseCase.StpEvaluationCommand command = new StpEvaluationUseCase.StpEvaluationCommand(
-                transactionType, customerMykad, amount, agentTier,
+                transactionType, agentId, customerMykad, amount, agentTier,
                 transactionCountToday, amountToday, null, todayTotalAmount
         );
 

@@ -7,11 +7,9 @@ import com.agentbanking.orchestrator.domain.port.out.QRPaymentPort.QRPaymentStat
 import com.agentbanking.orchestrator.application.workflow.CashlessPaymentWorkflow;
 import com.agentbanking.orchestrator.domain.model.WorkflowResult;
 import com.agentbanking.orchestrator.domain.model.WorkflowStatus;
-import com.agentbanking.orchestrator.domain.port.out.LedgerServicePort;
-import com.agentbanking.orchestrator.domain.port.out.LedgerServicePort.FloatBlockInput;
-import com.agentbanking.orchestrator.domain.port.out.LedgerServicePort.FloatBlockResult;
-import com.agentbanking.orchestrator.domain.port.out.LedgerServicePort.FloatCommitInput;
-import com.agentbanking.orchestrator.domain.port.out.LedgerServicePort.FloatReleaseInput;
+import com.agentbanking.orchestrator.domain.port.out.LedgerServicePort.*;
+import com.agentbanking.orchestrator.domain.port.out.RulesServicePort.*;
+
 import io.temporal.activity.ActivityOptions;
 import io.temporal.common.RetryOptions;
 import io.temporal.failure.ActivityFailure;
@@ -19,7 +17,6 @@ import io.temporal.failure.CanceledFailure;
 import io.temporal.spring.boot.WorkflowImpl;
 import io.temporal.workflow.Workflow;
 import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.math.BigDecimal;
 import java.time.Duration;
@@ -30,6 +27,9 @@ public class CashlessPaymentWorkflowImpl implements CashlessPaymentWorkflow {
 
     private static final Logger log = Workflow.getLogger(CashlessPaymentWorkflowImpl.class);
 
+    private GetDailyMetricsActivity getDailyMetricsActivity;
+    private CheckVelocityActivity checkVelocityActivity;
+    private EvaluateStpActivity evaluateStpActivity;
     private ValidateFloatCapacityActivity validateFloatCapacityActivity;
     private BlockFloatActivity blockFloatActivity;
     private CommitFloatActivity commitFloatActivity;
@@ -44,6 +44,9 @@ public class CashlessPaymentWorkflowImpl implements CashlessPaymentWorkflow {
     private WorkflowStatus currentStatus = WorkflowStatus.PENDING;
 
     public CashlessPaymentWorkflowImpl(
+            GetDailyMetricsActivity getDailyMetricsActivity,
+            CheckVelocityActivity checkVelocityActivity,
+            EvaluateStpActivity evaluateStpActivity,
             ValidateFloatCapacityActivity validateFloatCapacityActivity,
             BlockFloatActivity blockFloatActivity,
             CommitFloatActivity commitFloatActivity,
@@ -54,6 +57,9 @@ public class CashlessPaymentWorkflowImpl implements CashlessPaymentWorkflow {
             WaitForRTPApprovalActivity waitForRTPApprovalActivity,
             CreditAgentFloatActivity creditAgentFloatActivity,
             PersistWorkflowResultActivity persistWorkflowResultActivity) {
+        this.getDailyMetricsActivity = getDailyMetricsActivity;
+        this.checkVelocityActivity = checkVelocityActivity;
+        this.evaluateStpActivity = evaluateStpActivity;
         this.validateFloatCapacityActivity = validateFloatCapacityActivity;
         this.blockFloatActivity = blockFloatActivity;
         this.commitFloatActivity = commitFloatActivity;
@@ -68,11 +74,23 @@ public class CashlessPaymentWorkflowImpl implements CashlessPaymentWorkflow {
 
     @SuppressWarnings("SpringJavaAutowiredMembersInspection")
     public CashlessPaymentWorkflowImpl() {
+        this.getDailyMetricsActivity = Workflow.newActivityStub(GetDailyMetricsActivity.class, ActivityOptions.newBuilder()
+                .setStartToCloseTimeout(Duration.ofSeconds(30))
+                .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(3).build())
+                .build());
+        this.checkVelocityActivity = Workflow.newActivityStub(CheckVelocityActivity.class, ActivityOptions.newBuilder()
+                .setStartToCloseTimeout(Duration.ofSeconds(30))
+                .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(3).build())
+                .build());
+        this.evaluateStpActivity = Workflow.newActivityStub(EvaluateStpActivity.class, ActivityOptions.newBuilder()
+                .setStartToCloseTimeout(Duration.ofSeconds(30))
+                .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(3).build())
+                .build());
         this.validateFloatCapacityActivity = Workflow.newActivityStub(ValidateFloatCapacityActivity.class, ActivityOptions.newBuilder()
                 .setStartToCloseTimeout(Duration.ofSeconds(30))
                 .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(3).build())
                 .build());
-        this.blockFloatActivity = Workflow.newActivityStub(BlockFloatActivity.class, ActivityOptions.newBuilder()
+        this.blockFloatActivity = Workflow.newActivityStub(CheckVelocityActivity.class != null ? BlockFloatActivity.class : BlockFloatActivity.class, ActivityOptions.newBuilder()
                 .setStartToCloseTimeout(Duration.ofSeconds(30))
                 .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(3).build())
                 .build());
@@ -116,6 +134,49 @@ public class CashlessPaymentWorkflowImpl implements CashlessPaymentWorkflow {
         currentStatus = WorkflowStatus.RUNNING;
 
         try {
+            // Task: Fetch metrics
+            DailyMetricsResult metrics = getDailyMetricsActivity.getDailyMetrics(input.agentId());
+
+            // Step 1: Check velocity
+            VelocityCheckResult velocityResult = checkVelocityActivity.checkVelocity(
+                    new VelocityCheckInput(
+                        input.agentId(), 
+                        "CASHLESS_PAYMENT",
+                        input.amount(), 
+                        "UNKNOWN", // No customer ID in CashlessPaymentInput
+                        metrics.transactionCountToday(),
+                        metrics.amountToday()
+                    ));
+            
+            if (!velocityResult.passed()) {
+                currentStatus = WorkflowStatus.FAILED;
+                WorkflowResult failResult = WorkflowResult.failed(velocityResult.errorCode(), "Velocity check failed", "DECLINE");
+                persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
+                        Workflow.getInfo().getWorkflowId(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null, "Velocity check failed"));
+                return failResult;
+            }
+
+            // Step 2: Evaluate STP
+            StpDecision stpDecision = evaluateStpActivity.evaluateStp(
+                    new EvaluateStpActivity.Input(
+                            "CASHLESS_PAYMENT",
+                            input.agentId().toString(),
+                            input.amount().toString(),
+                            "UNKNOWN",
+                            input.agentTier(),
+                            metrics.transactionCountToday(),
+                            metrics.amountToday().toString(),
+                            metrics.todayTotalAmount().toString()
+                    )
+            );
+            if (!stpDecision.approved()) {
+                currentStatus = WorkflowStatus.PENDING_REVIEW;
+                WorkflowResult reviewResult = WorkflowResult.failed("ERR_STP_REVIEW", stpDecision.reason(), "REVIEW");
+                persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
+                        Workflow.getInfo().getWorkflowId(), "PENDING_REVIEW", reviewResult.errorCode(), reviewResult.errorMessage(), null, null, null, stpDecision.reason()));
+                return reviewResult;
+            }
+
             FloatCapacityResult capacityResult = validateFloatCapacityActivity.validate(input.agentId(), input.amount());
             if (!capacityResult.sufficient()) {
                 currentStatus = WorkflowStatus.FAILED;
@@ -139,7 +200,8 @@ public class CashlessPaymentWorkflowImpl implements CashlessPaymentWorkflow {
                                 input.geofenceLat(),
                                 input.geofenceLng(),
                                 input.agentTier(),
-                                input.targetBin()
+                                input.targetBin(),
+                                "CASHLESS_PAYMENT"
                         )
                 );
             } catch (ActivityFailure e) {

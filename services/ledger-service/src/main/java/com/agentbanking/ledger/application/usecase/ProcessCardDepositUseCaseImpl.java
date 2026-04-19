@@ -48,7 +48,8 @@ public class ProcessCardDepositUseCaseImpl implements ProcessCardDepositUseCase 
                 null, // ref1
                 null, // ref2
                 null, // geofenceLat
-                null  // geofenceLng
+                null, // geofenceLng
+                "CASH_DEPOSIT"
         );
 
         TransactionResult response = new TransactionResult(

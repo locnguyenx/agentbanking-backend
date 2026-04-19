@@ -1,0 +1,321 @@
+> Task :common:compileJava UP-TO-DATE
+> Task :common:processResources NO-SOURCE
+> Task :common:classes UP-TO-DATE
+> Task :common:jar UP-TO-DATE
+> Task :common:compileTestFixturesJava UP-TO-DATE
+> Task :common:processTestFixturesResources NO-SOURCE
+> Task :common:testFixturesClasses UP-TO-DATE
+> Task :common:testFixturesJar UP-TO-DATE
+> Task :gateway:compileJava UP-TO-DATE
+> Task :gateway:processResources UP-TO-DATE
+> Task :gateway:classes UP-TO-DATE
+> Task :gateway:compileTestJava UP-TO-DATE
+> Task :gateway:processTestResources UP-TO-DATE
+> Task :gateway:testClasses UP-TO-DATE
+
+> Task :gateway:cleanE2eTestData
+=== E2E Test Data Cleanup ===
+Gateway URL: http://localhost:8080
+Auth URL: http://localhost:8087
+Onboarding URL: http://localhost:8083
+
+14:17:03.651 [main] ERROR io.netty.resolver.dns.DnsServerAddressStreamProviders -- Unable to load io.netty.resolver.dns.macos.MacOSDnsServerAddressStreamProvider, fallback to system defaults. This may result in incorrect DNS resolutions on MacOS. Check whether you have a dependency on 'io.netty:netty-resolver-dns-native-macos'. Use DEBUG level to see the full stack: java.lang.UnsatisfiedLinkError: failed to load the required native library
+Admin token obtained successfully
+
+--- Cleaning test users ---
+
+--- Cleaning test agents ---
+
+=== Cleanup Complete ===
+
+> Task :gateway:e2eTest
+
+SelfContainedOrchestratorE2ETest STANDARD_OUT
+    === Self-Contained E2E Test Setup ===
+    Gateway URL: http://localhost:8080
+
+SelfContainedOrchestratorE2ETest > Setup: Get test token > Get or create test agent token STANDARD_OUT
+    14:17:12.351 [Test worker] ERROR io.netty.resolver.dns.DnsServerAddressStreamProviders -- Unable to load io.netty.resolver.dns.macos.MacOSDnsServerAddressStreamProvider, fallback to system defaults. This may result in incorrect DNS resolutions on MacOS. Check whether you have a dependency on 'io.netty:netty-resolver-dns-native-macos'. Use DEBUG level to see the full stack: java.lang.UnsatisfiedLinkError: failed to load the required native library
+    Agent token obtained: eyJhbGciOiJIUzUxMiJ9...
+
+SelfContainedOrchestratorE2ETest > Setup: Get test token > Get or create test agent token PASSED
+
+SelfContainedOrchestratorE2ETest > Setup: Get test token > Create or get agent via onboarding service STANDARD_OUT
+    Onboarding Response: {"agentId":"64ae8151-ce80-4aaa-b363-623183bf042e","agentCode":"AGT-E2E-001","businessName":"E2E Test Business","tier":"STANDARD","status":"ACTIVE","merchantGpsLat":3.1390,"merchantGpsLng":101.6869,"phoneNumber":"0123456789","createdAt":"2026-04-19T07:17:13.565591229","updatedAt":"2026-04-19T07:17:13.813749554"}
+    Agent created/retrieved: 64ae8151-ce80-4aaa-b363-623183bf042e
+
+SelfContainedOrchestratorE2ETest > Setup: Get test token > Create or get agent via onboarding service PASSED
+
+SelfContainedOrchestratorE2ETest > Setup: Get test token > Top up agent float balance STANDARD_OUT
+    Float provisioned for agent: 64ae8151-ce80-4aaa-b363-623183bf042e
+
+SelfContainedOrchestratorE2ETest > Setup: Get test token > Top up agent float balance PASSED
+
+SelfContainedOrchestratorE2ETest > BDD-TO: Workflow Router Dispatch > BDD-TO-03: Cash Deposit completes successfully with side effects FAILED
+    org.opentest4j.AssertionFailedError: Workflow should complete successfully ==> expected: <COMPLETED> but was: <FAILED>
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:151)
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.buildAndThrow(AssertionFailureBuilder.java:132)
+        at app//org.junit.jupiter.api.AssertEquals.failNotEqual(AssertEquals.java:197)
+        at app//org.junit.jupiter.api.AssertEquals.assertEquals(AssertEquals.java:182)
+        at app//org.junit.jupiter.api.Assertions.assertEquals(Assertions.java:1156)
+        at app//com.agentbanking.gateway.integration.orchestrator.SelfContainedOrchestratorE2ETest.verifyTransactionSuccess(SelfContainedOrchestratorE2ETest.java:1865)
+        at app//com.agentbanking.gateway.integration.orchestrator.SelfContainedOrchestratorE2ETest$WorkflowRouterDispatch.deposit_shouldCompleteSuccessfully(SelfContainedOrchestratorE2ETest.java:357)
+
+SelfContainedOrchestratorE2ETest > BDD-TO: Workflow Router Dispatch > BDD-TO-06: Router rejects unsupported transaction type PASSED
+
+SelfContainedOrchestratorE2ETest > BDD-TO: Workflow Router Dispatch > BDD-TO-05: DuitNow Transfer completes successfully with side effects FAILED
+    org.opentest4j.AssertionFailedError: Workflow should complete successfully ==> expected: <COMPLETED> but was: <FAILED>
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:151)
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.buildAndThrow(AssertionFailureBuilder.java:132)
+        at app//org.junit.jupiter.api.AssertEquals.failNotEqual(AssertEquals.java:197)
+        at app//org.junit.jupiter.api.AssertEquals.assertEquals(AssertEquals.java:182)
+        at app//org.junit.jupiter.api.Assertions.assertEquals(Assertions.java:1156)
+        at app//com.agentbanking.gateway.integration.orchestrator.SelfContainedOrchestratorE2ETest.verifyTransactionSuccess(SelfContainedOrchestratorE2ETest.java:1865)
+        at app//com.agentbanking.gateway.integration.orchestrator.SelfContainedOrchestratorE2ETest$WorkflowRouterDispatch.duitNowTransfer_shouldCompleteSuccessfully(SelfContainedOrchestratorE2ETest.java:404)
+
+SelfContainedOrchestratorE2ETest > BDD-TO: Workflow Router Dispatch > BDD-TO-02: On-Us Withdrawal completes successfully with side effects FAILED
+    org.opentest4j.AssertionFailedError: Workflow should complete successfully ==> expected: <COMPLETED> but was: <FAILED>
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:151)
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.buildAndThrow(AssertionFailureBuilder.java:132)
+        at app//org.junit.jupiter.api.AssertEquals.failNotEqual(AssertEquals.java:197)
+        at app//org.junit.jupiter.api.AssertEquals.assertEquals(AssertEquals.java:182)
+        at app//org.junit.jupiter.api.Assertions.assertEquals(Assertions.java:1156)
+        at app//com.agentbanking.gateway.integration.orchestrator.SelfContainedOrchestratorE2ETest.verifyTransactionSuccess(SelfContainedOrchestratorE2ETest.java:1865)
+        at app//com.agentbanking.gateway.integration.orchestrator.SelfContainedOrchestratorE2ETest$WorkflowRouterDispatch.withdraw_onUs_shouldCompleteSuccessfully(SelfContainedOrchestratorE2ETest.java:335)
+
+SelfContainedOrchestratorE2ETest > BDD-TO: Workflow Router Dispatch > BDD-TO-01: Off-Us Withdrawal completes successfully with side effects FAILED
+    org.opentest4j.AssertionFailedError: Workflow should complete successfully ==> expected: <COMPLETED> but was: <FAILED>
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:151)
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.buildAndThrow(AssertionFailureBuilder.java:132)
+        at app//org.junit.jupiter.api.AssertEquals.failNotEqual(AssertEquals.java:197)
+        at app//org.junit.jupiter.api.AssertEquals.assertEquals(AssertEquals.java:182)
+        at app//org.junit.jupiter.api.Assertions.assertEquals(Assertions.java:1156)
+        at app//com.agentbanking.gateway.integration.orchestrator.SelfContainedOrchestratorE2ETest.verifyTransactionSuccess(SelfContainedOrchestratorE2ETest.java:1865)
+        at app//com.agentbanking.gateway.integration.orchestrator.SelfContainedOrchestratorE2ETest$WorkflowRouterDispatch.withdraw_offUs_shouldCompleteSuccessfully(SelfContainedOrchestratorE2ETest.java:313)
+
+SelfContainedOrchestratorE2ETest > BDD-TO: Workflow Router Dispatch > BDD-TO-04: Bill Payment completes successfully with side effects FAILED
+    org.opentest4j.AssertionFailedError: Workflow should complete successfully ==> expected: <COMPLETED> but was: <PENDING>
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:151)
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.buildAndThrow(AssertionFailureBuilder.java:132)
+        at app//org.junit.jupiter.api.AssertEquals.failNotEqual(AssertEquals.java:197)
+        at app//org.junit.jupiter.api.AssertEquals.assertEquals(AssertEquals.java:182)
+        at app//org.junit.jupiter.api.Assertions.assertEquals(Assertions.java:1156)
+        at app//com.agentbanking.gateway.integration.orchestrator.SelfContainedOrchestratorE2ETest.verifyTransactionSuccess(SelfContainedOrchestratorE2ETest.java:1865)
+        at app//com.agentbanking.gateway.integration.orchestrator.SelfContainedOrchestratorE2ETest$WorkflowRouterDispatch.billPayment_shouldCompleteSuccessfully(SelfContainedOrchestratorE2ETest.java:382)
+
+SelfContainedOrchestratorE2ETest > BDD-TO-NEW: New Transaction Types E2E > BDD-TO-NEW-02: PIN-based Purchase completes successfully with side effects FAILED
+    org.opentest4j.AssertionFailedError: Workflow should complete successfully ==> expected: <COMPLETED> but was: <FAILED>
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:151)
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.buildAndThrow(AssertionFailureBuilder.java:132)
+        at app//org.junit.jupiter.api.AssertEquals.failNotEqual(AssertEquals.java:197)
+        at app//org.junit.jupiter.api.AssertEquals.assertEquals(AssertEquals.java:182)
+        at app//org.junit.jupiter.api.Assertions.assertEquals(Assertions.java:1156)
+        at app//com.agentbanking.gateway.integration.orchestrator.SelfContainedOrchestratorE2ETest.verifyTransactionSuccess(SelfContainedOrchestratorE2ETest.java:1865)
+        at app//com.agentbanking.gateway.integration.orchestrator.SelfContainedOrchestratorE2ETest$NewTransactionTypesE2E.pinBasedPurchase_shouldCompleteSuccessfully(SelfContainedOrchestratorE2ETest.java:480)
+
+SelfContainedOrchestratorE2ETest > BDD-TO-NEW: New Transaction Types E2E > BDD-TO-NEW-01: Cashless Payment completes successfully with side effects FAILED
+    org.opentest4j.AssertionFailedError: Workflow should complete successfully ==> expected: <COMPLETED> but was: <FAILED>
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:151)
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.buildAndThrow(AssertionFailureBuilder.java:132)
+        at app//org.junit.jupiter.api.AssertEquals.failNotEqual(AssertEquals.java:197)
+        at app//org.junit.jupiter.api.AssertEquals.assertEquals(AssertEquals.java:182)
+        at app//org.junit.jupiter.api.Assertions.assertEquals(Assertions.java:1156)
+        at app//com.agentbanking.gateway.integration.orchestrator.SelfContainedOrchestratorE2ETest.verifyTransactionSuccess(SelfContainedOrchestratorE2ETest.java:1865)
+        at app//com.agentbanking.gateway.integration.orchestrator.SelfContainedOrchestratorE2ETest$NewTransactionTypesE2E.cashlessPayment_shouldCompleteSuccessfully(SelfContainedOrchestratorE2ETest.java:459)
+
+SelfContainedOrchestratorE2ETest > BDD-TO-NEW: New Transaction Types E2E > BDD-TO-NEW-03: Prepaid Topup completes successfully with side effects FAILED
+    org.opentest4j.AssertionFailedError: Workflow should complete successfully ==> expected: <COMPLETED> but was: <PENDING>
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:151)
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.buildAndThrow(AssertionFailureBuilder.java:132)
+        at app//org.junit.jupiter.api.AssertEquals.failNotEqual(AssertEquals.java:197)
+        at app//org.junit.jupiter.api.AssertEquals.assertEquals(AssertEquals.java:182)
+        at app//org.junit.jupiter.api.Assertions.assertEquals(Assertions.java:1156)
+        at app//com.agentbanking.gateway.integration.orchestrator.SelfContainedOrchestratorE2ETest.verifyTransactionSuccess(SelfContainedOrchestratorE2ETest.java:1865)
+        at app//com.agentbanking.gateway.integration.orchestrator.SelfContainedOrchestratorE2ETest$NewTransactionTypesE2E.prepaidTopup_shouldCompleteSuccessfully(SelfContainedOrchestratorE2ETest.java:502)
+
+SelfContainedOrchestratorE2ETest > BDD-TO-NEW: New Transaction Types E2E > BDD-TO-NEW-07: PIN Purchase completes successfully with side effects FAILED
+    org.opentest4j.AssertionFailedError: Workflow should complete successfully ==> expected: <COMPLETED> but was: <FAILED>
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:151)
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.buildAndThrow(AssertionFailureBuilder.java:132)
+        at app//org.junit.jupiter.api.AssertEquals.failNotEqual(AssertEquals.java:197)
+        at app//org.junit.jupiter.api.AssertEquals.assertEquals(AssertEquals.java:182)
+        at app//org.junit.jupiter.api.Assertions.assertEquals(Assertions.java:1156)
+        at app//com.agentbanking.gateway.integration.orchestrator.SelfContainedOrchestratorE2ETest.verifyTransactionSuccess(SelfContainedOrchestratorE2ETest.java:1865)
+        at app//com.agentbanking.gateway.integration.orchestrator.SelfContainedOrchestratorE2ETest$NewTransactionTypesE2E.pinPurchase_shouldCompleteSuccessfully(SelfContainedOrchestratorE2ETest.java:590)
+
+SelfContainedOrchestratorE2ETest > BDD-TO-NEW: New Transaction Types E2E > BDD-TO-NEW-06: ESSP Purchase completes successfully with side effects FAILED
+    org.opentest4j.AssertionFailedError: Workflow should complete successfully ==> expected: <COMPLETED> but was: <FAILED>
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:151)
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.buildAndThrow(AssertionFailureBuilder.java:132)
+        at app//org.junit.jupiter.api.AssertEquals.failNotEqual(AssertEquals.java:197)
+        at app//org.junit.jupiter.api.AssertEquals.assertEquals(AssertEquals.java:182)
+        at app//org.junit.jupiter.api.Assertions.assertEquals(Assertions.java:1156)
+        at app//com.agentbanking.gateway.integration.orchestrator.SelfContainedOrchestratorE2ETest.verifyTransactionSuccess(SelfContainedOrchestratorE2ETest.java:1865)
+        at app//com.agentbanking.gateway.integration.orchestrator.SelfContainedOrchestratorE2ETest$NewTransactionTypesE2E.esspPurchase_shouldCompleteSuccessfully(SelfContainedOrchestratorE2ETest.java:568)
+
+SelfContainedOrchestratorE2ETest > BDD-TO-NEW: New Transaction Types E2E > BDD-TO-NEW-04: E-Wallet Withdrawal completes successfully with side effects FAILED
+    org.opentest4j.AssertionFailedError: Workflow should complete successfully ==> expected: <COMPLETED> but was: <FAILED>
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:151)
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.buildAndThrow(AssertionFailureBuilder.java:132)
+        at app//org.junit.jupiter.api.AssertEquals.failNotEqual(AssertEquals.java:197)
+        at app//org.junit.jupiter.api.AssertEquals.assertEquals(AssertEquals.java:182)
+        at app//org.junit.jupiter.api.Assertions.assertEquals(Assertions.java:1156)
+        at app//com.agentbanking.gateway.integration.orchestrator.SelfContainedOrchestratorE2ETest.verifyTransactionSuccess(SelfContainedOrchestratorE2ETest.java:1865)
+        at app//com.agentbanking.gateway.integration.orchestrator.SelfContainedOrchestratorE2ETest$NewTransactionTypesE2E.ewalletWithdrawal_shouldCompleteSuccessfully(SelfContainedOrchestratorE2ETest.java:524)
+
+SelfContainedOrchestratorE2ETest > BDD-TO-NEW: New Transaction Types E2E > BDD-TO-NEW-05: E-Wallet Topup completes successfully with side effects FAILED
+    org.opentest4j.AssertionFailedError: Workflow should complete successfully ==> expected: <COMPLETED> but was: <FAILED>
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:151)
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.buildAndThrow(AssertionFailureBuilder.java:132)
+        at app//org.junit.jupiter.api.AssertEquals.failNotEqual(AssertEquals.java:197)
+        at app//org.junit.jupiter.api.AssertEquals.assertEquals(AssertEquals.java:182)
+        at app//org.junit.jupiter.api.Assertions.assertEquals(Assertions.java:1156)
+        at app//com.agentbanking.gateway.integration.orchestrator.SelfContainedOrchestratorE2ETest.verifyTransactionSuccess(SelfContainedOrchestratorE2ETest.java:1865)
+        at app//com.agentbanking.gateway.integration.orchestrator.SelfContainedOrchestratorE2ETest$NewTransactionTypesE2E.ewalletTopup_shouldCompleteSuccessfully(SelfContainedOrchestratorE2ETest.java:546)
+
+SelfContainedOrchestratorE2ETest > BDD-TO-NEW: New Transaction Types E2E > BDD-TO-NEW-09: Hybrid Cashback completes successfully with side effects FAILED
+    org.opentest4j.AssertionFailedError: Workflow should complete successfully ==> expected: <COMPLETED> but was: <FAILED>
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:151)
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.buildAndThrow(AssertionFailureBuilder.java:132)
+        at app//org.junit.jupiter.api.AssertEquals.failNotEqual(AssertEquals.java:197)
+        at app//org.junit.jupiter.api.AssertEquals.assertEquals(AssertEquals.java:182)
+        at app//org.junit.jupiter.api.Assertions.assertEquals(Assertions.java:1156)
+        at app//com.agentbanking.gateway.integration.orchestrator.SelfContainedOrchestratorE2ETest.verifyTransactionSuccess(SelfContainedOrchestratorE2ETest.java:1865)
+        at app//com.agentbanking.gateway.integration.orchestrator.SelfContainedOrchestratorE2ETest$NewTransactionTypesE2E.hybridCashback_shouldCompleteSuccessfully(SelfContainedOrchestratorE2ETest.java:634)
+
+SelfContainedOrchestratorE2ETest > BDD-TO-NEW: New Transaction Types E2E > BDD-TO-NEW-08: Retail Sale completes successfully with side effects FAILED
+    org.opentest4j.AssertionFailedError: Workflow should complete successfully ==> expected: <COMPLETED> but was: <FAILED>
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:151)
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.buildAndThrow(AssertionFailureBuilder.java:132)
+        at app//org.junit.jupiter.api.AssertEquals.failNotEqual(AssertEquals.java:197)
+        at app//org.junit.jupiter.api.AssertEquals.assertEquals(AssertEquals.java:182)
+        at app//org.junit.jupiter.api.Assertions.assertEquals(Assertions.java:1156)
+        at app//com.agentbanking.gateway.integration.orchestrator.SelfContainedOrchestratorE2ETest.verifyTransactionSuccess(SelfContainedOrchestratorE2ETest.java:1865)
+        at app//com.agentbanking.gateway.integration.orchestrator.SelfContainedOrchestratorE2ETest$NewTransactionTypesE2E.retailSale_shouldCompleteSuccessfully(SelfContainedOrchestratorE2ETest.java:612)
+
+SelfContainedOrchestratorE2ETest > BDD-POLL: Polling Endpoint > BDD-POLL-01: Poll returns PENDING status for running workflow PASSED
+
+SelfContainedOrchestratorE2ETest > BDD-POLL: Polling Endpoint > BDD-POLL-04: Poll for non-existent workflowId returns 404 PASSED
+
+SelfContainedOrchestratorE2ETest > BDD-IDE: Idempotency > BDD-IDE-01: Duplicate workflow start returns existing status PASSED
+
+SelfContainedOrchestratorE2ETest > Security: Authentication > Transaction request without auth token STANDARD_OUT
+    Transaction without auth returned status: 401
+
+SelfContainedOrchestratorE2ETest > Security: Authentication > Transaction request without auth token PASSED
+
+SelfContainedOrchestratorE2ETest > BDD-WF: Workflow Lifecycle > BDD-WF-01: Workflow starts and returns PENDING status immediately PASSED
+
+SelfContainedOrchestratorE2ETest > BDD-WF: Workflow Lifecycle > BDD-WF-02: Poll returns COMPLETED status with transaction details PASSED
+
+SelfContainedOrchestratorE2ETest > BDD-WF: Workflow Lifecycle > BDD-WF-03: Poll returns FAILED status with error details PASSED
+
+SelfContainedOrchestratorE2ETest > BDD-WF-HP-W: Withdrawal Happy Path > BDD-WF-HP-W01: Off-Us withdrawal completes successfully FAILED
+    org.opentest4j.AssertionFailedError: Workflow should complete successfully, but was: FAILED Error: ERR_SYS_AGENT_FLOAT_NOT_FOUND ==> expected: <COMPLETED> but was: <FAILED>
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:151)
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.buildAndThrow(AssertionFailureBuilder.java:132)
+        at app//org.junit.jupiter.api.AssertEquals.failNotEqual(AssertEquals.java:197)
+        at app//org.junit.jupiter.api.AssertEquals.assertEquals(AssertEquals.java:182)
+        at app//org.junit.jupiter.api.Assertions.assertEquals(Assertions.java:1156)
+        at app//com.agentbanking.gateway.integration.orchestrator.SelfContainedOrchestratorE2ETest$WithdrawalHappyPath.offUsWithdrawal_shouldCompleteSuccessfully(SelfContainedOrchestratorE2ETest.java:1019)
+
+SelfContainedOrchestratorE2ETest > BDD-WF-HP-W: Withdrawal Happy Path > BDD-WF-HP-W02: On-Us withdrawal starts WithdrawalOnUsWorkflow PASSED
+
+SelfContainedOrchestratorE2ETest > BDD-WF-EC-W: Withdrawal Edge Cases > BDD-WF-EC-W04: Insufficient float - workflow fails at float block FAILED
+    org.opentest4j.AssertionFailedError: Should have error code for insufficient float, got: ERR_SYS_AGENT_FLOAT_NOT_FOUND ==> expected: <true> but was: <false>
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:151)
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.buildAndThrow(AssertionFailureBuilder.java:132)
+        at app//org.junit.jupiter.api.AssertTrue.failNotTrue(AssertTrue.java:63)
+        at app//org.junit.jupiter.api.AssertTrue.assertTrue(AssertTrue.java:36)
+        at app//org.junit.jupiter.api.Assertions.assertTrue(Assertions.java:214)
+        at app//com.agentbanking.gateway.integration.orchestrator.SelfContainedOrchestratorE2ETest$WithdrawalEdgeCases.withdraw_insufficientFloat_shouldFail(SelfContainedOrchestratorE2ETest.java:1112)
+
+SelfContainedOrchestratorE2ETest > BDD-WF-EC-W: Withdrawal Edge Cases > BDD-WF-EC-W05: Velocity check fails - workflow fails before float block FAILED
+    org.opentest4j.AssertionFailedError: First transaction should complete successfully ==> expected: <COMPLETED> but was: <FAILED>
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:151)
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.buildAndThrow(AssertionFailureBuilder.java:132)
+        at app//org.junit.jupiter.api.AssertEquals.failNotEqual(AssertEquals.java:197)
+        at app//org.junit.jupiter.api.AssertEquals.assertEquals(AssertEquals.java:182)
+        at app//org.junit.jupiter.api.Assertions.assertEquals(Assertions.java:1156)
+        at app//com.agentbanking.gateway.integration.orchestrator.SelfContainedOrchestratorE2ETest$WithdrawalEdgeCases.withdraw_velocityExceeded_shouldFail(SelfContainedOrchestratorE2ETest.java:1157)
+
+SelfContainedOrchestratorE2ETest > BDD-WF-D: Deposit Workflow > BDD-WF-HP-D01: Cash deposit completes successfully FAILED
+    org.opentest4j.AssertionFailedError: Deposit workflow should complete successfully, but was: FAILED Error: ERR_BIZ_DEPOSIT_FAILED ==> expected: <COMPLETED> but was: <FAILED>
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:151)
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.buildAndThrow(AssertionFailureBuilder.java:132)
+        at app//org.junit.jupiter.api.AssertEquals.failNotEqual(AssertEquals.java:197)
+        at app//org.junit.jupiter.api.AssertEquals.assertEquals(AssertEquals.java:182)
+        at app//org.junit.jupiter.api.Assertions.assertEquals(Assertions.java:1156)
+        at app//com.agentbanking.gateway.integration.orchestrator.SelfContainedOrchestratorE2ETest$DepositWorkflow.deposit_shouldCompleteSuccessfully(SelfContainedOrchestratorE2ETest.java:1215)
+
+SelfContainedOrchestratorE2ETest > BDD-WF-D: Deposit Workflow > BDD-WF-EC-D02: High-value deposit requires biometric verification PASSED
+
+SelfContainedOrchestratorE2ETest > BDD-WF-D: Deposit Workflow > BDD-WF-EC-D01: Deposit to invalid account - fails before money moves PASSED
+
+SelfContainedOrchestratorE2ETest > BDD-WF-BP: Bill Payment Workflow > BDD-WF-EC-BP01: Invalid biller reference - float released PASSED
+
+SelfContainedOrchestratorE2ETest > BDD-WF-BP: Bill Payment Workflow > BDD-WF-HP-BP01: Bill payment completes successfully FAILED
+    org.opentest4j.AssertionFailedError: Bill payment workflow should complete successfully, but was: PENDING Error: null ==> expected: <COMPLETED> but was: <PENDING>
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:151)
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.buildAndThrow(AssertionFailureBuilder.java:132)
+        at app//org.junit.jupiter.api.AssertEquals.failNotEqual(AssertEquals.java:197)
+        at app//org.junit.jupiter.api.AssertEquals.assertEquals(AssertEquals.java:182)
+        at app//org.junit.jupiter.api.Assertions.assertEquals(Assertions.java:1156)
+        at app//com.agentbanking.gateway.integration.orchestrator.SelfContainedOrchestratorE2ETest$BillPaymentWorkflow.billPayment_shouldCompleteSuccessfully(SelfContainedOrchestratorE2ETest.java:1318)
+
+SelfContainedOrchestratorE2ETest > BDD-WF-DN: DuitNow Transfer Workflow > BDD-WF-HP-DN01: DuitNow transfer via mobile proxy completes successfully FAILED
+    org.opentest4j.AssertionFailedError: DuitNow workflow should complete successfully, but was: PENDING Error: null ==> expected: <COMPLETED> but was: <PENDING>
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:151)
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.buildAndThrow(AssertionFailureBuilder.java:132)
+        at app//org.junit.jupiter.api.AssertEquals.failNotEqual(AssertEquals.java:197)
+        at app//org.junit.jupiter.api.AssertEquals.assertEquals(AssertEquals.java:182)
+        at app//org.junit.jupiter.api.Assertions.assertEquals(Assertions.java:1156)
+        at app//com.agentbanking.gateway.integration.orchestrator.SelfContainedOrchestratorE2ETest$DuitNowWorkflow.duitNowTransfer_mobileProxy_shouldCompleteSuccessfully(SelfContainedOrchestratorE2ETest.java:1399)
+
+SelfContainedOrchestratorE2ETest > BDD-WF-DN: DuitNow Transfer Workflow > BDD-WF-EC-DN01: Proxy not found - float released PASSED
+
+SelfContainedOrchestratorE2ETest > BDD-WF-DN: DuitNow Transfer Workflow > BDD-WF-HP-DN03: DuitNow transfer via BRN proxy PASSED
+
+SelfContainedOrchestratorE2ETest > BDD-WF-DN: DuitNow Transfer Workflow > BDD-WF-HP-DN02: DuitNow transfer via MyKad proxy PASSED
+
+SelfContainedOrchestratorE2ETest > BDD-STP: STP Evaluation End-to-End > BDD-STP-02: High value - triggers PENDING_REVIEW (NON_STP) STANDARD_OUT
+    High value transaction started - pending review expected
+
+SelfContainedOrchestratorE2ETest > BDD-STP: STP Evaluation End-to-End > BDD-STP-02: High value - triggers PENDING_REVIEW (NON_STP) PASSED
+
+SelfContainedOrchestratorE2ETest > BDD-STP: STP Evaluation End-to-End > BDD-STP-04: Bill payment - FULL_STP path PASSED
+
+SelfContainedOrchestratorE2ETest > BDD-STP: STP Evaluation End-to-End > BDD-STP-03: Deposit - FULL_STP path PASSED
+
+SelfContainedOrchestratorE2ETest > BDD-STP: STP Evaluation End-to-End > BDD-STP-01: Full STP - transaction completes immediately STANDARD_OUT
+    Transaction status after FULL_STP: PENDING
+
+SelfContainedOrchestratorE2ETest > BDD-STP: STP Evaluation End-to-End > BDD-STP-01: Full STP - transaction completes immediately PASSED
+
+SelfContainedOrchestratorE2ETest > BDD-STP: STP Evaluation End-to-End > BDD-STP-06: Invalid transaction - rejects at gateway PASSED
+
+SelfContainedOrchestratorE2ETest > BDD-STP: STP Evaluation End-to-End > BDD-STP-07: Verify pendingReason is captured in PENDING_REVIEW status PASSED
+
+SelfContainedOrchestratorE2ETest > BDD-STP: STP Evaluation End-to-End > BDD-STP-05: DuitNow transfer - FULL_STP path PASSED
+
+45 tests completed, 20 failed
+
+> Task :gateway:e2eTest FAILED
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':gateway:e2eTest'.
+> There were failing tests. See the report at: file:///Users/me/myprojects/agentbanking-backend/.worktrees/bdd-coverage/gateway/build/reports/tests/e2eTest/index.html
+
+* Try:
+> Run with --scan to get full insights.
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/8.5/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD FAILED in 4m 45s
+10 actionable tasks: 2 executed, 8 up-to-date

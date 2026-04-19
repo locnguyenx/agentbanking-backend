@@ -27,6 +27,7 @@ public class DuitNowTransferWorkflowImpl implements DuitNowTransferWorkflow {
 
     private static final Logger log = Workflow.getLogger(DuitNowTransferWorkflowImpl.class);
 
+    private GetDailyMetricsActivity getDailyMetricsActivity;
     private CheckVelocityActivity checkVelocityActivity;
     private EvaluateStpActivity evaluateStpActivity;
     private CalculateFeesActivity calculateFeesActivity;
@@ -43,6 +44,7 @@ public class DuitNowTransferWorkflowImpl implements DuitNowTransferWorkflow {
     private WorkflowStatus currentStatus = WorkflowStatus.PENDING;
 
     public DuitNowTransferWorkflowImpl(
+            GetDailyMetricsActivity getDailyMetricsActivity,
             CheckVelocityActivity checkVelocityActivity,
             EvaluateStpActivity evaluateStpActivity,
             CalculateFeesActivity calculateFeesActivity,
@@ -55,6 +57,7 @@ public class DuitNowTransferWorkflowImpl implements DuitNowTransferWorkflow {
             PublishKafkaEventActivity publishKafkaEventActivity,
             SaveResolutionCaseActivity saveResolutionCaseActivity,
             PersistWorkflowResultActivity persistWorkflowResultActivity) {
+        this.getDailyMetricsActivity = getDailyMetricsActivity;
         this.checkVelocityActivity = checkVelocityActivity;
         this.evaluateStpActivity = evaluateStpActivity;
         this.calculateFeesActivity = calculateFeesActivity;
@@ -71,6 +74,10 @@ public class DuitNowTransferWorkflowImpl implements DuitNowTransferWorkflow {
 
     @SuppressWarnings("SpringJavaAutowiredMembersInspection")
     public DuitNowTransferWorkflowImpl() {
+        this.getDailyMetricsActivity = Workflow.newActivityStub(GetDailyMetricsActivity.class, ActivityOptions.newBuilder()
+                .setStartToCloseTimeout(Duration.ofSeconds(30))
+                .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(3).build())
+                .build());
         this.checkVelocityActivity = Workflow.newActivityStub(CheckVelocityActivity.class, ActivityOptions.newBuilder()
                 .setStartToCloseTimeout(Duration.ofSeconds(30))
                 .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(3).build())
@@ -127,9 +134,20 @@ public class DuitNowTransferWorkflowImpl implements DuitNowTransferWorkflow {
         currentStatus = WorkflowStatus.RUNNING;
 
         try {
+            // Task: Fetch metrics
+            DailyMetricsResult metrics = getDailyMetricsActivity.getDailyMetrics(input.agentId());
+
             // Step 1: Check velocity
             VelocityCheckResult velocityResult = checkVelocityActivity.checkVelocity(
-                    new VelocityCheckInput(input.agentId(), input.amount(), input.customerMykad()));
+                    new VelocityCheckInput(
+                        input.agentId(), 
+                        "DUITNOW_TRANSFER",
+                        input.amount(), 
+                        input.customerMykad(),
+                        metrics.transactionCountToday(),
+                        metrics.amountToday()
+                    ));
+            
             if (!velocityResult.passed()) {
                 currentStatus = WorkflowStatus.FAILED;
                 WorkflowResult failResult = WorkflowResult.failed(velocityResult.errorCode(), "Velocity check failed", "DECLINE");
@@ -148,9 +166,9 @@ public class DuitNowTransferWorkflowImpl implements DuitNowTransferWorkflow {
                                 input.amount().toString(),
                                 input.customerMykad(),
                                 input.agentTier(),
-                                0,
-                                "0",
-                                "0"
+                                metrics.transactionCountToday(),
+                                metrics.amountToday().toString(),
+                                metrics.todayTotalAmount().toString()
                         )
                 );
             } catch (ActivityFailure e) {
@@ -202,7 +220,8 @@ public class DuitNowTransferWorkflowImpl implements DuitNowTransferWorkflow {
                                 input.geofenceLat(),
                                 input.geofenceLng(),
                                 input.agentTier(),
-                                input.targetBin()
+                                input.targetBin(),
+                                "DUITNOW_TRANSFER"
                         )
                 );
             } catch (ActivityFailure e) {

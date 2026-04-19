@@ -1,0 +1,757 @@
+Initialized native services in: /Users/me/.gradle/native
+Initialized jansi services in: /Users/me/.gradle/native
+Received JVM installation metadata from '/Library/Java/JavaVirtualMachines/zulu-21.jdk/Contents/Home': {JAVA_HOME=/Library/Java/JavaVirtualMachines/zulu-21.jdk/Contents/Home, JAVA_VERSION=21.0.6, JAVA_VENDOR=Azul Systems, Inc., RUNTIME_NAME=OpenJDK Runtime Environment, RUNTIME_VERSION=21.0.6+7-LTS, VM_NAME=OpenJDK 64-Bit Server VM, VM_VERSION=21.0.6+7-LTS, VM_VENDOR=Azul Systems, Inc., OS_ARCH=aarch64}
+Found daemon DaemonInfo{pid=23743, address=[481385cf-006b-4633-81a2-57f5298a3a1d port:51721, addresses:[/127.0.0.1]], state=Idle, lastBusy=1776526145399, context=DefaultDaemonContext[uid=daba449d-6b8a-43dc-9a47-a6d026a57e79,javaHome=/Library/Java/JavaVirtualMachines/zulu-21.jdk/Contents/Home,daemonRegistryDir=/Users/me/.gradle/daemon,pid=23743,idleTimeout=10800000,priority=NORMAL,applyInstrumentationAgent=true,daemonOpts=--add-opens=java.base/java.util=ALL-UNNAMED,--add-opens=java.base/java.lang=ALL-UNNAMED,--add-opens=java.base/java.lang.invoke=ALL-UNNAMED,--add-opens=java.prefs/java.util.prefs=ALL-UNNAMED,--add-opens=java.base/java.nio.charset=ALL-UNNAMED,--add-opens=java.base/java.net=ALL-UNNAMED,--add-opens=java.base/java.util.concurrent.atomic=ALL-UNNAMED,-XX:MaxMetaspaceSize=384m,-XX:+HeapDumpOnOutOfMemoryError,-Xms256m,-Xmx512m,-Dfile.encoding=utf8,-Duser.country=VN,-Duser.language=en,-Duser.variant]} however its context does not match the desired criteria.
+At least one daemon option is different.
+Wanted: DefaultDaemonContext[uid=null,javaHome=/Library/Java/JavaVirtualMachines/zulu-21.jdk/Contents/Home,daemonRegistryDir=/Users/me/.gradle/daemon,pid=8081,idleTimeout=null,priority=NORMAL,applyInstrumentationAgent=true,daemonOpts=--add-opens=java.base/java.util=ALL-UNNAMED,--add-opens=java.base/java.lang=ALL-UNNAMED,--add-opens=java.base/java.lang.invoke=ALL-UNNAMED,--add-opens=java.prefs/java.util.prefs=ALL-UNNAMED,--add-opens=java.base/java.nio.charset=ALL-UNNAMED,--add-opens=java.base/java.net=ALL-UNNAMED,--add-opens=java.base/java.util.concurrent.atomic=ALL-UNNAMED,-XX:MaxMetaspaceSize=384m,-XX:+HeapDumpOnOutOfMemoryError,-Xms256m,-Xmx512m,-Dfile.encoding=UTF-8,-Duser.country=VN,-Duser.language=en,-Duser.variant]
+Actual: DefaultDaemonContext[uid=daba449d-6b8a-43dc-9a47-a6d026a57e79,javaHome=/Library/Java/JavaVirtualMachines/zulu-21.jdk/Contents/Home,daemonRegistryDir=/Users/me/.gradle/daemon,pid=23743,idleTimeout=10800000,priority=NORMAL,applyInstrumentationAgent=true,daemonOpts=--add-opens=java.base/java.util=ALL-UNNAMED,--add-opens=java.base/java.lang=ALL-UNNAMED,--add-opens=java.base/java.lang.invoke=ALL-UNNAMED,--add-opens=java.prefs/java.util.prefs=ALL-UNNAMED,--add-opens=java.base/java.nio.charset=ALL-UNNAMED,--add-opens=java.base/java.net=ALL-UNNAMED,--add-opens=java.base/java.util.concurrent.atomic=ALL-UNNAMED,-XX:MaxMetaspaceSize=384m,-XX:+HeapDumpOnOutOfMemoryError,-Xms256m,-Xmx512m,-Dfile.encoding=utf8,-Duser.country=VN,-Duser.language=en,-Duser.variant]
+
+  Looking for a different daemon...
+Found daemon DaemonInfo{pid=46540, address=[e7d60121-e2d2-42f5-8ac9-afca0cde0032 port:54502, addresses:[/127.0.0.1]], state=Idle, lastBusy=1776551456492, context=DefaultDaemonContext[uid=89b59287-1f96-4f40-af59-e968c7a1be5d,javaHome=/Users/me/.antigravity/extensions/redhat.java-1.53.0-darwin-arm64/jre/21.0.10-macosx-aarch64,daemonRegistryDir=/Users/me/.gradle/daemon,pid=46540,idleTimeout=10800000,priority=NORMAL,applyInstrumentationAgent=true,daemonOpts=--add-opens=java.base/java.util=ALL-UNNAMED,--add-opens=java.base/java.lang=ALL-UNNAMED,--add-opens=java.base/java.lang.invoke=ALL-UNNAMED,--add-opens=java.prefs/java.util.prefs=ALL-UNNAMED,--add-opens=java.base/java.nio.charset=ALL-UNNAMED,--add-opens=java.base/java.net=ALL-UNNAMED,--add-opens=java.base/java.util.concurrent.atomic=ALL-UNNAMED,-XX:MaxMetaspaceSize=384m,-XX:+HeapDumpOnOutOfMemoryError,-Xms256m,-Xmx512m,-Dfile.encoding=UTF-8,-Duser.country=VN,-Duser.language=en,-Duser.variant]} however its context does not match the desired criteria.
+Java home is different.
+Wanted: DefaultDaemonContext[uid=null,javaHome=/Library/Java/JavaVirtualMachines/zulu-21.jdk/Contents/Home,daemonRegistryDir=/Users/me/.gradle/daemon,pid=8081,idleTimeout=null,priority=NORMAL,applyInstrumentationAgent=true,daemonOpts=--add-opens=java.base/java.util=ALL-UNNAMED,--add-opens=java.base/java.lang=ALL-UNNAMED,--add-opens=java.base/java.lang.invoke=ALL-UNNAMED,--add-opens=java.prefs/java.util.prefs=ALL-UNNAMED,--add-opens=java.base/java.nio.charset=ALL-UNNAMED,--add-opens=java.base/java.net=ALL-UNNAMED,--add-opens=java.base/java.util.concurrent.atomic=ALL-UNNAMED,-XX:MaxMetaspaceSize=384m,-XX:+HeapDumpOnOutOfMemoryError,-Xms256m,-Xmx512m,-Dfile.encoding=UTF-8,-Duser.country=VN,-Duser.language=en,-Duser.variant]
+Actual: DefaultDaemonContext[uid=89b59287-1f96-4f40-af59-e968c7a1be5d,javaHome=/Users/me/.antigravity/extensions/redhat.java-1.53.0-darwin-arm64/jre/21.0.10-macosx-aarch64,daemonRegistryDir=/Users/me/.gradle/daemon,pid=46540,idleTimeout=10800000,priority=NORMAL,applyInstrumentationAgent=true,daemonOpts=--add-opens=java.base/java.util=ALL-UNNAMED,--add-opens=java.base/java.lang=ALL-UNNAMED,--add-opens=java.base/java.lang.invoke=ALL-UNNAMED,--add-opens=java.prefs/java.util.prefs=ALL-UNNAMED,--add-opens=java.base/java.nio.charset=ALL-UNNAMED,--add-opens=java.base/java.net=ALL-UNNAMED,--add-opens=java.base/java.util.concurrent.atomic=ALL-UNNAMED,-XX:MaxMetaspaceSize=384m,-XX:+HeapDumpOnOutOfMemoryError,-Xms256m,-Xmx512m,-Dfile.encoding=UTF-8,-Duser.country=VN,-Duser.language=en,-Duser.variant]
+
+  Looking for a different daemon...
+Found daemon DaemonInfo{pid=70498, address=[a0b51ec9-e4b4-4f7c-b8b1-1fe5d0914a18 port:56340, addresses:[/127.0.0.1]], state=Idle, lastBusy=1776577483057, context=DefaultDaemonContext[uid=fdc93db7-3b68-482a-b3ff-8fd98058031c,javaHome=/Users/me/.antigravity/extensions/redhat.java-1.53.0-darwin-arm64/jre/21.0.10-macosx-aarch64,daemonRegistryDir=/Users/me/.gradle/daemon,pid=70498,idleTimeout=10800000,priority=NORMAL,applyInstrumentationAgent=true,daemonOpts=--add-opens=java.base/java.util=ALL-UNNAMED,--add-opens=java.base/java.lang=ALL-UNNAMED,--add-opens=java.base/java.lang.invoke=ALL-UNNAMED,--add-opens=java.prefs/java.util.prefs=ALL-UNNAMED,--add-opens=java.base/java.nio.charset=ALL-UNNAMED,--add-opens=java.base/java.net=ALL-UNNAMED,--add-opens=java.base/java.util.concurrent.atomic=ALL-UNNAMED,-XX:MaxMetaspaceSize=384m,-XX:+HeapDumpOnOutOfMemoryError,-Xms256m,-Xmx512m,-Dfile.encoding=utf8,-Duser.country=VN,-Duser.language=en,-Duser.variant]} however its context does not match the desired criteria.
+Java home is different.
+Wanted: DefaultDaemonContext[uid=null,javaHome=/Library/Java/JavaVirtualMachines/zulu-21.jdk/Contents/Home,daemonRegistryDir=/Users/me/.gradle/daemon,pid=8081,idleTimeout=null,priority=NORMAL,applyInstrumentationAgent=true,daemonOpts=--add-opens=java.base/java.util=ALL-UNNAMED,--add-opens=java.base/java.lang=ALL-UNNAMED,--add-opens=java.base/java.lang.invoke=ALL-UNNAMED,--add-opens=java.prefs/java.util.prefs=ALL-UNNAMED,--add-opens=java.base/java.nio.charset=ALL-UNNAMED,--add-opens=java.base/java.net=ALL-UNNAMED,--add-opens=java.base/java.util.concurrent.atomic=ALL-UNNAMED,-XX:MaxMetaspaceSize=384m,-XX:+HeapDumpOnOutOfMemoryError,-Xms256m,-Xmx512m,-Dfile.encoding=UTF-8,-Duser.country=VN,-Duser.language=en,-Duser.variant]
+Actual: DefaultDaemonContext[uid=fdc93db7-3b68-482a-b3ff-8fd98058031c,javaHome=/Users/me/.antigravity/extensions/redhat.java-1.53.0-darwin-arm64/jre/21.0.10-macosx-aarch64,daemonRegistryDir=/Users/me/.gradle/daemon,pid=70498,idleTimeout=10800000,priority=NORMAL,applyInstrumentationAgent=true,daemonOpts=--add-opens=java.base/java.util=ALL-UNNAMED,--add-opens=java.base/java.lang=ALL-UNNAMED,--add-opens=java.base/java.lang.invoke=ALL-UNNAMED,--add-opens=java.prefs/java.util.prefs=ALL-UNNAMED,--add-opens=java.base/java.nio.charset=ALL-UNNAMED,--add-opens=java.base/java.net=ALL-UNNAMED,--add-opens=java.base/java.util.concurrent.atomic=ALL-UNNAMED,-XX:MaxMetaspaceSize=384m,-XX:+HeapDumpOnOutOfMemoryError,-Xms256m,-Xmx512m,-Dfile.encoding=utf8,-Duser.country=VN,-Duser.language=en,-Duser.variant]
+
+  Looking for a different daemon...
+The client will now receive all logging from the daemon (pid: 3165). The daemon log file: /Users/me/.gradle/daemon/8.5/daemon-3165.out.log
+Starting 5th build in daemon [uptime: 20 mins 32.843 secs, performance: 100%, GC rate: 0.00/s, heap usage: 0% of 512 MiB, non-heap usage: 19% of 384 MiB]
+Using 8 worker leases.
+Now considering [/Users/me/myprojects/agentbanking-backend/.worktrees/bdd-coverage] as hierarchies to watch
+Watching the file system is configured to be enabled if available
+File system watching is active
+Starting Build
+Settings evaluated using settings file '/Users/me/myprojects/agentbanking-backend/.worktrees/bdd-coverage/settings.gradle'.
+Projects loaded. Root project using build file '/Users/me/myprojects/agentbanking-backend/.worktrees/bdd-coverage/build.gradle'.
+Included projects: [root project 'agent-banking-platform', project ':common', project ':gateway', project ':mock-server', project ':services', project ':services:audit-service', project ':services:auth-iam-service', project ':services:biller-service', project ':services:ledger-service', project ':services:onboarding-service', project ':services:orchestrator-service', project ':services:rules-service', project ':services:switch-adapter-service']
+
+> Configure project :
+Evaluating root project 'agent-banking-platform' using build file '/Users/me/myprojects/agentbanking-backend/.worktrees/bdd-coverage/build.gradle'.
+Applying dependency management to configuration 'annotationProcessor' in project 'common'
+Applying dependency management to configuration 'apiElements' in project 'common'
+Applying dependency management to configuration 'archives' in project 'common'
+Applying dependency management to configuration 'bootArchives' in project 'common'
+Applying dependency management to configuration 'compileClasspath' in project 'common'
+Applying dependency management to configuration 'compileOnly' in project 'common'
+Applying dependency management to configuration 'default' in project 'common'
+Applying dependency management to configuration 'developmentOnly' in project 'common'
+Applying dependency management to configuration 'implementation' in project 'common'
+Applying dependency management to configuration 'mainSourceElements' in project 'common'
+Applying dependency management to configuration 'productionRuntimeClasspath' in project 'common'
+Applying dependency management to configuration 'runtimeClasspath' in project 'common'
+Applying dependency management to configuration 'runtimeElements' in project 'common'
+Applying dependency management to configuration 'runtimeOnly' in project 'common'
+Applying dependency management to configuration 'testAndDevelopmentOnly' in project 'common'
+Applying dependency management to configuration 'testAnnotationProcessor' in project 'common'
+Applying dependency management to configuration 'testCompileClasspath' in project 'common'
+Applying dependency management to configuration 'testCompileOnly' in project 'common'
+Applying dependency management to configuration 'testImplementation' in project 'common'
+Applying dependency management to configuration 'testResultsElementsForTest' in project 'common'
+Applying dependency management to configuration 'testRuntimeClasspath' in project 'common'
+Applying dependency management to configuration 'testRuntimeOnly' in project 'common'
+Applying dependency management to configuration 'annotationProcessor' in project 'gateway'
+Applying dependency management to configuration 'apiElements' in project 'gateway'
+Applying dependency management to configuration 'archives' in project 'gateway'
+Applying dependency management to configuration 'bootArchives' in project 'gateway'
+Applying dependency management to configuration 'compileClasspath' in project 'gateway'
+Applying dependency management to configuration 'compileOnly' in project 'gateway'
+Applying dependency management to configuration 'default' in project 'gateway'
+Applying dependency management to configuration 'developmentOnly' in project 'gateway'
+Applying dependency management to configuration 'implementation' in project 'gateway'
+Applying dependency management to configuration 'mainSourceElements' in project 'gateway'
+Applying dependency management to configuration 'productionRuntimeClasspath' in project 'gateway'
+Applying dependency management to configuration 'runtimeClasspath' in project 'gateway'
+Applying dependency management to configuration 'runtimeElements' in project 'gateway'
+Applying dependency management to configuration 'runtimeOnly' in project 'gateway'
+Applying dependency management to configuration 'testAndDevelopmentOnly' in project 'gateway'
+Applying dependency management to configuration 'testAnnotationProcessor' in project 'gateway'
+Applying dependency management to configuration 'testCompileClasspath' in project 'gateway'
+Applying dependency management to configuration 'testCompileOnly' in project 'gateway'
+Applying dependency management to configuration 'testImplementation' in project 'gateway'
+Applying dependency management to configuration 'testResultsElementsForTest' in project 'gateway'
+Applying dependency management to configuration 'testRuntimeClasspath' in project 'gateway'
+Applying dependency management to configuration 'testRuntimeOnly' in project 'gateway'
+Applying dependency management to configuration 'annotationProcessor' in project 'mock-server'
+Applying dependency management to configuration 'apiElements' in project 'mock-server'
+Applying dependency management to configuration 'archives' in project 'mock-server'
+Applying dependency management to configuration 'bootArchives' in project 'mock-server'
+Applying dependency management to configuration 'compileClasspath' in project 'mock-server'
+Applying dependency management to configuration 'compileOnly' in project 'mock-server'
+Applying dependency management to configuration 'default' in project 'mock-server'
+Applying dependency management to configuration 'developmentOnly' in project 'mock-server'
+Applying dependency management to configuration 'implementation' in project 'mock-server'
+Applying dependency management to configuration 'mainSourceElements' in project 'mock-server'
+Applying dependency management to configuration 'productionRuntimeClasspath' in project 'mock-server'
+Applying dependency management to configuration 'runtimeClasspath' in project 'mock-server'
+Applying dependency management to configuration 'runtimeElements' in project 'mock-server'
+Applying dependency management to configuration 'runtimeOnly' in project 'mock-server'
+Applying dependency management to configuration 'testAndDevelopmentOnly' in project 'mock-server'
+Applying dependency management to configuration 'testAnnotationProcessor' in project 'mock-server'
+Applying dependency management to configuration 'testCompileClasspath' in project 'mock-server'
+Applying dependency management to configuration 'testCompileOnly' in project 'mock-server'
+Applying dependency management to configuration 'testImplementation' in project 'mock-server'
+Applying dependency management to configuration 'testResultsElementsForTest' in project 'mock-server'
+Applying dependency management to configuration 'testRuntimeClasspath' in project 'mock-server'
+Applying dependency management to configuration 'testRuntimeOnly' in project 'mock-server'
+Applying dependency management to configuration 'annotationProcessor' in project 'services'
+Applying dependency management to configuration 'apiElements' in project 'services'
+Applying dependency management to configuration 'archives' in project 'services'
+Applying dependency management to configuration 'bootArchives' in project 'services'
+Applying dependency management to configuration 'compileClasspath' in project 'services'
+Applying dependency management to configuration 'compileOnly' in project 'services'
+Applying dependency management to configuration 'default' in project 'services'
+Applying dependency management to configuration 'developmentOnly' in project 'services'
+Applying dependency management to configuration 'implementation' in project 'services'
+Applying dependency management to configuration 'mainSourceElements' in project 'services'
+Applying dependency management to configuration 'productionRuntimeClasspath' in project 'services'
+Applying dependency management to configuration 'runtimeClasspath' in project 'services'
+Applying dependency management to configuration 'runtimeElements' in project 'services'
+Applying dependency management to configuration 'runtimeOnly' in project 'services'
+Applying dependency management to configuration 'testAndDevelopmentOnly' in project 'services'
+Applying dependency management to configuration 'testAnnotationProcessor' in project 'services'
+Applying dependency management to configuration 'testCompileClasspath' in project 'services'
+Applying dependency management to configuration 'testCompileOnly' in project 'services'
+Applying dependency management to configuration 'testImplementation' in project 'services'
+Applying dependency management to configuration 'testResultsElementsForTest' in project 'services'
+Applying dependency management to configuration 'testRuntimeClasspath' in project 'services'
+Applying dependency management to configuration 'testRuntimeOnly' in project 'services'
+Applying dependency management to configuration 'annotationProcessor' in project 'audit-service'
+Applying dependency management to configuration 'apiElements' in project 'audit-service'
+Applying dependency management to configuration 'archives' in project 'audit-service'
+Applying dependency management to configuration 'bootArchives' in project 'audit-service'
+Applying dependency management to configuration 'compileClasspath' in project 'audit-service'
+Applying dependency management to configuration 'compileOnly' in project 'audit-service'
+Applying dependency management to configuration 'default' in project 'audit-service'
+Applying dependency management to configuration 'developmentOnly' in project 'audit-service'
+Applying dependency management to configuration 'implementation' in project 'audit-service'
+Applying dependency management to configuration 'mainSourceElements' in project 'audit-service'
+Applying dependency management to configuration 'productionRuntimeClasspath' in project 'audit-service'
+Applying dependency management to configuration 'runtimeClasspath' in project 'audit-service'
+Applying dependency management to configuration 'runtimeElements' in project 'audit-service'
+Applying dependency management to configuration 'runtimeOnly' in project 'audit-service'
+Applying dependency management to configuration 'testAndDevelopmentOnly' in project 'audit-service'
+Applying dependency management to configuration 'testAnnotationProcessor' in project 'audit-service'
+Applying dependency management to configuration 'testCompileClasspath' in project 'audit-service'
+Applying dependency management to configuration 'testCompileOnly' in project 'audit-service'
+Applying dependency management to configuration 'testImplementation' in project 'audit-service'
+Applying dependency management to configuration 'testResultsElementsForTest' in project 'audit-service'
+Applying dependency management to configuration 'testRuntimeClasspath' in project 'audit-service'
+Applying dependency management to configuration 'testRuntimeOnly' in project 'audit-service'
+Applying dependency management to configuration 'annotationProcessor' in project 'auth-iam-service'
+Applying dependency management to configuration 'apiElements' in project 'auth-iam-service'
+Applying dependency management to configuration 'archives' in project 'auth-iam-service'
+Applying dependency management to configuration 'bootArchives' in project 'auth-iam-service'
+Applying dependency management to configuration 'compileClasspath' in project 'auth-iam-service'
+Applying dependency management to configuration 'compileOnly' in project 'auth-iam-service'
+Applying dependency management to configuration 'default' in project 'auth-iam-service'
+Applying dependency management to configuration 'developmentOnly' in project 'auth-iam-service'
+Applying dependency management to configuration 'implementation' in project 'auth-iam-service'
+Applying dependency management to configuration 'mainSourceElements' in project 'auth-iam-service'
+Applying dependency management to configuration 'productionRuntimeClasspath' in project 'auth-iam-service'
+Applying dependency management to configuration 'runtimeClasspath' in project 'auth-iam-service'
+Applying dependency management to configuration 'runtimeElements' in project 'auth-iam-service'
+Applying dependency management to configuration 'runtimeOnly' in project 'auth-iam-service'
+Applying dependency management to configuration 'testAndDevelopmentOnly' in project 'auth-iam-service'
+Applying dependency management to configuration 'testAnnotationProcessor' in project 'auth-iam-service'
+Applying dependency management to configuration 'testCompileClasspath' in project 'auth-iam-service'
+Applying dependency management to configuration 'testCompileOnly' in project 'auth-iam-service'
+Applying dependency management to configuration 'testImplementation' in project 'auth-iam-service'
+Applying dependency management to configuration 'testResultsElementsForTest' in project 'auth-iam-service'
+Applying dependency management to configuration 'testRuntimeClasspath' in project 'auth-iam-service'
+Applying dependency management to configuration 'testRuntimeOnly' in project 'auth-iam-service'
+Applying dependency management to configuration 'annotationProcessor' in project 'biller-service'
+Applying dependency management to configuration 'apiElements' in project 'biller-service'
+Applying dependency management to configuration 'archives' in project 'biller-service'
+Applying dependency management to configuration 'bootArchives' in project 'biller-service'
+Applying dependency management to configuration 'compileClasspath' in project 'biller-service'
+Applying dependency management to configuration 'compileOnly' in project 'biller-service'
+Applying dependency management to configuration 'default' in project 'biller-service'
+Applying dependency management to configuration 'developmentOnly' in project 'biller-service'
+Applying dependency management to configuration 'implementation' in project 'biller-service'
+Applying dependency management to configuration 'mainSourceElements' in project 'biller-service'
+Applying dependency management to configuration 'productionRuntimeClasspath' in project 'biller-service'
+Applying dependency management to configuration 'runtimeClasspath' in project 'biller-service'
+Applying dependency management to configuration 'runtimeElements' in project 'biller-service'
+Applying dependency management to configuration 'runtimeOnly' in project 'biller-service'
+Applying dependency management to configuration 'testAndDevelopmentOnly' in project 'biller-service'
+Applying dependency management to configuration 'testAnnotationProcessor' in project 'biller-service'
+Applying dependency management to configuration 'testCompileClasspath' in project 'biller-service'
+Applying dependency management to configuration 'testCompileOnly' in project 'biller-service'
+Applying dependency management to configuration 'testImplementation' in project 'biller-service'
+Applying dependency management to configuration 'testResultsElementsForTest' in project 'biller-service'
+Applying dependency management to configuration 'testRuntimeClasspath' in project 'biller-service'
+Applying dependency management to configuration 'testRuntimeOnly' in project 'biller-service'
+Applying dependency management to configuration 'annotationProcessor' in project 'ledger-service'
+Applying dependency management to configuration 'apiElements' in project 'ledger-service'
+Applying dependency management to configuration 'archives' in project 'ledger-service'
+Applying dependency management to configuration 'bootArchives' in project 'ledger-service'
+Applying dependency management to configuration 'compileClasspath' in project 'ledger-service'
+Applying dependency management to configuration 'compileOnly' in project 'ledger-service'
+Applying dependency management to configuration 'default' in project 'ledger-service'
+Applying dependency management to configuration 'developmentOnly' in project 'ledger-service'
+Applying dependency management to configuration 'implementation' in project 'ledger-service'
+Applying dependency management to configuration 'mainSourceElements' in project 'ledger-service'
+Applying dependency management to configuration 'productionRuntimeClasspath' in project 'ledger-service'
+Applying dependency management to configuration 'runtimeClasspath' in project 'ledger-service'
+Applying dependency management to configuration 'runtimeElements' in project 'ledger-service'
+Applying dependency management to configuration 'runtimeOnly' in project 'ledger-service'
+Applying dependency management to configuration 'testAndDevelopmentOnly' in project 'ledger-service'
+Applying dependency management to configuration 'testAnnotationProcessor' in project 'ledger-service'
+Applying dependency management to configuration 'testCompileClasspath' in project 'ledger-service'
+Applying dependency management to configuration 'testCompileOnly' in project 'ledger-service'
+Applying dependency management to configuration 'testImplementation' in project 'ledger-service'
+Applying dependency management to configuration 'testResultsElementsForTest' in project 'ledger-service'
+Applying dependency management to configuration 'testRuntimeClasspath' in project 'ledger-service'
+Applying dependency management to configuration 'testRuntimeOnly' in project 'ledger-service'
+Applying dependency management to configuration 'annotationProcessor' in project 'onboarding-service'
+Applying dependency management to configuration 'apiElements' in project 'onboarding-service'
+Applying dependency management to configuration 'archives' in project 'onboarding-service'
+Applying dependency management to configuration 'bootArchives' in project 'onboarding-service'
+Applying dependency management to configuration 'compileClasspath' in project 'onboarding-service'
+Applying dependency management to configuration 'compileOnly' in project 'onboarding-service'
+Applying dependency management to configuration 'default' in project 'onboarding-service'
+Applying dependency management to configuration 'developmentOnly' in project 'onboarding-service'
+Applying dependency management to configuration 'implementation' in project 'onboarding-service'
+Applying dependency management to configuration 'mainSourceElements' in project 'onboarding-service'
+Applying dependency management to configuration 'productionRuntimeClasspath' in project 'onboarding-service'
+Applying dependency management to configuration 'runtimeClasspath' in project 'onboarding-service'
+Applying dependency management to configuration 'runtimeElements' in project 'onboarding-service'
+Applying dependency management to configuration 'runtimeOnly' in project 'onboarding-service'
+Applying dependency management to configuration 'testAndDevelopmentOnly' in project 'onboarding-service'
+Applying dependency management to configuration 'testAnnotationProcessor' in project 'onboarding-service'
+Applying dependency management to configuration 'testCompileClasspath' in project 'onboarding-service'
+Applying dependency management to configuration 'testCompileOnly' in project 'onboarding-service'
+Applying dependency management to configuration 'testImplementation' in project 'onboarding-service'
+Applying dependency management to configuration 'testResultsElementsForTest' in project 'onboarding-service'
+Applying dependency management to configuration 'testRuntimeClasspath' in project 'onboarding-service'
+Applying dependency management to configuration 'testRuntimeOnly' in project 'onboarding-service'
+Applying dependency management to configuration 'annotationProcessor' in project 'orchestrator-service'
+Applying dependency management to configuration 'apiElements' in project 'orchestrator-service'
+Applying dependency management to configuration 'archives' in project 'orchestrator-service'
+Applying dependency management to configuration 'bootArchives' in project 'orchestrator-service'
+Applying dependency management to configuration 'compileClasspath' in project 'orchestrator-service'
+Applying dependency management to configuration 'compileOnly' in project 'orchestrator-service'
+Applying dependency management to configuration 'default' in project 'orchestrator-service'
+Applying dependency management to configuration 'developmentOnly' in project 'orchestrator-service'
+Applying dependency management to configuration 'implementation' in project 'orchestrator-service'
+Applying dependency management to configuration 'mainSourceElements' in project 'orchestrator-service'
+Applying dependency management to configuration 'productionRuntimeClasspath' in project 'orchestrator-service'
+Applying dependency management to configuration 'runtimeClasspath' in project 'orchestrator-service'
+Applying dependency management to configuration 'runtimeElements' in project 'orchestrator-service'
+Applying dependency management to configuration 'runtimeOnly' in project 'orchestrator-service'
+Applying dependency management to configuration 'testAndDevelopmentOnly' in project 'orchestrator-service'
+Applying dependency management to configuration 'testAnnotationProcessor' in project 'orchestrator-service'
+Applying dependency management to configuration 'testCompileClasspath' in project 'orchestrator-service'
+Applying dependency management to configuration 'testCompileOnly' in project 'orchestrator-service'
+Applying dependency management to configuration 'testImplementation' in project 'orchestrator-service'
+Applying dependency management to configuration 'testResultsElementsForTest' in project 'orchestrator-service'
+Applying dependency management to configuration 'testRuntimeClasspath' in project 'orchestrator-service'
+Applying dependency management to configuration 'testRuntimeOnly' in project 'orchestrator-service'
+Applying dependency management to configuration 'annotationProcessor' in project 'rules-service'
+Applying dependency management to configuration 'apiElements' in project 'rules-service'
+Applying dependency management to configuration 'archives' in project 'rules-service'
+Applying dependency management to configuration 'bootArchives' in project 'rules-service'
+Applying dependency management to configuration 'compileClasspath' in project 'rules-service'
+Applying dependency management to configuration 'compileOnly' in project 'rules-service'
+Applying dependency management to configuration 'default' in project 'rules-service'
+Applying dependency management to configuration 'developmentOnly' in project 'rules-service'
+Applying dependency management to configuration 'implementation' in project 'rules-service'
+Applying dependency management to configuration 'mainSourceElements' in project 'rules-service'
+Applying dependency management to configuration 'productionRuntimeClasspath' in project 'rules-service'
+Applying dependency management to configuration 'runtimeClasspath' in project 'rules-service'
+Applying dependency management to configuration 'runtimeElements' in project 'rules-service'
+Applying dependency management to configuration 'runtimeOnly' in project 'rules-service'
+Applying dependency management to configuration 'testAndDevelopmentOnly' in project 'rules-service'
+Applying dependency management to configuration 'testAnnotationProcessor' in project 'rules-service'
+Applying dependency management to configuration 'testCompileClasspath' in project 'rules-service'
+Applying dependency management to configuration 'testCompileOnly' in project 'rules-service'
+Applying dependency management to configuration 'testImplementation' in project 'rules-service'
+Applying dependency management to configuration 'testResultsElementsForTest' in project 'rules-service'
+Applying dependency management to configuration 'testRuntimeClasspath' in project 'rules-service'
+Applying dependency management to configuration 'testRuntimeOnly' in project 'rules-service'
+Applying dependency management to configuration 'annotationProcessor' in project 'switch-adapter-service'
+Applying dependency management to configuration 'apiElements' in project 'switch-adapter-service'
+Applying dependency management to configuration 'archives' in project 'switch-adapter-service'
+Applying dependency management to configuration 'bootArchives' in project 'switch-adapter-service'
+Applying dependency management to configuration 'compileClasspath' in project 'switch-adapter-service'
+Applying dependency management to configuration 'compileOnly' in project 'switch-adapter-service'
+Applying dependency management to configuration 'default' in project 'switch-adapter-service'
+Applying dependency management to configuration 'developmentOnly' in project 'switch-adapter-service'
+Applying dependency management to configuration 'implementation' in project 'switch-adapter-service'
+Applying dependency management to configuration 'mainSourceElements' in project 'switch-adapter-service'
+Applying dependency management to configuration 'productionRuntimeClasspath' in project 'switch-adapter-service'
+Applying dependency management to configuration 'runtimeClasspath' in project 'switch-adapter-service'
+Applying dependency management to configuration 'runtimeElements' in project 'switch-adapter-service'
+Applying dependency management to configuration 'runtimeOnly' in project 'switch-adapter-service'
+Applying dependency management to configuration 'testAndDevelopmentOnly' in project 'switch-adapter-service'
+Applying dependency management to configuration 'testAnnotationProcessor' in project 'switch-adapter-service'
+Applying dependency management to configuration 'testCompileClasspath' in project 'switch-adapter-service'
+Applying dependency management to configuration 'testCompileOnly' in project 'switch-adapter-service'
+Applying dependency management to configuration 'testImplementation' in project 'switch-adapter-service'
+Applying dependency management to configuration 'testResultsElementsForTest' in project 'switch-adapter-service'
+Applying dependency management to configuration 'testRuntimeClasspath' in project 'switch-adapter-service'
+Applying dependency management to configuration 'testRuntimeOnly' in project 'switch-adapter-service'
+
+> Configure project :common
+Evaluating project ':common' using build file '/Users/me/myprojects/agentbanking-backend/.worktrees/bdd-coverage/common/build.gradle'.
+Applying dependency management to configuration 'api' in project 'common'
+Applying dependency management to configuration 'compileOnlyApi' in project 'common'
+Applying dependency management to configuration 'testFixturesImplementation' in project 'common'
+Applying dependency management to configuration 'testFixturesCompileOnly' in project 'common'
+Applying dependency management to configuration 'testFixturesCompileClasspath' in project 'common'
+Applying dependency management to configuration 'testFixturesAnnotationProcessor' in project 'common'
+Applying dependency management to configuration 'testFixturesRuntimeOnly' in project 'common'
+Applying dependency management to configuration 'testFixturesRuntimeClasspath' in project 'common'
+Applying dependency management to configuration 'testFixturesApiElements' in project 'common'
+Applying dependency management to configuration 'testFixturesRuntimeElements' in project 'common'
+Applying dependency management to configuration 'testFixturesApi' in project 'common'
+Applying dependency management to configuration 'testFixturesCompileOnlyApi' in project 'common'
+
+> Configure project :gateway
+Evaluating project ':gateway' using build file '/Users/me/myprojects/agentbanking-backend/.worktrees/bdd-coverage/gateway/build.gradle'.
+Applying dependency management to configuration 'api' in project 'gateway'
+Applying dependency management to configuration 'compileOnlyApi' in project 'gateway'
+
+> Configure project :mock-server
+Evaluating project ':mock-server' using build file '/Users/me/myprojects/agentbanking-backend/.worktrees/bdd-coverage/mock-server/build.gradle'.
+
+> Configure project :services
+Evaluating project ':services' using build file '/Users/me/myprojects/agentbanking-backend/.worktrees/bdd-coverage/services/build.gradle'.
+
+> Configure project :services:audit-service
+Evaluating project ':services:audit-service' using build file '/Users/me/myprojects/agentbanking-backend/.worktrees/bdd-coverage/services/audit-service/build.gradle'.
+Applying dependency management to configuration 'api' in project 'audit-service'
+Applying dependency management to configuration 'compileOnlyApi' in project 'audit-service'
+
+> Configure project :services:auth-iam-service
+Evaluating project ':services:auth-iam-service' using build file '/Users/me/myprojects/agentbanking-backend/.worktrees/bdd-coverage/services/auth-iam-service/build.gradle'.
+Applying dependency management to configuration 'api' in project 'auth-iam-service'
+Applying dependency management to configuration 'compileOnlyApi' in project 'auth-iam-service'
+
+> Configure project :services:biller-service
+Evaluating project ':services:biller-service' using build file '/Users/me/myprojects/agentbanking-backend/.worktrees/bdd-coverage/services/biller-service/build.gradle'.
+Applying dependency management to configuration 'api' in project 'biller-service'
+Applying dependency management to configuration 'compileOnlyApi' in project 'biller-service'
+
+> Configure project :services:ledger-service
+Evaluating project ':services:ledger-service' using build file '/Users/me/myprojects/agentbanking-backend/.worktrees/bdd-coverage/services/ledger-service/build.gradle'.
+Applying dependency management to configuration 'api' in project 'ledger-service'
+Applying dependency management to configuration 'compileOnlyApi' in project 'ledger-service'
+
+> Configure project :services:onboarding-service
+Evaluating project ':services:onboarding-service' using build file '/Users/me/myprojects/agentbanking-backend/.worktrees/bdd-coverage/services/onboarding-service/build.gradle'.
+Applying dependency management to configuration 'api' in project 'onboarding-service'
+Applying dependency management to configuration 'compileOnlyApi' in project 'onboarding-service'
+
+> Configure project :services:orchestrator-service
+Evaluating project ':services:orchestrator-service' using build file '/Users/me/myprojects/agentbanking-backend/.worktrees/bdd-coverage/services/orchestrator-service/build.gradle'.
+
+> Configure project :services:rules-service
+Evaluating project ':services:rules-service' using build file '/Users/me/myprojects/agentbanking-backend/.worktrees/bdd-coverage/services/rules-service/build.gradle'.
+Applying dependency management to configuration 'api' in project 'rules-service'
+Applying dependency management to configuration 'compileOnlyApi' in project 'rules-service'
+
+> Configure project :services:switch-adapter-service
+Evaluating project ':services:switch-adapter-service' using build file '/Users/me/myprojects/agentbanking-backend/.worktrees/bdd-coverage/services/switch-adapter-service/build.gradle'.
+Applying dependency management to configuration 'api' in project 'switch-adapter-service'
+Applying dependency management to configuration 'compileOnlyApi' in project 'switch-adapter-service'
+All projects evaluated.
+Task path ':gateway:e2eTest' matched project ':gateway'
+Task name matched 'e2eTest'
+Selected primary task 'e2eTest' from project :gateway
+Tasks to be executed: [task ':common:compileJava', task ':common:processResources', task ':common:classes', task ':common:jar', task ':common:compileTestFixturesJava', task ':common:processTestFixturesResources', task ':common:testFixturesClasses', task ':common:testFixturesJar', task ':gateway:compileJava', task ':gateway:processResources', task ':gateway:classes', task ':gateway:compileTestJava', task ':gateway:processTestResources', task ':gateway:testClasses', task ':gateway:cleanE2eTestData', task ':gateway:e2eTest']
+Tasks that were excluded: []
+Resolve mutations for :common:compileJava (Thread[#566,Execution worker,5,main]) started.
+:common:compileJava (Thread[#566,Execution worker,5,main]) started.
+
+> Task :common:compileJava
+Resolving global dependency management for project 'common'
+Excluding []
+Excluding []
+Caching disabled for task ':common:compileJava' because:
+  Build cache is disabled
+Skipping task ':common:compileJava' as it is up-to-date.
+
+> Task :common:compileJava UP-TO-DATE
+work action resolve main (project :common) (Thread[#566,Execution worker,5,main]) started.
+Resolve mutations for :common:processResources (Thread[#566,Execution worker,5,main]) started.
+:common:processResources (Thread[#566,Execution worker,5,main]) started.
+
+> Task :common:processResources NO-SOURCE
+Skipping task ':common:processResources' as it has no source files and no previous output files.
+Resolve mutations for :common:classes (Thread[#566,Execution worker,5,main]) started.
+:common:classes (Thread[#566,Execution worker,5,main]) started.
+
+> Task :common:classes UP-TO-DATE
+Skipping task ':common:classes' as it has no actions.
+Resolve mutations for :common:jar (Thread[#566,Execution worker,5,main]) started.
+:common:jar (Thread[#566,Execution worker,5,main]) started.
+
+> Task :common:jar UP-TO-DATE
+Caching disabled for task ':common:jar' because:
+  Build cache is disabled
+Skipping task ':common:jar' as it is up-to-date.
+work action resolve common-plain.jar (project :common) (Thread[#566,Execution worker,5,main]) started.
+Resolve mutations for :common:compileTestFixturesJava (Thread[#566,Execution worker,5,main]) started.
+:common:compileTestFixturesJava (Thread[#566,Execution worker,5,main]) started.
+
+> Task :common:compileTestFixturesJava
+Excluding []
+Excluding []
+Caching disabled for task ':common:compileTestFixturesJava' because:
+  Build cache is disabled
+Skipping task ':common:compileTestFixturesJava' as it is up-to-date.
+
+> Task :common:compileTestFixturesJava UP-TO-DATE
+work action resolve testFixtures (project :common) (Thread[#566,Execution worker,5,main]) started.
+Resolve mutations for :common:processTestFixturesResources (Thread[#566,Execution worker,5,main]) started.
+:common:processTestFixturesResources (Thread[#566,Execution worker,5,main]) started.
+
+> Task :common:processTestFixturesResources NO-SOURCE
+Skipping task ':common:processTestFixturesResources' as it has no source files and no previous output files.
+Resolve mutations for :common:testFixturesClasses (Thread[#566,Execution worker,5,main]) started.
+:common:testFixturesClasses (Thread[#566,Execution worker,5,main]) started.
+
+> Task :common:testFixturesClasses UP-TO-DATE
+Skipping task ':common:testFixturesClasses' as it has no actions.
+Resolve mutations for :common:testFixturesJar (Thread[#566,Execution worker,5,main]) started.
+:common:testFixturesJar (Thread[#570,Execution worker Thread 5,5,main]) started.
+
+> Task :common:testFixturesJar UP-TO-DATE
+Caching disabled for task ':common:testFixturesJar' because:
+  Build cache is disabled
+Skipping task ':common:testFixturesJar' as it is up-to-date.
+work action resolve common-test-fixtures.jar (project :common) (Thread[#570,Execution worker Thread 5,5,main]) started.
+Resolve mutations for :gateway:compileJava (Thread[#570,Execution worker Thread 5,5,main]) started.
+:gateway:compileJava (Thread[#570,Execution worker Thread 5,5,main]) started.
+
+> Task :gateway:compileJava UP-TO-DATE
+Resolving global dependency management for project 'gateway'
+Excluding []
+Excluding []
+Caching disabled for task ':gateway:compileJava' because:
+  Build cache is disabled
+Skipping task ':gateway:compileJava' as it is up-to-date.
+Resolve mutations for :gateway:processResources (Thread[#570,Execution worker Thread 5,5,main]) started.
+:gateway:processResources (Thread[#567,Execution worker Thread 2,5,main]) started.
+
+> Task :gateway:processResources UP-TO-DATE
+Caching disabled for task ':gateway:processResources' because:
+  Build cache is disabled
+Skipping task ':gateway:processResources' as it is up-to-date.
+Resolve mutations for :gateway:classes (Thread[#567,Execution worker Thread 2,5,main]) started.
+:gateway:classes (Thread[#567,Execution worker Thread 2,5,main]) started.
+
+> Task :gateway:classes UP-TO-DATE
+Skipping task ':gateway:classes' as it has no actions.
+Resolve mutations for :gateway:compileTestJava (Thread[#567,Execution worker Thread 2,5,main]) started.
+:gateway:compileTestJava (Thread[#567,Execution worker Thread 2,5,main]) started.
+
+> Task :gateway:compileTestJava UP-TO-DATE
+Excluding [javax.validation:validation-api]
+Excluding []
+Caching disabled for task ':gateway:compileTestJava' because:
+  Build cache is disabled
+Skipping task ':gateway:compileTestJava' as it is up-to-date.
+Resolve mutations for :gateway:processTestResources (Thread[#567,Execution worker Thread 2,5,main]) started.
+:gateway:processTestResources (Thread[#567,Execution worker Thread 2,5,main]) started.
+
+> Task :gateway:processTestResources UP-TO-DATE
+Caching disabled for task ':gateway:processTestResources' because:
+  Build cache is disabled
+Skipping task ':gateway:processTestResources' as it is up-to-date.
+Resolve mutations for :gateway:testClasses (Thread[#567,Execution worker Thread 2,5,main]) started.
+:gateway:testClasses (Thread[#567,Execution worker Thread 2,5,main]) started.
+
+> Task :gateway:testClasses UP-TO-DATE
+Skipping task ':gateway:testClasses' as it has no actions.
+Resolve mutations for :gateway:cleanE2eTestData (Thread[#567,Execution worker Thread 2,5,main]) started.
+:gateway:cleanE2eTestData (Thread[#567,Execution worker Thread 2,5,main]) started.
+
+> Task :gateway:cleanE2eTestData
+Excluding []
+Caching disabled for task ':gateway:cleanE2eTestData' because:
+  Build cache is disabled
+Task ':gateway:cleanE2eTestData' is not up-to-date because:
+  Task has not declared any outputs despite executing actions.
+Starting process 'command '/Library/Java/JavaVirtualMachines/zulu-21.jdk/Contents/Home/bin/java''. Working directory: /Users/me/myprojects/agentbanking-backend/.worktrees/bdd-coverage/gateway Command: /Library/Java/JavaVirtualMachines/zulu-21.jdk/Contents/Home/bin/java -Dfile.encoding=UTF-8 -Duser.country=VN -Duser.language=en -Duser.variant -cp /Users/me/myprojects/agentbanking-backend/.worktrees/bdd-coverage/gateway/build/classes/java/test:/Users/me/myprojects/agentbanking-backend/.worktrees/bdd-coverage/gateway/build/resources/test:/Users/me/myprojects/agentbanking-backend/.worktrees/bdd-coverage/gateway/build/classes/java/main:/Users/me/myprojects/agentbanking-backend/.worktrees/bdd-coverage/gateway/build/resources/main:/Users/me/myprojects/agentbanking-backend/.worktrees/bdd-coverage/common/build/libs/common-1.0.0-SNAPSHOT-plain.jar:/Users/me/myprojects/agentbanking-backend/.worktrees/bdd-coverage/common/build/libs/common-1.0.0-SNAPSHOT-test-fixtures.jar:/Users/me/.gradle/caches/modules-2/files-2.1/org.springframework.cloud/spring-cloud-starter-gateway/4.1.0/78c032b4fcacd067e74a65da744bf68fda32d5a2/spring-cloud-starter-gateway-4.1.0.jar:/Users/me/.gradle/caches/modules-2/files-2.1/org.springframework.boot/spring-boot-starter-actuator/3.2.5/14ac0ed95f3913fb90d3a49884e561c88ad2d844/spring-boot-starter-actuator-3.2.5.jar:/Users/me/.gradle/caches/modules-2/files-2.1/org.springframework.boot/spring-boot-starter-data-redis-reactive/3.2.5/32f0300c703b4a433757b44ea1932901256257bb/spring-boot-starter-data-redis-reactive-3.2.5.jar:/Users/me/.gradle/caches/modules-2/files-2.1/org.springframework.boot/spring-boot-starter-oauth2-resource-server/3.2.5/c7531b2b3ca50f59d8cd55e1306849653b21ce8c/spring-boot-starter-oauth2-resource-server-3.2.5.jar:/Users/me/.gradle/caches/modules-2/files-2.1/org.springframework.boot/spring-boot-starter-security/3.2.5/8ce0f176dfcf9a0b3b5d76babd971057f009961d/spring-boot-starter-security-3.2.5.jar:/Users/me/.gradle/caches/modules-2/files-2.1/io.github.resilience4j/resilience4j-reactor/2.1.0/dd724e7eb54ff4b7115bdc5432562057e9aab0e5/resilience4j-reactor-2.1.0.jar:/Users/me/.gradle/caches/modules-2/files-2.1/org.springdoc/springdoc-openapi-starter-webflux-ui/2.5.0/eaa0f1283789f1351ddbe3ae9234f9c7a64d09a2/springdoc-openapi-starter-webflux-ui-2.5.0.jar:/Users/me/.gradle/caches/modules-2/files-2.1/org.springframework.boot/spring-boot-starter-webflux/3.2.5/a555a210408e8c7dc085889cd3c7b2404a7137f7/spring-boot-starter-webflux-3.2.5.jar:/Users/me/.gradle/caches/modules-2/files-2.1/io.jsonwebtoken/jjwt-impl/0.12.5/b4ceb5407a360e0eb7ba6fa6c6452abadf6c120a/jjwt-impl-0.12.5.jar:/Users/me/.gradle/caches/modules-2/files-2.1/io.jsonwebtoken/jjwt-jackson/0.12.5/1b3e39349c8508272760a7b4cdf6053083ed3f6/jjwt-jackson-0.12.5.jar:/Users/me/.gradle/caches/modules-2/files-2.1/io.jsonwebtoken/jjwt-api/0.12.5/ea8243e36f16c2834ad69a048ed8a24aa9dd3e79/jjwt-api-0.12.5.jar:/Users/me/.gradle/caches/modules-2/files-2.1/org.springframework.boot/spring-boot-starter-test/3.2.5/c2f2d1d01ef908d04bfa367ec48d13ab15f2b16f/spring-boot-starter-test-3.2.5.jar:/Users/me/.gradle/caches/modules-2/files-2.1/io.projectreactor/reactor-test/3.6.5/e7b4e197a2c005652cc992277f60f9602851a253/reactor-test-3.6.5.jar:/Users/me/.gradle/caches/modules-2/files-2.1/org.springframework.security/spring-security-oauth2-jose/6.2.4/97eafa23d3dffc6db5a0e65e4517a297c39d29b7/spring-security-oauth2-jose-6.2.4.jar:/Users/me/.gradle/caches/modules-2/files-2.1/com.nimbusds/nimbus-jose-jwt/9.37.3/700f71ffefd60c16bd8ce711a956967ea9071cec/nimbus-jose-jwt-9.37.3.jar:/Users/me/.gradle/caches/modules-2/files-2.1/org.wiremock/wiremock-standalone/3.5.4/382dd54470053ac5233a011585a4304395bedc38/wiremock-standalone-3.5.4.jar:/Users/me/.gradle/caches/modules-2/files-2.1/org.testcontainers/junit-jupiter/1.20.1/cf14f1537b524879fc535c93a45a9e4c6e09c571/junit-jupiter-1.20.1.jar:/Users/me/.gradle/caches/modules-2/files-2.1/org.testcontainers/testcontainers-kafka/2.0.4/2c14e2ef0fe4f4f2cb15ec6a0866a2e32d34aaa5/testcontainers-kafka-2.0.4.jar:/Users/me/.gradle/caches/modules-2/files-2.1/org.testcontainers/testcontainers-postgresql/2.0.4/56f587c02a11539dbd60440d2da43581143defe1/testcontainers-postgresql-2.0.4.jar:/Users/me/.gradle/caches/modules-2/files-2.1/org.testcontainers/testcontainers-jdbc/2.0.4/2343ec21238a730ea193e368dd76fae2ff8eee64/testcontainers-jdbc-2.0.4.jar:/Users/me/.gradle/caches/modules-2/files-2.1/org.testcontainers/testcontainers-database-commons/2.0.4/7ecfe090ec6d0f81a5891b4e1f8cc58c5e796419/testcontainers-database-commons-2.0.4.jar:/Users/me/.gradle/caches/modules-2/files-2.1/org.testcontainers/testcontainers/1.20.1/ee366429821ee4667b05a7bd283ac73c6543c3af/testcontainers-1.20.1.jar:/Users/me/.gradle/caches/modules-2/files-2.1/com.atlassian.oai/swagger-request-validator-core/2.41.0/be83030d61058ea7db2a3401f81c9fc684135ab4/swagger-request-validator-core-2.41.0.jar:/Users/me/.gradle/caches/modules-2/files-2.1/org.springframework.data/spring-data-redis/3.2.5/686c8fb1ec322e5aed5dfdb2f49a3ada6eb9f961/spring-data-redis-3.2.5.jar:/Users/me/.gradle/caches/modules-2/files-2.1/io.github.resilience4j/resilience4j-circuitbreaker/2.1.0/8138ed9546d984f023cf20539dba4e33b6246866/resilience4j-circuitbreaker-2.1.0.jar:/Users/me/.gradle/caches/modules-2/files-2.1/io.github.resilience4j/resilience4j-ratelimiter/2.1.0/48dff23ede5fef4bdbc6ade6e7b27c86a96f59e8/resilience4j-ratelimiter-2.1.0.jar:/Users/me/.gradle/caches/modules-2/files-2.1/io.github.resilience4j/resilience4j-timelimiter/2.1.0/326f89e40ee01f9f235f67efd137dcedf3da1dc4/resilience4j-timelimiter-2.1.0.jar:/Users/me/.gradle/caches/modules-2/files-2.1/io.github.resilience4j/resilience4j-bulkhead/2.1.0/1ec5dacf4da3d90bd45a884330af01359f568ac5/resilience4j-bulkhead-2.1.0.jar:/Users/me/.gradle/caches/modules-2/files-2.1/io.github.resilience4j/resilience4j-retry/2.1.0/afaad85737e3ae522ef3161bef4ac8d557e5c95b/resilience4j-retry-2.1.0.jar:/Users/me/.gradle/caches/modules-2/files-2.1/com.jayway.jsonpath/json-path/2.9.0/37fe2217f577b0b68b18e62c4d17a8858ecf9b69/json-path-2.9.0.jar:/Users/me/.gradle/caches/modules-2/files-2.1/com.github.docker-java/docker-java-api/3.4.0/9ef23dcc93693f15e69b64632be096c38e31bc44/docker-java-api-3.4.0.jar:/Users/me/.gradle/caches/modules-2/files-2.1/com.github.docker-java/docker-java-transport-zerodep/3.4.0/c4ce6d8695cfdb0027872f99cc20f8f679f8a969/docker-java-transport-zerodep-3.4.0.jar:/Users/me/.gradle/caches/modules-2/files-2.1/org.springframework.data/spring-data-keyvalue/3.2.5/dd9edad22714829bf5d027cacc377d51942e489a/spring-data-keyvalue-3.2.5.jar:/Users/me/.gradle/caches/modules-2/files-2.1/io.github.resilience4j/resilience4j-core/2.1.0/edebba65e2778e666a5e0832ee3210f85d1c2873/resilience4j-core-2.1.0.jar:/Users/me/.gradle/caches/modules-2/files-2.1/org.springframework.boot/spring-boot-starter-data-jpa/3.2.5/99c1272c135f1c44b0c94ed0b65dca9b201323b7/spring-boot-starter-data-jpa-3.2.5.jar:/Users/me/.gradle/caches/modules-2/files-2.1/org.springframework.data/spring-data-jpa/3.2.5/f5c674caedc0132c7865b9a2edaa04b8f5351262/spring-data-jpa-3.2.5.jar:/Users/me/.gradle/caches/modules-2/files-2.1/org.springframework.cloud/spring-cloud-gateway-server/4.1.0/bd6c2462cd1d05181d8377e2a4d1bd4567f3aff8/spring-cloud-gateway-server-4.1.0.jar:/Users/me/.gradle/caches/modules-2/files-2.1/org.springframework.boot/spring-boot-starter-validation/3.2.5/3757dceb20eca3880ee1fb5f07159e42c7f7405/spring-boot-starter-validation-3.2.5.jar:/Users/me/.gradle/caches/modules-2/files-2.1/org.springframework.cloud/spring-cloud-starter/4.1.0/8558f5e64af9abbab030ff25654cbbc9d6892d72/spring-cloud-starter-4.1.0.jar:/Users/me/.gradle/caches/modules-2/files-2.1/org.springframework.boot/spring-boot-starter-json/3.2.5/6df311af4c242eb95c3526f48ab4f31c384a247e/spring-boot-starter-json-3.2.5.jar:/Users/me/.gradle/caches/modules-2/files-2.1/org.springframework.boot/spring-boot-starter-aop/3.2.5/1c6c5d81e6c7f8b3e255c9e384153e9f52a93d1b/spring-boot-starter-aop-3.2.5.jar:/Users/me/.gradle/caches/modules-2/files-2.1/org.springframework.boot/spring-boot-starter-jdbc/3.2.5/2fc156645b02bef43dcd4e697ae6f4ba9388a978/spring-boot-starter-jdbc-3.2.5.jar:/Users/me/.gradle/caches/modules-2/files-2.1/org.springframework.boot/spring-boot-starter/3.2.5/a9837a876129cc6fe5f3abf1de5ec0a16faaf003/spring-boot-starter-3.2.5.jar:/Users/me/.gradle/caches/modules-2/files-2.1/org.springframework.boot/spring-boot-starter-logging/3.2.5/28cf3a346da7bb624381ccc21d7a27500181de63/spring-boot-starter-logging-3.2.5.jar:/Users/me/.gradle/caches/modules-2/files-2.1/ch.qos.logback/logback-classic/1.4.14/d98bc162275134cdf1518774da4a2a17ef6fb94d/logback-classic-1.4.14.jar:/Users/me/.gradle/caches/modules-2/files-2.1/org.apache.logging.log4j/log4j-to-slf4j/2.21.1/d77b2ba81711ed596cd797cc2b5b5bd7409d841c/log4j-to-slf4j-2.21.1.jar:/Users/me/.gradle/caches/modules-2/files-2.1/org.slf4j/jul-to-slf4j/2.0.13/a3bcd9d9dd50c71ce69f06b1fd05e40fdeff6ba5/jul-to-slf4j-2.0.13.jar:/Users/me/.gradle/caches/modules-2/files-2.1/org.springframework.data/spring-data-commons/3.2.5/d4bb5a08fad512b345ae4077bdf0f50c95eed07/spring-data-commons-3.2.5.jar:/Users/me/.gradle/caches/modules-2/files-2.1/org.springdoc/springdoc-openapi-starter-webflux-api/2.5.0/d98a2409f0126934b399bf3fdf9199159d4e2bf0/springdoc-openapi-starter-webflux-api-2.5.0.jar:/Users/me/.gradle/caches/modules-2/files-2.1/org.springdoc/springdoc-openapi-starter-common/2.5.0/d83078092cc4e61ef502018c7560d466210cc14e/springdoc-openapi-starter-common-2.5.0.jar:/Users/me/.gradle/caches/modules-2/files-2.1/io.swagger.core.v3/swagger-core-jakarta/2.2.21/b7d961d3431bb200af600c5bb6b68024c2f6282c/swagger-core-jakarta-2.2.21.jar:/Users/me/.gradle/caches/modules-2/files-2.1/com.zaxxer/HikariCP/5.0.1/a74c7f0a37046846e88d54f7cb6ea6d565c65f9c/HikariCP-5.0.1.jar:/Users/me/.gradle/caches/modules-2/files-2.1/io.swagger.parser.v3/swagger-parser/2.1.22/fe267aca1d6f7af1e0fd7896abede6ddb3948a28/swagger-parser-2.1.22.jar:/Users/me/.gradle/caches/modules-2/files-2.1/io.swagger.parser.v3/swagger-parser-v2-converter/2.1.22/fdcf2cdf4e51ae15531df0bf5615623e1f3cc4d/swagger-parser-v2-converter-2.1.22.jar:/Users/me/.gradle/caches/modules-2/files-2.1/io.swagger/swagger-compat-spec-parser/1.0.70/252d8fdf6847aba9185b0804814a16f9ae7ba064/swagger-compat-spec-parser-1.0.70.jar:/Users/me/.gradle/caches/modules-2/files-2.1/io.swagger/swagger-parser/1.0.70/14ed5affe6fe2f4860cc334b3853a95388df2103/swagger-parser-1.0.70.jar:/Users/me/.gradle/caches/modules-2/files-2.1/io.swagger/swagger-core/1.6.14/a54afa6a1068a899cb3d0616ca03bffb8b17f1f/swagger-core-1.6.14.jar:/Users/me/.gradle/caches/modules-2/files-2.1/io.swagger.parser.v3/swagger-parser-v3/2.1.22/58160f204b0be1921443020b4e9c074d3e5009c3/swagger-parser-v3-2.1.22.jar:/Users/me/.gradle/caches/modules-2/files-2.1/io.swagger.core.v3/swagger-core/2.2.21/19c68896c7a3a1b2f4eb2f0fd560d747ca67acd0/swagger-core-2.2.21.jar:/Users/me/.gradle/caches/modules-2/files-2.1/io.swagger/swagger-models/1.6.14/21a6bd576f96f8c203d252a71a548a21b628924/swagger-models-1.6.14.jar:/Users/me/.gradle/caches/modules-2/files-2.1/org.slf4j/slf4j-api/2.0.13/80229737f704b121a318bba5d5deacbcf395bc77/slf4j-api-2.0.13.jar:/Users/me/.gradle/caches/modules-2/files-2.1/org.springframework.boot/spring-boot-actuator-autoconfigure/3.2.5/aa58ac33da22febe8ea6d179eb0bf3f76ed2850d/spring-boot-actuator-autoconfigure-3.2.5.jar:/Users/me/.gradle/caches/modules-2/files-2.1/io.micrometer/micrometer-jakarta9/1.12.5/8fe03be9a51974cdb700b04c8df5378f8566c179/micrometer-jakarta9-1.12.5.jar:/Users/me/.gradle/caches/modules-2/files-2.1/org.springframework.security/spring-security-config/6.2.4/ef1f16ce7900f602826b985f15b67bbe60015a08/spring-security-config-6.2.4.jar:/Users/me/.gradle/caches/modules-2/files-2.1/org.springframework.security/spring-security-oauth2-resource-server/6.2.4/44a8a2d62c9d3190414ac32662422c1c76a19132/spring-security-oauth2-resource-server-6.2.4.jar:/Users/me/.gradle/caches/modules-2/files-2.1/org.springframework.security/spring-security-web/6.2.4/b4a436865cf6483e088c986432f44d9e90bab6a3/spring-security-web-6.2.4.jar:/Users/me/.gradle/caches/modules-2/files-2.1/org.springframework.security/spring-security-oauth2-core/6.2.4/fb2acd32562247ec8f1a3e4ee983bc1ba0c171ed/spring-security-oauth2-core-6.2.4.jar:/Users/me/.gradle/caches/modules-2/files-2.1/org.springframework.security/spring-security-core/6.2.4/b1bb9c66df67cd6ecc5548dec8b37341cef11a80/spring-security-core-6.2.4.jar:/Users/me/.gradle/caches/modules-2/files-2.1/org.springframework/spring-webflux/6.1.6/5d315dbc075c81ec72440de976eea70e082602d0/spring-webflux-6.1.6.jar:/Users/me/.gradle/caches/modules-2/files-2.1/org.springframework/spring-web/6.1.6/49a32e3497fe39550da3b280bda5d9933ae2d51d/spring-web-6.1.6.jar:/Users/me/.gradle/caches/modules-2/files-2.1/io.micrometer/micrometer-core/1.12.5/ee49ea9ec34c3d4aa1417a46ce8017f15513b5af/micrometer-core-1.12.5.jar:/Users/me/.gradle/caches/modules-2/files-2.1/org.springframework.boot/spring-boot-test-autoconfigure/3.2.5/678ff2604c4650db84dc7a63eb058fb322a58807/spring-boot-test-autoconfigure-3.2.5.jar:/Users/me/.gradle/caches/modules-2/files-2.1/org.springframework.boot/spring-boot-test/3.2.5/df5c1f52e00aaa749932f9e213190b8635d59a86/spring-boot-test-3.2.5.jar:/Users/me/.gradle/caches/modules-2/files-2.1/org.springframework.boot/spring-boot-autoconfigure/3.2.5/6385a2c00a03edb896b2833e4bdee2ae53cd69b8/spring-boot-autoconfigure-3.2.5.jar:/Users/me/.gradle/caches/modules-2/files-2.1/org.springframework.boot/spring-boot-actuator/3.2.5/f0623b4ce7c614a452cddc9b369d69ff6e7f9173/spring-boot-actuator-3.2.5.jar:/Users/me/.gradle/caches/modules-2/files-2.1/org.springframework.boot/spring-boot/3.2.5/eec72431f6f56a50c9919129665ba3359ca02104/spring-boot-3.2.5.jar:/Users/me/.gradle/caches/modules-2/files-2.1/org.springframework/spring-context-support/6.1.6/7cc404d7f0c6e1b1ecfa30080fe194b52867d6b2/spring-context-support-6.1.6.jar:/Users/me/.gradle/caches/modules-2/files-2.1/org.springframework/spring-context/6.1.6/2be30298638975efaf7fff22f1570d79b2679814/spring-context-6.1.6.jar:/Users/me/.gradle/caches/modules-2/files-2.1/io.micrometer/micrometer-observation/1.12.5/ee23704259a1aad5c8f503db4d37cdfe5352e766/micrometer-observation-1.12.5.jar:/Users/me/.gradle/caches/modules-2/files-2.1/io.lettuce/lettuce-core/6.3.2.RELEASE/29b2aac09256c5fc2e9e9ad1df41c65dad5e557a/lettuce-core-6.3.2.RELEASE.jar:/Users/me/.gradle/caches/modules-2/files-2.1/io.projectreactor.addons/reactor-extra/3.5.1/227cd47421ca0571c662f67428903c5c54777ef1/reactor-extra-3.5.1.jar:/Users/me/.gradle/caches/modules-2/files-2.1/org.springframework.boot/spring-boot-starter-reactor-netty/3.2.5/1bdb8b6f9275dca52937da72234f2650db38c30a/spring-boot-starter-reactor-netty-3.2.5.jar:/Users/me/.gradle/caches/modules-2/files-2.1/io.projectreactor.netty/reactor-netty-http/1.1.18/ae9b2275856405cc124be851007b3a867bc30f57/reactor-netty-http-1.1.18.jar:/Users/me/.gradle/caches/modules-2/files-2.1/io.projectreactor.netty/reactor-netty-core/1.1.18/4b4ac6bcc29261fa3eab6ca924f508ef9613746a/reactor-netty-core-1.1.18.jar:/Users/me/.gradle/caches/modules-2/files-2.1/io.projectreactor/reactor-core/3.6.5/2004aaddac35e8b52daca6a8b4d0db7c6f8fca10/reactor-core-3.6.5.jar:/Users/me/.gradle/caches/modules-2/files-2.1/org.springframework/spring-aop/6.1.6/4958f52cb9fcb3adf7e836304550de5431a9347e/spring-aop-6.1.6.jar:/Users/me/.gradle/caches/modules-2/files-2.1/org.webjars/swagger-ui/5.13.0/262a148333ae8c7fd0e23606855ec516e473efd/swagger-ui-5.13.0.jar:/Users/me/.gradle/caches/modules-2/files-2.1/com.fasterxml.jackson.datatype/jackson-datatype-jsr310/2.15.4/7de629770a4559db57128d35ccae7d2fddd35db3/jackson-datatype-jsr310-2.15.4.jar:/Users/me/.gradle/caches/modules-2/files-2.1/com.fasterxml.jackson.module/jackson-module-parameter-names/2.15.4/e654497a08359db2521b69b5f710e00836915d8c/jackson-module-parameter-names-2.15.4.jar:/Users/me/.gradle/caches/modules-2/files-2.1/io.swagger.parser.v3/swagger-parser-core/2.1.22/ae0a729007d0fbeda6d0a037f24b438287e304ea/swagger-parser-core-2.1.22.jar:/Users/me/.gradle/caches/modules-2/files-2.1/io.swagger.core.v3/swagger-models/2.2.21/e28d4d66d25cbd44bc7b240632fdce632beba605/swagger-models-2.2.21.jar:/Users/me/.gradle/caches/modules-2/files-2.1/io.swagger.core.v3/swagger-models-jakarta/2.2.21/3f6ed502304a3a2cc4ae847dbdc956ba010e8261/swagger-models-jakarta-2.2.21.jar:/Users/me/.gradle/caches/modules-2/files-2.1/com.fasterxml.jackson.core/jackson-annotations/2.15.4/5223ea5a9bf52cdc9c5e537a0e52f2432eaf208b/jackson-annotations-2.15.4.jar:/Users/me/.gradle/caches/modules-2/files-2.1/com.fasterxml.jackson.dataformat/jackson-dataformat-yaml/2.15.4/4a5dcae45b67fe5edbec821711555d30347f69a0/jackson-dataformat-yaml-2.15.4.jar:/Users/me/.gradle/caches/modules-2/files-2.1/com.fasterxml.jackson.core/jackson-core/2.15.4/aebe84b45360debad94f692a4074c6aceb535fa0/jackson-core-2.15.4.jar:/Users/me/.gradle/caches/modules-2/files-2.1/com.fasterxml.jackson.datatype/jackson-datatype-jdk8/2.15.4/694777f182334a21bf1aeab1b04cc4398c801f3f/jackson-datatype-jdk8-2.15.4.jar:/Users/me/.gradle/caches/modules-2/files-2.1/com.github.java-json-tools/json-schema-validator/2.2.14/10c42918adc1fd4454e83bb21365f30df497a076/json-schema-validator-2.2.14.jar:/Users/me/.gradle/caches/modules-2/files-2.1/com.github.java-json-tools/json-schema-core/1.2.14/39d4efcf7e538684200fea15e08d47d0198c19fb/json-schema-core-1.2.14.jar:/Users/me/.gradle/caches/modules-2/files-2.1/com.github.java-json-tools/jackson-coreutils-equivalence/1.0/8b928cf1f95dc5fe6b1648f5da93befab031da19/jackson-coreutils-equivalence-1.0.jar:/Users/me/.gradle/caches/modules-2/files-2.1/com.github.java-json-tools/json-patch/1.13/c8b72249e50fe778e7df223e5b1fed1931a4a688/json-patch-1.13.jar:/Users/me/.gradle/caches/modules-2/files-2.1/com.github.java-json-tools/jackson-coreutils/2.0/6374371261b91b829d10f21256b2feefdf8f0a78/jackson-coreutils-2.0.jar:/Users/me/.gradle/caches/modules-2/files-2.1/com.fasterxml.jackson.core/jackson-databind/2.15.4/560309fc381f77d4d15c4a4cdaa0db5025c4fd13/jackson-databind-2.15.4.jar:/Users/me/.gradle/caches/modules-2/files-2.1/org.hibernate.orm/hibernate-core/6.4.4.Final/5c9decb3c5a70bf7801d41fc32633416c26be069/hibernate-core-6.4.4.Final.jar:/Users/me/.gradle/caches/modules-2/files-2.1/org.glassfish.jaxb/jaxb-runtime/4.0.5/ca84c2a7169b5293e232b9d00d1e4e36d4c3914a/jaxb-runtime-4.0.5.jar:/Users/me/.gradle/caches/modules-2/files-2.1/org.glassfish.jaxb/jaxb-core/4.0.5/7b4b11ea5542eea4ad55e1080b23be436795b3/jaxb-core-4.0.5.jar:/Users/me/.gradle/caches/modules-2/files-2.1/jakarta.xml.bind/jakarta.xml.bind-api/4.0.2/6cd5a999b834b63238005b7144136379dc36cad2/jakarta.xml.bind-api-4.0.2.jar:/Users/me/.gradle/caches/modules-2/files-2.1/net.minidev/json-smart/2.5.1/4c11d2808d009132dfbbf947ebf37de6bf266c8e/json-smart-2.5.1.jar:/Users/me/.gradle/caches/modules-2/files-2.1/org.assertj/assertj-core/3.24.2/ebbf338e33f893139459ce5df023115971c2786f/assertj-core-3.24.2.jar:/Users/me/.gradle/caches/modules-2/files-2.1/org.awaitility/awaitility/4.2.1/e56b600e0b184182ba5b2baccd2bab593a98a624/awaitility-4.2.1.jar:/Users/me/.gradle/caches/modules-2/files-2.1/junit/junit/4.13.2/8ac9e16d933b6fb43bc7f576336b8f4d7eb5ba12/junit-4.13.2.jar:/Users/me/.gradle/caches/modules-2/files-2.1/org.hamcrest/hamcrest-core/2.2/3f2bd07716a31c395e2837254f37f21f0f0ab24b/hamcrest-core-2.2.jar:/Users/me/.gradle/caches/modules-2/files-2.1/org.hamcrest/hamcrest/2.2/1820c0968dba3a11a1b30669bb1f01978a91dedc/hamcrest-2.2.jar:/Users/me/.gradle/caches/modules-2/files-2.1/org.mockito/mockito-junit-jupiter/5.7.0/ac2d6a3431747a7986b8f4abef465f72bf3a21ae/mockito-junit-jupiter-5.7.0.jar:/Users/me/.gradle/caches/modules-2/files-2.1/org.junit.jupiter/junit-jupiter-params/5.10.2/359132c82a9d3fa87a325db6edd33b5fdc67a3d8/junit-jupiter-params-5.10.2.jar:/Users/me/.gradle/caches/modules-2/files-2.1/org.junit.jupiter/junit-jupiter-engine/5.10.2/f1f8fe97bd58e85569205f071274d459c2c4f8cd/junit-jupiter-engine-5.10.2.jar:/Users/me/.gradle/caches/modules-2/files-2.1/org.junit.jupiter/junit-jupiter-api/5.10.2/fb55d6e2bce173f35fd28422e7975539621055ef/junit-jupiter-api-5.10.2.jar:/Users/me/.gradle/caches/modules-2/files-2.1/org.junit.platform/junit-platform-engine/1.10.2/d53bb4e0ce7f211a498705783440614bfaf0df2e/junit-platform-engine-1.10.2.jar:/Users/me/.gradle/caches/modules-2/files-2.1/org.junit.platform/junit-platform-commons/1.10.2/3197154a1f0c88da46c47a9ca27611ac7ec5d797/junit-platform-commons-1.10.2.jar:/Users/me/.gradle/caches/modules-2/files-2.1/org.junit.jupiter/junit-jupiter/5.10.2/831c0b86ddc2ce38391c5b81ea662b0cfdc02cce/junit-jupiter-5.10.2.jar:/Users/me/.gradle/caches/modules-2/files-2.1/org.mockito/mockito-core/5.7.0/a1c258331ab91d66863c983aff7136357e9de056/mockito-core-5.7.0.jar:/Users/me/.gradle/caches/modules-2/files-2.1/org.skyscreamer/jsonassert/1.5.1/6d842d0faf4cf6725c509a5e5347d319ee0431c3/jsonassert-1.5.1.jar:/Users/me/.gradle/caches/modules-2/files-2.1/org.springframework/spring-test/6.1.6/7c2662da187db28f7721ff05c9718f1e3181c847/spring-test-6.1.6.jar:/Users/me/.gradle/caches/modules-2/files-2.1/org.springframework/spring-orm/6.1.6/c8687b15d3ae95769cef73626e62ffc7fff7e0bf/spring-orm-6.1.6.jar:/Users/me/.gradle/caches/modules-2/files-2.1/org.springframework/spring-jdbc/6.1.6/3f8a440a49c15264ff438598b715bd00c5a88109/spring-jdbc-6.1.6.jar:/Users/me/.gradle/caches/modules-2/files-2.1/org.springframework/spring-tx/6.1.6/4e18554fb6669f266108cc838a4619bbc8f7db8d/spring-tx-6.1.6.jar:/Users/me/.gradle/caches/modules-2/files-2.1/org.springframework/spring-oxm/6.1.6/1af328c07b70c5360e73fb206fd0ae81401e00a5/spring-oxm-6.1.6.jar:/Users/me/.gradle/caches/modules-2/files-2.1/org.springframework/spring-beans/6.1.6/332d80ff134420db4ebf7614758e6a02a9bd3c41/spring-beans-6.1.6.jar:/Users/me/.gradle/caches/modules-2/files-2.1/org.springframework/spring-expression/6.1.6/9c3d7f0e17a919a4ea9f087e4e2140ad39776bc8/spring-expression-6.1.6.jar:/Users/me/.gradle/caches/modules-2/files-2.1/org.springframework/spring-core/6.1.6/dea4b8e110b7b54a02a4907e32dbb0adee8a7168/spring-core-6.1.6.jar:/Users/me/.gradle/caches/modules-2/files-2.1/org.xmlunit/xmlunit-core/2.9.1/e5833662d9a1279a37da3ef6f62a1da29fcd68c4/xmlunit-core-2.9.1.jar:/Users/me/.gradle/caches/modules-2/files-2.1/com.github.stephenc.jcip/jcip-annotations/1.0-1/ef31541dd28ae2cefdd17c7ebf352d93e9058c63/jcip-annotations-1.0-1.jar:/Users/me/.gradle/caches/modules-2/files-2.1/org.apache.commons/commons-compress/1.24.0/b4b1b5a3d9573b2970fddab236102c0a4d27d35e/commons-compress-1.24.0.jar:/Users/me/.gradle/caches/modules-2/files-2.1/org.rnorth.duct-tape/duct-tape/1.0.8/92edc22a9ab2f3e17c9bf700aaee377d50e8b530/duct-tape-1.0.8.jar:/Users/me/.gradle/caches/modules-2/files-2.1/com.github.java-json-tools/uri-template/0.10/6e8cf7b04f5ed679c76f15e0b19918906d84dbc4/uri-template-0.10.jar:/Users/me/.gradle/caches/modules-2/files-2.1/com.google.guava/guava/33.0.0-jre/161ba27964a62f241533807a46b8711b13c1d94b/guava-33.0.0-jre.jar:/Users/me/.gradle/caches/modules-2/files-2.1/com.github.java-json-tools/msg-simple/1.2/a06afa2d5d75c98e54ab370107930978fc3f9937/msg-simple-1.2.jar:/Users/me/.gradle/caches/modules-2/files-2.1/com.github.java-json-tools/btf/1.3/6cf5405e214cbc83337a107cdef8401fb6aa6383/btf-1.3.jar:/Users/me/.gradle/caches/modules-2/files-2.1/com.google.code.findbugs/jsr305/3.0.2/25ea2e8b0c338a877313bd4672d3fe056ea78f0d/jsr305-3.0.2.jar:/Users/me/.gradle/caches/modules-2/files-2.1/org.apache.tomcat.embed/tomcat-embed-el/10.1.20/cc1a42b8228699e92c8eba0187eccf54bf892802/tomcat-embed-el-10.1.20.jar:/Users/me/.gradle/caches/modules-2/files-2.1/org.hibernate.validator/hibernate-validator/8.0.1.Final/e49e116b3d3928060599b176b3538bb848718e95/hibernate-validator-8.0.1.Final.jar:/Users/me/.gradle/caches/modules-2/files-2.1/org.springframework.cloud/spring-cloud-context/4.1.0/32c784465c4bbc3ba64646940923ec2ed99e6762/spring-cloud-context-4.1.0.jar:/Users/me/.gradle/caches/modules-2/files-2.1/org.springframework.cloud/spring-cloud-commons/4.1.0/4b9d72e2e8326de7d200d54111e924e5be73db54/spring-cloud-commons-4.1.0.jar:/Users/me/.gradle/caches/modules-2/files-2.1/org.springframework.security/spring-security-rsa/1.1.1/8fc6284711440b16c3ecaa0fe2f163ffdb0a5027/spring-security-rsa-1.1.1.jar:/Users/me/.gradle/caches/modules-2/files-2.1/jakarta.annotation/jakarta.annotation-api/2.1.1/48b9bda22b091b1f48b13af03fe36db3be6e1ae3/jakarta.annotation-api-2.1.1.jar:/Users/me/.gradle/caches/modules-2/files-2.1/org.yaml/snakeyaml/2.2/3af797a25458550a16bf89acc8e4ab2b7f2bfce0/snakeyaml-2.2.jar:/Users/me/.gradle/caches/modules-2/files-2.1/io.micrometer/micrometer-commons/1.12.5/da45afd81a6a05267df5ddfe10438ea857e0f7d9/micrometer-commons-1.12.5.jar:/Users/me/.gradle/caches/modules-2/files-2.1/io.netty/netty-codec-http2/4.1.109.Final/6bd4a54b69a81356393f6e4621bad40754f8a5a2/netty-codec-http2-4.1.109.Final.jar:/Users/me/.gradle/caches/modules-2/files-2.1/io.netty/netty-handler-proxy/4.1.109.Final/a77224107f586a7f9e3dc5d12fc0d4d8f0c04803/netty-handler-proxy-4.1.109.Final.jar:/Users/me/.gradle/caches/modules-2/files-2.1/io.netty/netty-codec-http/4.1.109.Final/6dca43cedc0b2dc6bf57bdc85fce6ffca3e6b72a/netty-codec-http-4.1.109.Final.jar:/Users/me/.gradle/caches/modules-2/files-2.1/io.netty/netty-resolver-dns-native-macos/4.1.109.Final/fd5b9a5723287b292123f2fe6811b68a6a9783b5/netty-resolver-dns-native-macos-4.1.109.Final-osx-x86_64.jar:/Users/me/.gradle/caches/modules-2/files-2.1/io.netty/netty-resolver-dns-classes-macos/4.1.109.Final/6badcddb9885324b1a2b396068cb45c9af02163b/netty-resolver-dns-classes-macos-4.1.109.Final.jar:/Users/me/.gradle/caches/modules-2/files-2.1/io.netty/netty-resolver-dns/4.1.109.Final/5f4d858234b557b73631a24e562bb89fc5399cad/netty-resolver-dns-4.1.109.Final.jar:/Users/me/.gradle/caches/modules-2/files-2.1/io.netty/netty-handler/4.1.109.Final/9167863307b3c44cc12262e7b5512de3499b9c4a/netty-handler-4.1.109.Final.jar:/Users/me/.gradle/caches/modules-2/files-2.1/io.netty/netty-transport-native-epoll/4.1.109.Final/1f762ef557cf91d16b86bde840f618ddb38e6f81/netty-transport-native-epoll-4.1.109.Final-linux-x86_64.jar:/Users/me/.gradle/caches/modules-2/files-2.1/io.netty/netty-transport-classes-epoll/4.1.109.Final/7307c8acbc9b331fce3496750a5112bdc726fd2a/netty-transport-classes-epoll-4.1.109.Final.jar:/Users/me/.gradle/caches/modules-2/files-2.1/io.netty/netty-transport-native-unix-common/4.1.109.Final/da7fe1e6943cbab8ee48df2beadc2c8304f347a2/netty-transport-native-unix-common-4.1.109.Final.jar:/Users/me/.gradle/caches/modules-2/files-2.1/io.netty/netty-codec-dns/4.1.109.Final/ee231baee2cc9f1300ecc0d9a1e8bb9b31db02fa/netty-codec-dns-4.1.109.Final.jar:/Users/me/.gradle/caches/modules-2/files-2.1/io.netty/netty-codec-socks/4.1.109.Final/7f4f0c0dd54c578af2c613a0db7172bf7dca9c79/netty-codec-socks-4.1.109.Final.jar:/Users/me/.gradle/caches/modules-2/files-2.1/io.netty/netty-codec/4.1.109.Final/16e0b2beb49318a549d3ba5d66d707bd5daa8c97/netty-codec-4.1.109.Final.jar:/Users/me/.gradle/caches/modules-2/files-2.1/io.netty/netty-transport/4.1.109.Final/79e3b07d58ef03c7a860d48f932b720675aa8bd3/netty-transport-4.1.109.Final.jar:/Users/me/.gradle/caches/modules-2/files-2.1/io.netty/netty-resolver/4.1.109.Final/55485ac976e27c8bb67ee111a8490c58f67b70c/netty-resolver-4.1.109.Final.jar:/Users/me/.gradle/caches/modules-2/files-2.1/io.netty/netty-buffer/4.1.109.Final/9d21d602ad7c639fa16b1d26559065d310a34c51/netty-buffer-4.1.109.Final.jar:/Users/me/.gradle/caches/modules-2/files-2.1/io.netty/netty-common/4.1.109.Final/da63e54ee1ca69abf4206cb74fadef7f50850911/netty-common-4.1.109.Final.jar:/Users/me/.gradle/caches/modules-2/files-2.1/org.reactivestreams/reactive-streams/1.0.4/3864a1320d97d7b045f729a326e1e077661f31b7/reactive-streams-1.0.4.jar:/Users/me/.gradle/caches/modules-2/files-2.1/org.springframework.security/spring-security-crypto/6.2.4/9583253c66bafe7cbf0f082d069b08675331ce78/spring-security-crypto-6.2.4.jar:/Users/me/.gradle/caches/modules-2/files-2.1/org.springframework/spring-aspects/6.1.6/409aba797564c23c08e2307f2df728aed117e914/spring-aspects-6.1.6.jar:/Users/me/.gradle/caches/modules-2/files-2.1/org.eclipse.angus/angus-activation/2.0.2/41f1e0ddd157c856926ed149ab837d110955a9fc/angus-activation-2.0.2.jar:/Users/me/.gradle/caches/modules-2/files-2.1/jakarta.activation/jakarta.activation-api/2.1.3/fa165bd70cda600368eee31555222776a46b881f/jakarta.activation-api-2.1.3.jar:/Users/me/.gradle/caches/modules-2/files-2.1/net.minidev/accessors-smart/2.5.1/19b820261eb2e7de7d5bde11d1c06e4501dd7e5f/accessors-smart-2.5.1.jar:/Users/me/.gradle/caches/modules-2/files-2.1/net.bytebuddy/byte-buddy/1.14.13/45cf516d9a23485200950549ff72b204c307fc9d/byte-buddy-1.14.13.jar:/Users/me/.gradle/caches/modules-2/files-2.1/net.bytebuddy/byte-buddy-agent/1.14.13/979ce25f7d3096a2e82214ba7dc972a05ce7a171/byte-buddy-agent-1.14.13.jar:/Users/me/.gradle/caches/modules-2/files-2.1/org.objenesis/objenesis/3.3/1049c09f1de4331e8193e579448d0916d75b7631/objenesis-3.3.jar:/Users/me/.gradle/caches/modules-2/files-2.1/com.vaadin.external.google/android-json/0.0.20131108.vaadin1/fa26d351fe62a6a17f5cda1287c1c6110dec413f/android-json-0.0.20131108.vaadin1.jar:/Users/me/.gradle/caches/modules-2/files-2.1/org.springframework/spring-jcl/6.1.6/84cb19b30b22feca73c2ac005ca849c5890935a3/spring-jcl-6.1.6.jar:/Users/me/.gradle/caches/modules-2/files-2.1/org.jetbrains/annotations/17.0.0/8ceead41f4e71821919dbdb7a9847608f1a938cb/annotations-17.0.0.jar:/Users/me/.gradle/caches/modules-2/files-2.1/com.github.docker-java/docker-java-transport/3.4.0/c058705684d782effc4b2edfdef1a87544ba4af8/docker-java-transport-3.4.0.jar:/Users/me/.gradle/caches/modules-2/files-2.1/net.java.dev.jna/jna/5.13.0/1200e7ebeedbe0d10062093f32925a912020e747/jna-5.13.0.jar:/Users/me/.gradle/caches/modules-2/files-2.1/io.swagger.parser.v3/swagger-parser-safe-url-resolver/2.1.22/572c9d6c9d320f1b0e8ce068f849f619f92e71ac/swagger-parser-safe-url-resolver-2.1.22.jar:/Users/me/.gradle/caches/modules-2/files-2.1/io.swagger/swagger-parser-safe-url-resolver/1.0.70/a72b6548d83b890de3c5810036c6510c56fb09ae/swagger-parser-safe-url-resolver-1.0.70.jar:/Users/me/.gradle/caches/modules-2/files-2.1/commons-io/commons-io/2.15.1/f11560da189ab563a5c8e351941415430e9304ea/commons-io-2.15.1.jar:/Users/me/.gradle/caches/modules-2/files-2.1/com.sun.mail/mailapi/1.6.2/208b6439dfbe6713c384ebf54ecd62cd4423cc50/mailapi-1.6.2.jar:/Users/me/.gradle/caches/modules-2/files-2.1/joda-time/joda-time/2.10.5/7f1d89817cd20a32444d5ab4160f035ab9b864e7/joda-time-2.10.5.jar:/Users/me/.gradle/caches/modules-2/files-2.1/com.googlecode.libphonenumber/libphonenumber/8.11.1/6bb6115fd5a0bf00964afec358496faea66b7db5/libphonenumber-8.11.1.jar:/Users/me/.gradle/caches/modules-2/files-2.1/net.sf.jopt-simple/jopt-simple/5.0.4/4fdac2fbe92dfad86aa6e9301736f6b4342a3f5c/jopt-simple-5.0.4.jar:/Users/me/.gradle/caches/modules-2/files-2.1/com.google.guava/failureaccess/1.0.2/c4a06a64e650562f30b7bf9aaec1bfed43aca12b/failureaccess-1.0.2.jar:/Users/me/.gradle/caches/modules-2/files-2.1/com.google.guava/listenablefuture/9999.0-empty-to-avoid-conflict-with-guava/b421526c5f297295adef1c886e5246c39d4ac629/listenablefuture-9999.0-empty-to-avoid-conflict-with-guava.jar:/Users/me/.gradle/caches/modules-2/files-2.1/org.checkerframework/checker-qual/3.41.0/8be6df7f1e9bccb19f8f351b3651f0bac2f5e0c/checker-qual-3.41.0.jar:/Users/me/.gradle/caches/modules-2/files-2.1/com.google.errorprone/error_prone_annotations/2.23.0/43a27853b6c7d54893e0b1997c2c778c347179eb/error_prone_annotations-2.23.0.jar:/Users/me/.gradle/caches/modules-2/files-2.1/jakarta.validation/jakarta.validation-api/3.0.2/92b6631659ba35ca09e44874d3eb936edfeee532/jakarta.validation-api-3.0.2.jar:/Users/me/.gradle/caches/modules-2/files-2.1/org.jboss.logging/jboss-logging/3.5.3.Final/c88fc1d8a96d4c3491f55d4317458ccad53ca663/jboss-logging-3.5.3.Final.jar:/Users/me/.gradle/caches/modules-2/files-2.1/com.fasterxml/classmate/1.6.0/91affab6f84a2182fce5dd72a8d01bc14346dddd/classmate-1.6.0.jar:/Users/me/.gradle/caches/modules-2/files-2.1/org.bouncycastle/bcprov-jdk18on/1.74/8753dedf57165efdb1a7a69a90fe49a77353efb9/bcprov-jdk18on-1.74.jar:/Users/me/.gradle/caches/modules-2/files-2.1/org.hdrhistogram/HdrHistogram/2.1.12/6eb7552156e0d517ae80cc2247be1427c8d90452/HdrHistogram-2.1.12.jar:/Users/me/.gradle/caches/modules-2/files-2.1/org.latencyutils/LatencyUtils/2.0.3/769c0b82cb2421c8256300e907298a9410a2a3d3/LatencyUtils-2.0.3.jar:/Users/me/.gradle/caches/modules-2/files-2.1/org.aspectj/aspectjweaver/1.9.22/10736ab74a53af5e2e1b07e76335a5391526b6f8/aspectjweaver-1.9.22.jar:/Users/me/.gradle/caches/modules-2/files-2.1/jakarta.persistence/jakarta.persistence-api/3.1.0/66901fa1c373c6aff65c13791cc11da72060a8d6/jakarta.persistence-api-3.1.0.jar:/Users/me/.gradle/caches/modules-2/files-2.1/jakarta.transaction/jakarta.transaction-api/2.0.1/51a520e3fae406abb84e2e1148e6746ce3f80a1a/jakarta.transaction-api-2.0.1.jar:/Users/me/.gradle/caches/modules-2/files-2.1/org.hibernate.common/hibernate-commons-annotations/6.0.6.Final/77a5f94b56d49508e0ee334751db5b78e5ccd50c/hibernate-commons-annotations-6.0.6.Final.jar:/Users/me/.gradle/caches/modules-2/files-2.1/io.smallrye/jandex/3.1.2/a6c1c89925c7df06242b03dddb353116ceb9584c/jandex-3.1.2.jar:/Users/me/.gradle/caches/modules-2/files-2.1/jakarta.inject/jakarta.inject-api/2.0.1/4c28afe1991a941d7702fe1362c365f0a8641d1e/jakarta.inject-api-2.0.1.jar:/Users/me/.gradle/caches/modules-2/files-2.1/org.antlr/antlr4-runtime/4.13.0/5a02e48521624faaf5ff4d99afc88b01686af655/antlr4-runtime-4.13.0.jar:/Users/me/.gradle/caches/modules-2/files-2.1/org.ow2.asm/asm/9.6/aa205cf0a06dbd8e04ece91c0b37c3f5d567546a/asm-9.6.jar:/Users/me/.gradle/caches/modules-2/files-2.1/org.opentest4j/opentest4j/1.3.0/152ea56b3a72f655d4fd677fc0ef2596c3dd5e6e/opentest4j-1.3.0.jar:/Users/me/.gradle/caches/modules-2/files-2.1/org.mozilla/rhino/1.7.7.2/a7c4a9ba8b6922374580d71060ef71eafa994256/rhino-1.7.7.2.jar:/Users/me/.gradle/caches/modules-2/files-2.1/ch.qos.logback/logback-core/1.4.14/4d3c2248219ac0effeb380ed4c5280a80bf395e8/logback-core-1.4.14.jar:/Users/me/.gradle/caches/modules-2/files-2.1/org.apache.logging.log4j/log4j-api/2.21.1/74c65e87b9ce1694a01524e192d7be989ba70486/log4j-api-2.21.1.jar:/Users/me/.gradle/caches/modules-2/files-2.1/org.apache.commons/commons-lang3/3.13.0/b7263237aa89c1f99b327197c41d0669707a462e/commons-lang3-3.13.0.jar:/Users/me/.gradle/caches/modules-2/files-2.1/io.swagger.core.v3/swagger-annotations-jakarta/2.2.21/3fa24dc3ad843c44602df97832f2d38e7bad1465/swagger-annotations-jakarta-2.2.21.jar:/Users/me/.gradle/caches/modules-2/files-2.1/org.apache.httpcomponents/httpclient/4.5.14/1194890e6f56ec29177673f2f12d0b8e627dec98/httpclient-4.5.14.jar:/Users/me/.gradle/caches/modules-2/files-2.1/io.swagger.core.v3/swagger-annotations/2.2.21/dc1176eb864ffab970ad193e7a11ed42b4337d33/swagger-annotations-2.2.21.jar:/Users/me/.gradle/caches/modules-2/files-2.1/org.glassfish.jaxb/txw2/4.0.5/f36a4ef12120a9bb06d766d6a0e54b144fd7ed98/txw2-4.0.5.jar:/Users/me/.gradle/caches/modules-2/files-2.1/com.sun.istack/istack-commons-runtime/4.1.2/18ec117c85f3ba0ac65409136afa8e42bc74e739/istack-commons-runtime-4.1.2.jar:/Users/me/.gradle/caches/modules-2/files-2.1/io.swagger/swagger-annotations/1.6.14/2f78befb7777f158bd9e2218fd70c78dec1a2a61/swagger-annotations-1.6.14.jar:/Users/me/.gradle/caches/modules-2/files-2.1/org.apache.httpcomponents/httpcore/4.4.16/51cf043c87253c9f58b539c9f7e44c8894223850/httpcore-4.4.16.jar:/Users/me/.gradle/caches/modules-2/files-2.1/commons-logging/commons-logging/1.2/4bfc12adfe4842bf07b657f0369c4cb522955686/commons-logging-1.2.jar:/Users/me/.gradle/caches/modules-2/files-2.1/commons-codec/commons-codec/1.16.1/47bd4d333fba53406f6c6c51884ddbca435c8862/commons-codec-1.16.1.jar com.agentbanking.gateway.e2e.CleanTestData
+Successfully started process 'command '/Library/Java/JavaVirtualMachines/zulu-21.jdk/Contents/Home/bin/java''
+=== E2E Test Data Cleanup ===
+Gateway URL: http://localhost:8080
+Auth URL: http://localhost:8087
+Onboarding URL: http://localhost:8083
+
+13:06:35.508 [main] ERROR io.netty.resolver.dns.DnsServerAddressStreamProviders -- Unable to load io.netty.resolver.dns.macos.MacOSDnsServerAddressStreamProvider, fallback to system defaults. This may result in incorrect DNS resolutions on MacOS. Check whether you have a dependency on 'io.netty:netty-resolver-dns-native-macos'. Use DEBUG level to see the full stack: java.lang.UnsatisfiedLinkError: failed to load the required native library
+Admin token obtained successfully
+
+--- Cleaning test users ---
+  Deleting user: agent001 (4ae019ab-3b50-475c-8cf7-71691d1fd428)
+    Deleted successfully
+
+--- Cleaning test agents ---
+
+=== Cleanup Complete ===
+Resolve mutations for :gateway:e2eTest (Thread[#572,Execution worker Thread 7,5,main]) started.
+:gateway:e2eTest (Thread[#567,Execution worker Thread 2,5,main]) started.
+
+> Task :gateway:e2eTest
+Caching disabled for task ':gateway:e2eTest' because:
+  Build cache is disabled
+Task ':gateway:e2eTest' is not up-to-date because:
+  Task has failed previously.
+Starting process 'Gradle Test Executor 4'. Working directory: /Users/me/myprojects/agentbanking-backend/.worktrees/bdd-coverage/gateway Command: /Library/Java/JavaVirtualMachines/zulu-21.jdk/Contents/Home/bin/java -Djunit.jupiter.execution.parallel.enabled=false -Djunit.jupiter.execution.timeout.default=60s -Djunit.jupiter.testclass.order.default=org.junit.jupiter.api.ClassOrderer$OrderAnnotation -Dorg.gradle.internal.worker.tmpdir=/Users/me/myprojects/agentbanking-backend/.worktrees/bdd-coverage/gateway/build/tmp/e2eTest/work -Dorg.gradle.native=false -Dspring.profiles.active=local @/Users/me/.gradle/.tmp/gradle-worker-classpath12443445824106710739txt -Xmx512m -Dfile.encoding=UTF-8 -Duser.country=VN -Duser.language=en -Duser.variant -ea worker.org.gradle.process.internal.worker.GradleWorkerMain 'Gradle Test Executor 4'
+Successfully started process 'Gradle Test Executor 4'
+
+Gradle Test Executor 4 started executing tests.
+
+> Task :gateway:e2eTest
+
+SelfContainedOrchestratorE2ETest STANDARD_OUT
+    === Self-Contained E2E Test Setup ===
+    Gateway URL: http://localhost:8080
+
+SelfContainedOrchestratorE2ETest > Setup: Get test token > Get or create test agent token STANDARD_OUT
+    13:07:04.241 [Test worker] ERROR io.netty.resolver.dns.DnsServerAddressStreamProviders -- Unable to load io.netty.resolver.dns.macos.MacOSDnsServerAddressStreamProvider, fallback to system defaults. This may result in incorrect DNS resolutions on MacOS. Check whether you have a dependency on 'io.netty:netty-resolver-dns-native-macos'. Use DEBUG level to see the full stack: java.lang.UnsatisfiedLinkError: failed to load the required native library
+    Agent token obtained: eyJhbGciOiJIUzUxMiJ9...
+
+SelfContainedOrchestratorE2ETest > Setup: Get test token > Top up agent float balance SKIPPED
+
+SelfContainedOrchestratorE2ETest > BDD-TO: Workflow Router Dispatch > BDD-TO-03: Cash Deposit completes successfully with side effects FAILED
+    org.opentest4j.AssertionFailedError: Workflow should complete successfully ==> expected: <COMPLETED> but was: <FAILED>
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:151)
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.buildAndThrow(AssertionFailureBuilder.java:132)
+        at app//org.junit.jupiter.api.AssertEquals.failNotEqual(AssertEquals.java:197)
+        at app//org.junit.jupiter.api.AssertEquals.assertEquals(AssertEquals.java:182)
+        at app//org.junit.jupiter.api.Assertions.assertEquals(Assertions.java:1156)
+        at app//com.agentbanking.gateway.integration.orchestrator.SelfContainedOrchestratorE2ETest.verifyTransactionSuccess(SelfContainedOrchestratorE2ETest.java:1856)
+        at app//com.agentbanking.gateway.integration.orchestrator.SelfContainedOrchestratorE2ETest$WorkflowRouterDispatch.deposit_shouldCompleteSuccessfully(SelfContainedOrchestratorE2ETest.java:348)
+
+SelfContainedOrchestratorE2ETest > BDD-TO: Workflow Router Dispatch > BDD-TO-05: DuitNow Transfer completes successfully with side effects FAILED
+    org.opentest4j.AssertionFailedError: Workflow should complete successfully ==> expected: <COMPLETED> but was: <PENDING>
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:151)
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.buildAndThrow(AssertionFailureBuilder.java:132)
+        at app//org.junit.jupiter.api.AssertEquals.failNotEqual(AssertEquals.java:197)
+        at app//org.junit.jupiter.api.AssertEquals.assertEquals(AssertEquals.java:182)
+        at app//org.junit.jupiter.api.Assertions.assertEquals(Assertions.java:1156)
+        at app//com.agentbanking.gateway.integration.orchestrator.SelfContainedOrchestratorE2ETest.verifyTransactionSuccess(SelfContainedOrchestratorE2ETest.java:1856)
+        at app//com.agentbanking.gateway.integration.orchestrator.SelfContainedOrchestratorE2ETest$WorkflowRouterDispatch.duitNowTransfer_shouldCompleteSuccessfully(SelfContainedOrchestratorE2ETest.java:395)
+
+SelfContainedOrchestratorE2ETest > BDD-TO: Workflow Router Dispatch > BDD-TO-02: On-Us Withdrawal completes successfully with side effects FAILED
+    org.opentest4j.AssertionFailedError: Workflow should complete successfully ==> expected: <COMPLETED> but was: <FAILED>
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:151)
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.buildAndThrow(AssertionFailureBuilder.java:132)
+        at app//org.junit.jupiter.api.AssertEquals.failNotEqual(AssertEquals.java:197)
+        at app//org.junit.jupiter.api.AssertEquals.assertEquals(AssertEquals.java:182)
+        at app//org.junit.jupiter.api.Assertions.assertEquals(Assertions.java:1156)
+        at app//com.agentbanking.gateway.integration.orchestrator.SelfContainedOrchestratorE2ETest.verifyTransactionSuccess(SelfContainedOrchestratorE2ETest.java:1856)
+        at app//com.agentbanking.gateway.integration.orchestrator.SelfContainedOrchestratorE2ETest$WorkflowRouterDispatch.withdraw_onUs_shouldCompleteSuccessfully(SelfContainedOrchestratorE2ETest.java:326)
+
+SelfContainedOrchestratorE2ETest > BDD-TO: Workflow Router Dispatch > BDD-TO-01: Off-Us Withdrawal completes successfully with side effects FAILED
+    org.opentest4j.AssertionFailedError: Workflow should complete successfully ==> expected: <COMPLETED> but was: <FAILED>
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:151)
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.buildAndThrow(AssertionFailureBuilder.java:132)
+        at app//org.junit.jupiter.api.AssertEquals.failNotEqual(AssertEquals.java:197)
+        at app//org.junit.jupiter.api.AssertEquals.assertEquals(AssertEquals.java:182)
+        at app//org.junit.jupiter.api.Assertions.assertEquals(Assertions.java:1156)
+        at app//com.agentbanking.gateway.integration.orchestrator.SelfContainedOrchestratorE2ETest.verifyTransactionSuccess(SelfContainedOrchestratorE2ETest.java:1856)
+        at app//com.agentbanking.gateway.integration.orchestrator.SelfContainedOrchestratorE2ETest$WorkflowRouterDispatch.withdraw_offUs_shouldCompleteSuccessfully(SelfContainedOrchestratorE2ETest.java:304)
+
+SelfContainedOrchestratorE2ETest > BDD-TO: Workflow Router Dispatch > BDD-TO-04: Bill Payment completes successfully with side effects FAILED
+    org.opentest4j.AssertionFailedError: Workflow should complete successfully ==> expected: <COMPLETED> but was: <PENDING>
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:151)
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.buildAndThrow(AssertionFailureBuilder.java:132)
+        at app//org.junit.jupiter.api.AssertEquals.failNotEqual(AssertEquals.java:197)
+        at app//org.junit.jupiter.api.AssertEquals.assertEquals(AssertEquals.java:182)
+        at app//org.junit.jupiter.api.Assertions.assertEquals(Assertions.java:1156)
+        at app//com.agentbanking.gateway.integration.orchestrator.SelfContainedOrchestratorE2ETest.verifyTransactionSuccess(SelfContainedOrchestratorE2ETest.java:1856)
+        at app//com.agentbanking.gateway.integration.orchestrator.SelfContainedOrchestratorE2ETest$WorkflowRouterDispatch.billPayment_shouldCompleteSuccessfully(SelfContainedOrchestratorE2ETest.java:373)
+
+SelfContainedOrchestratorE2ETest > BDD-TO-NEW: New Transaction Types E2E > BDD-TO-NEW-02: PIN-based Purchase completes successfully with side effects FAILED
+    org.opentest4j.AssertionFailedError: Workflow should complete successfully ==> expected: <COMPLETED> but was: <FAILED>
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:151)
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.buildAndThrow(AssertionFailureBuilder.java:132)
+        at app//org.junit.jupiter.api.AssertEquals.failNotEqual(AssertEquals.java:197)
+        at app//org.junit.jupiter.api.AssertEquals.assertEquals(AssertEquals.java:182)
+        at app//org.junit.jupiter.api.Assertions.assertEquals(Assertions.java:1156)
+        at app//com.agentbanking.gateway.integration.orchestrator.SelfContainedOrchestratorE2ETest.verifyTransactionSuccess(SelfContainedOrchestratorE2ETest.java:1856)
+        at app//com.agentbanking.gateway.integration.orchestrator.SelfContainedOrchestratorE2ETest$NewTransactionTypesE2E.pinBasedPurchase_shouldCompleteSuccessfully(SelfContainedOrchestratorE2ETest.java:471)
+
+SelfContainedOrchestratorE2ETest > BDD-TO-NEW: New Transaction Types E2E > BDD-TO-NEW-01: Cashless Payment completes successfully with side effects FAILED
+    org.opentest4j.AssertionFailedError: Workflow should complete successfully ==> expected: <COMPLETED> but was: <FAILED>
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:151)
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.buildAndThrow(AssertionFailureBuilder.java:132)
+        at app//org.junit.jupiter.api.AssertEquals.failNotEqual(AssertEquals.java:197)
+        at app//org.junit.jupiter.api.AssertEquals.assertEquals(AssertEquals.java:182)
+        at app//org.junit.jupiter.api.Assertions.assertEquals(Assertions.java:1156)
+        at app//com.agentbanking.gateway.integration.orchestrator.SelfContainedOrchestratorE2ETest.verifyTransactionSuccess(SelfContainedOrchestratorE2ETest.java:1856)
+        at app//com.agentbanking.gateway.integration.orchestrator.SelfContainedOrchestratorE2ETest$NewTransactionTypesE2E.cashlessPayment_shouldCompleteSuccessfully(SelfContainedOrchestratorE2ETest.java:450)
+
+SelfContainedOrchestratorE2ETest > BDD-TO-NEW: New Transaction Types E2E > BDD-TO-NEW-03: Prepaid Topup completes successfully with side effects FAILED
+    org.opentest4j.AssertionFailedError: Workflow should complete successfully ==> expected: <COMPLETED> but was: <FAILED>
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:151)
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.buildAndThrow(AssertionFailureBuilder.java:132)
+        at app//org.junit.jupiter.api.AssertEquals.failNotEqual(AssertEquals.java:197)
+        at app//org.junit.jupiter.api.AssertEquals.assertEquals(AssertEquals.java:182)
+        at app//org.junit.jupiter.api.Assertions.assertEquals(Assertions.java:1156)
+        at app//com.agentbanking.gateway.integration.orchestrator.SelfContainedOrchestratorE2ETest.verifyTransactionSuccess(SelfContainedOrchestratorE2ETest.java:1856)
+        at app//com.agentbanking.gateway.integration.orchestrator.SelfContainedOrchestratorE2ETest$NewTransactionTypesE2E.prepaidTopup_shouldCompleteSuccessfully(SelfContainedOrchestratorE2ETest.java:493)
+
+SelfContainedOrchestratorE2ETest > BDD-TO-NEW: New Transaction Types E2E > BDD-TO-NEW-07: PIN Purchase completes successfully with side effects FAILED
+    org.opentest4j.AssertionFailedError: Workflow should complete successfully ==> expected: <COMPLETED> but was: <FAILED>
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:151)
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.buildAndThrow(AssertionFailureBuilder.java:132)
+        at app//org.junit.jupiter.api.AssertEquals.failNotEqual(AssertEquals.java:197)
+        at app//org.junit.jupiter.api.AssertEquals.assertEquals(AssertEquals.java:182)
+        at app//org.junit.jupiter.api.Assertions.assertEquals(Assertions.java:1156)
+        at app//com.agentbanking.gateway.integration.orchestrator.SelfContainedOrchestratorE2ETest.verifyTransactionSuccess(SelfContainedOrchestratorE2ETest.java:1856)
+        at app//com.agentbanking.gateway.integration.orchestrator.SelfContainedOrchestratorE2ETest$NewTransactionTypesE2E.pinPurchase_shouldCompleteSuccessfully(SelfContainedOrchestratorE2ETest.java:581)
+
+SelfContainedOrchestratorE2ETest > BDD-TO-NEW: New Transaction Types E2E > BDD-TO-NEW-06: ESSP Purchase completes successfully with side effects FAILED
+    org.opentest4j.AssertionFailedError: Workflow should complete successfully ==> expected: <COMPLETED> but was: <FAILED>
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:151)
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.buildAndThrow(AssertionFailureBuilder.java:132)
+        at app//org.junit.jupiter.api.AssertEquals.failNotEqual(AssertEquals.java:197)
+        at app//org.junit.jupiter.api.AssertEquals.assertEquals(AssertEquals.java:182)
+        at app//org.junit.jupiter.api.Assertions.assertEquals(Assertions.java:1156)
+        at app//com.agentbanking.gateway.integration.orchestrator.SelfContainedOrchestratorE2ETest.verifyTransactionSuccess(SelfContainedOrchestratorE2ETest.java:1856)
+        at app//com.agentbanking.gateway.integration.orchestrator.SelfContainedOrchestratorE2ETest$NewTransactionTypesE2E.esspPurchase_shouldCompleteSuccessfully(SelfContainedOrchestratorE2ETest.java:559)
+
+SelfContainedOrchestratorE2ETest > BDD-TO-NEW: New Transaction Types E2E > BDD-TO-NEW-04: E-Wallet Withdrawal completes successfully with side effects FAILED
+    org.opentest4j.AssertionFailedError: Workflow should complete successfully ==> expected: <COMPLETED> but was: <FAILED>
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:151)
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.buildAndThrow(AssertionFailureBuilder.java:132)
+        at app//org.junit.jupiter.api.AssertEquals.failNotEqual(AssertEquals.java:197)
+        at app//org.junit.jupiter.api.AssertEquals.assertEquals(AssertEquals.java:182)
+        at app//org.junit.jupiter.api.Assertions.assertEquals(Assertions.java:1156)
+        at app//com.agentbanking.gateway.integration.orchestrator.SelfContainedOrchestratorE2ETest.verifyTransactionSuccess(SelfContainedOrchestratorE2ETest.java:1856)
+        at app//com.agentbanking.gateway.integration.orchestrator.SelfContainedOrchestratorE2ETest$NewTransactionTypesE2E.ewalletWithdrawal_shouldCompleteSuccessfully(SelfContainedOrchestratorE2ETest.java:515)
+
+SelfContainedOrchestratorE2ETest > BDD-TO-NEW: New Transaction Types E2E > BDD-TO-NEW-05: E-Wallet Topup completes successfully with side effects FAILED
+    org.opentest4j.AssertionFailedError: Workflow should complete successfully ==> expected: <COMPLETED> but was: <PENDING>
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:151)
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.buildAndThrow(AssertionFailureBuilder.java:132)
+        at app//org.junit.jupiter.api.AssertEquals.failNotEqual(AssertEquals.java:197)
+        at app//org.junit.jupiter.api.AssertEquals.assertEquals(AssertEquals.java:182)
+        at app//org.junit.jupiter.api.Assertions.assertEquals(Assertions.java:1156)
+        at app//com.agentbanking.gateway.integration.orchestrator.SelfContainedOrchestratorE2ETest.verifyTransactionSuccess(SelfContainedOrchestratorE2ETest.java:1856)
+        at app//com.agentbanking.gateway.integration.orchestrator.SelfContainedOrchestratorE2ETest$NewTransactionTypesE2E.ewalletTopup_shouldCompleteSuccessfully(SelfContainedOrchestratorE2ETest.java:537)
+
+SelfContainedOrchestratorE2ETest > BDD-TO-NEW: New Transaction Types E2E > BDD-TO-NEW-09: Hybrid Cashback completes successfully with side effects FAILED
+    org.opentest4j.AssertionFailedError: Workflow should complete successfully ==> expected: <COMPLETED> but was: <FAILED>
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:151)
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.buildAndThrow(AssertionFailureBuilder.java:132)
+        at app//org.junit.jupiter.api.AssertEquals.failNotEqual(AssertEquals.java:197)
+        at app//org.junit.jupiter.api.AssertEquals.assertEquals(AssertEquals.java:182)
+        at app//org.junit.jupiter.api.Assertions.assertEquals(Assertions.java:1156)
+        at app//com.agentbanking.gateway.integration.orchestrator.SelfContainedOrchestratorE2ETest.verifyTransactionSuccess(SelfContainedOrchestratorE2ETest.java:1856)
+        at app//com.agentbanking.gateway.integration.orchestrator.SelfContainedOrchestratorE2ETest$NewTransactionTypesE2E.hybridCashback_shouldCompleteSuccessfully(SelfContainedOrchestratorE2ETest.java:625)
+
+SelfContainedOrchestratorE2ETest > BDD-TO-NEW: New Transaction Types E2E > BDD-TO-NEW-08: Retail Sale completes successfully with side effects FAILED
+    org.opentest4j.AssertionFailedError: Workflow should complete successfully ==> expected: <COMPLETED> but was: <FAILED>
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:151)
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.buildAndThrow(AssertionFailureBuilder.java:132)
+        at app//org.junit.jupiter.api.AssertEquals.failNotEqual(AssertEquals.java:197)
+        at app//org.junit.jupiter.api.AssertEquals.assertEquals(AssertEquals.java:182)
+        at app//org.junit.jupiter.api.Assertions.assertEquals(Assertions.java:1156)
+        at app//com.agentbanking.gateway.integration.orchestrator.SelfContainedOrchestratorE2ETest.verifyTransactionSuccess(SelfContainedOrchestratorE2ETest.java:1856)
+        at app//com.agentbanking.gateway.integration.orchestrator.SelfContainedOrchestratorE2ETest$NewTransactionTypesE2E.retailSale_shouldCompleteSuccessfully(SelfContainedOrchestratorE2ETest.java:603)
+
+SelfContainedOrchestratorE2ETest > Security: Authentication > Transaction request without auth token STANDARD_OUT
+    Transaction without auth returned status: 401
+
+SelfContainedOrchestratorE2ETest > BDD-WF-HP-W: Withdrawal Happy Path > BDD-WF-HP-W01: Off-Us withdrawal completes successfully FAILED
+    org.opentest4j.AssertionFailedError: Workflow should complete successfully, but was: FAILED Error: ERR_SYS_AGENT_FLOAT_NOT_FOUND ==> expected: <COMPLETED> but was: <FAILED>
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:151)
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.buildAndThrow(AssertionFailureBuilder.java:132)
+        at app//org.junit.jupiter.api.AssertEquals.failNotEqual(AssertEquals.java:197)
+        at app//org.junit.jupiter.api.AssertEquals.assertEquals(AssertEquals.java:182)
+        at app//org.junit.jupiter.api.Assertions.assertEquals(Assertions.java:1156)
+        at app//com.agentbanking.gateway.integration.orchestrator.SelfContainedOrchestratorE2ETest$WithdrawalHappyPath.offUsWithdrawal_shouldCompleteSuccessfully(SelfContainedOrchestratorE2ETest.java:1010)
+
+SelfContainedOrchestratorE2ETest > BDD-WF-EC-W: Withdrawal Edge Cases > BDD-WF-EC-W04: Insufficient float - workflow fails at float block FAILED
+    org.opentest4j.AssertionFailedError: Should have error code for insufficient float, got: ERR_SYS_AGENT_FLOAT_NOT_FOUND ==> expected: <true> but was: <false>
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:151)
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.buildAndThrow(AssertionFailureBuilder.java:132)
+        at app//org.junit.jupiter.api.AssertTrue.failNotTrue(AssertTrue.java:63)
+        at app//org.junit.jupiter.api.AssertTrue.assertTrue(AssertTrue.java:36)
+        at app//org.junit.jupiter.api.Assertions.assertTrue(Assertions.java:214)
+        at app//com.agentbanking.gateway.integration.orchestrator.SelfContainedOrchestratorE2ETest$WithdrawalEdgeCases.withdraw_insufficientFloat_shouldFail(SelfContainedOrchestratorE2ETest.java:1103)
+
+SelfContainedOrchestratorE2ETest > BDD-WF-EC-W: Withdrawal Edge Cases > BDD-WF-EC-W05: Velocity check fails - workflow fails before float block FAILED
+    org.opentest4j.AssertionFailedError: First transaction should complete successfully ==> expected: <COMPLETED> but was: <FAILED>
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:151)
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.buildAndThrow(AssertionFailureBuilder.java:132)
+        at app//org.junit.jupiter.api.AssertEquals.failNotEqual(AssertEquals.java:197)
+        at app//org.junit.jupiter.api.AssertEquals.assertEquals(AssertEquals.java:182)
+        at app//org.junit.jupiter.api.Assertions.assertEquals(Assertions.java:1156)
+        at app//com.agentbanking.gateway.integration.orchestrator.SelfContainedOrchestratorE2ETest$WithdrawalEdgeCases.withdraw_velocityExceeded_shouldFail(SelfContainedOrchestratorE2ETest.java:1148)
+
+SelfContainedOrchestratorE2ETest > BDD-WF-D: Deposit Workflow > BDD-WF-HP-D01: Cash deposit completes successfully FAILED
+    org.opentest4j.AssertionFailedError: Deposit workflow should complete successfully, but was: FAILED Error: ERR_BIZ_DEPOSIT_FAILED ==> expected: <COMPLETED> but was: <FAILED>
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:151)
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.buildAndThrow(AssertionFailureBuilder.java:132)
+        at app//org.junit.jupiter.api.AssertEquals.failNotEqual(AssertEquals.java:197)
+        at app//org.junit.jupiter.api.AssertEquals.assertEquals(AssertEquals.java:182)
+        at app//org.junit.jupiter.api.Assertions.assertEquals(Assertions.java:1156)
+        at app//com.agentbanking.gateway.integration.orchestrator.SelfContainedOrchestratorE2ETest$DepositWorkflow.deposit_shouldCompleteSuccessfully(SelfContainedOrchestratorE2ETest.java:1206)
+
+SelfContainedOrchestratorE2ETest > BDD-WF-BP: Bill Payment Workflow > BDD-WF-HP-BP01: Bill payment completes successfully FAILED
+    org.opentest4j.AssertionFailedError: Bill payment workflow should complete successfully, but was: PENDING Error: null ==> expected: <COMPLETED> but was: <PENDING>
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:151)
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.buildAndThrow(AssertionFailureBuilder.java:132)
+        at app//org.junit.jupiter.api.AssertEquals.failNotEqual(AssertEquals.java:197)
+        at app//org.junit.jupiter.api.AssertEquals.assertEquals(AssertEquals.java:182)
+        at app//org.junit.jupiter.api.Assertions.assertEquals(Assertions.java:1156)
+        at app//com.agentbanking.gateway.integration.orchestrator.SelfContainedOrchestratorE2ETest$BillPaymentWorkflow.billPayment_shouldCompleteSuccessfully(SelfContainedOrchestratorE2ETest.java:1309)
+
+SelfContainedOrchestratorE2ETest > BDD-WF-DN: DuitNow Transfer Workflow > BDD-WF-HP-DN01: DuitNow transfer via mobile proxy completes successfully FAILED
+    org.opentest4j.AssertionFailedError: DuitNow workflow should complete successfully, but was: PENDING Error: null ==> expected: <COMPLETED> but was: <PENDING>
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:151)
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.buildAndThrow(AssertionFailureBuilder.java:132)
+        at app//org.junit.jupiter.api.AssertEquals.failNotEqual(AssertEquals.java:197)
+        at app//org.junit.jupiter.api.AssertEquals.assertEquals(AssertEquals.java:182)
+        at app//org.junit.jupiter.api.Assertions.assertEquals(Assertions.java:1156)
+        at app//com.agentbanking.gateway.integration.orchestrator.SelfContainedOrchestratorE2ETest$DuitNowWorkflow.duitNowTransfer_mobileProxy_shouldCompleteSuccessfully(SelfContainedOrchestratorE2ETest.java:1390)
+
+SelfContainedOrchestratorE2ETest > BDD-STP: STP Evaluation End-to-End > BDD-STP-02: High value - triggers PENDING_REVIEW (NON_STP) STANDARD_OUT
+    High value transaction started - pending review expected
+
+SelfContainedOrchestratorE2ETest > BDD-STP: STP Evaluation End-to-End > BDD-STP-01: Full STP - transaction completes immediately STANDARD_OUT
+    Transaction status after FULL_STP: PENDING
+
+Gradle Test Executor 4 finished executing tests.
+
+> Task :gateway:e2eTest FAILED
+
+45 tests completed, 20 failed, 1 skipped
+Finished generating test XML results (0.076 secs) into: /Users/me/myprojects/agentbanking-backend/.worktrees/bdd-coverage/gateway/build/test-results/e2eTest
+Generating HTML test report...
+Finished generating test html results (0.032 secs) into: /Users/me/myprojects/agentbanking-backend/.worktrees/bdd-coverage/gateway/build/reports/tests/e2eTest
+Invalidating in-memory cache of /Users/me/myprojects/agentbanking-backend/.worktrees/bdd-coverage/.gradle/8.5/fileHashes/fileHashes.bin
+Invalidating in-memory cache of /Users/me/myprojects/agentbanking-backend/.worktrees/bdd-coverage/.gradle/8.5/fileHashes/resourceHashesCache.bin
+Invalidating in-memory cache of /Users/me/myprojects/agentbanking-backend/.worktrees/bdd-coverage/.gradle/8.5/executionHistory/executionHistory.bin
+Invalidating in-memory cache of /Users/me/myprojects/agentbanking-backend/.worktrees/bdd-coverage/.gradle/buildOutputCleanup/outputFiles.bin
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':gateway:e2eTest'.
+> There were failing tests. See the report at: file:///Users/me/myprojects/agentbanking-backend/.worktrees/bdd-coverage/gateway/build/reports/tests/e2eTest/index.html
+
+* Try:
+> Run with --scan to get full insights.
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/8.5/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD FAILED in 5m 43s
+10 actionable tasks: 2 executed, 8 up-to-date
+Watched directory hierarchies: [/Users/me/myprojects/agentbanking-backend/.worktrees/bdd-coverage]

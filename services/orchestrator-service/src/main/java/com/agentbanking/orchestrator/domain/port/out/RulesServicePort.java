@@ -11,8 +11,11 @@ public interface RulesServicePort {
 
     record VelocityCheckInput(
         UUID agentId,
+        String transactionType,
         BigDecimal amount,
-        String customerMykad
+        String customerMykad,
+        int transactionCountToday,
+        BigDecimal amountToday
     ) {}
 
     record VelocityCheckResult(

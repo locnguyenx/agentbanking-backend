@@ -16,6 +16,7 @@ import com.agentbanking.orchestrator.application.workflow.HybridCashbackWorkflow
 import com.agentbanking.orchestrator.domain.model.WorkflowResult;
 import com.agentbanking.orchestrator.domain.model.WorkflowStatus;
 import com.agentbanking.orchestrator.domain.port.out.LedgerServicePort.*;
+import com.agentbanking.orchestrator.domain.port.out.RulesServicePort.*;
 import com.agentbanking.orchestrator.domain.port.out.QRPaymentPort.QRGenerationResult;
 import com.agentbanking.orchestrator.domain.port.out.QRPaymentPort.QRPaymentStatus;
 import com.agentbanking.orchestrator.domain.port.out.RequestToPayPort.RTPResult;
@@ -38,6 +39,9 @@ public class HybridCashbackWorkflowImpl implements HybridCashbackWorkflow {
 
     private static final Logger log = Workflow.getLogger(HybridCashbackWorkflowImpl.class);
 
+    private GetDailyMetricsActivity getDailyMetricsActivity;
+    private CheckVelocityActivity checkVelocityActivity;
+    private EvaluateStpActivity evaluateStpActivity;
     private ValidateFloatCapacityActivity validateFloatCapacityActivity;
     private CalculateMDRActivity calculateMDRActivity;
     private GenerateDynamicQRActivity generateDynamicQRActivity;
@@ -54,6 +58,9 @@ public class HybridCashbackWorkflowImpl implements HybridCashbackWorkflow {
     private WorkflowStatus currentStatus = WorkflowStatus.PENDING;
 
     public HybridCashbackWorkflowImpl(
+            GetDailyMetricsActivity getDailyMetricsActivity,
+            CheckVelocityActivity checkVelocityActivity,
+            EvaluateStpActivity evaluateStpActivity,
             ValidateFloatCapacityActivity validateFloatCapacityActivity,
             CalculateMDRActivity calculateMDRActivity,
             GenerateDynamicQRActivity generateDynamicQRActivity,
@@ -66,6 +73,9 @@ public class HybridCashbackWorkflowImpl implements HybridCashbackWorkflow {
             ReleaseFloatActivity releaseFloatActivity,
             CreditAgentFloatActivity creditAgentFloatActivity,
             PersistWorkflowResultActivity persistWorkflowResultActivity) {
+        this.getDailyMetricsActivity = getDailyMetricsActivity;
+        this.checkVelocityActivity = checkVelocityActivity;
+        this.evaluateStpActivity = evaluateStpActivity;
         this.validateFloatCapacityActivity = validateFloatCapacityActivity;
         this.calculateMDRActivity = calculateMDRActivity;
         this.generateDynamicQRActivity = generateDynamicQRActivity;
@@ -82,6 +92,18 @@ public class HybridCashbackWorkflowImpl implements HybridCashbackWorkflow {
 
     @SuppressWarnings("SpringJavaAutowiredMembersInspection")
     public HybridCashbackWorkflowImpl() {
+        this.getDailyMetricsActivity = Workflow.newActivityStub(GetDailyMetricsActivity.class, ActivityOptions.newBuilder()
+                .setStartToCloseTimeout(Duration.ofSeconds(30))
+                .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(3).build())
+                .build());
+        this.checkVelocityActivity = Workflow.newActivityStub(CheckVelocityActivity.class, ActivityOptions.newBuilder()
+                .setStartToCloseTimeout(Duration.ofSeconds(30))
+                .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(3).build())
+                .build());
+        this.evaluateStpActivity = Workflow.newActivityStub(EvaluateStpActivity.class, ActivityOptions.newBuilder()
+                .setStartToCloseTimeout(Duration.ofSeconds(30))
+                .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(3).build())
+                .build());
         this.validateFloatCapacityActivity = Workflow.newActivityStub(ValidateFloatCapacityActivity.class, ActivityOptions.newBuilder()
                 .setStartToCloseTimeout(Duration.ofSeconds(30))
                 .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(3).build())
@@ -139,6 +161,49 @@ public class HybridCashbackWorkflowImpl implements HybridCashbackWorkflow {
 
         try {
             BigDecimal totalAmount = input.purchaseAmount().add(input.cashbackAmount());
+
+            // Task: Fetch metrics
+            DailyMetricsResult metrics = getDailyMetricsActivity.getDailyMetrics(input.agentId());
+
+            // Step 1: Check velocity (Using totalAmount for security)
+            VelocityCheckResult velocityResult = checkVelocityActivity.checkVelocity(
+                    new VelocityCheckInput(
+                        input.agentId(), 
+                        "CASH_BACK",
+                        totalAmount, 
+                        input.customerProxy(),
+                        metrics.transactionCountToday(),
+                        metrics.amountToday()
+                    ));
+            
+            if (!velocityResult.passed()) {
+                currentStatus = WorkflowStatus.FAILED;
+                WorkflowResult failResult = WorkflowResult.failed(velocityResult.errorCode(), "Velocity check failed", "DECLINE");
+                persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
+                        Workflow.getInfo().getWorkflowId(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null, "Velocity check failed"));
+                return failResult;
+            }
+
+            // Step 2: Evaluate STP
+            StpDecision stpDecision = evaluateStpActivity.evaluateStp(
+                    new EvaluateStpActivity.Input(
+                            "CASH_BACK",
+                            input.agentId().toString(),
+                            totalAmount.toString(),
+                            input.customerProxy(),
+                            input.agentTier(),
+                            metrics.transactionCountToday(),
+                            metrics.amountToday().toString(),
+                            metrics.todayTotalAmount().toString()
+                    )
+            );
+            if (!stpDecision.approved()) {
+                currentStatus = WorkflowStatus.PENDING_REVIEW;
+                WorkflowResult reviewResult = WorkflowResult.failed("ERR_STP_REVIEW", stpDecision.reason(), "REVIEW");
+                persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
+                        Workflow.getInfo().getWorkflowId(), "PENDING_REVIEW", reviewResult.errorCode(), reviewResult.errorMessage(), null, null, null, stpDecision.reason()));
+                return reviewResult;
+            }
             
             var capacityResult = validateFloatCapacityActivity.validate(input.agentId(), totalAmount);
             if (!capacityResult.sufficient()) {
@@ -165,7 +230,8 @@ public class HybridCashbackWorkflowImpl implements HybridCashbackWorkflow {
                             input.geofenceLat(),
                             input.geofenceLng(),
                             input.agentTier(),
-                            input.targetBin()
+                            input.targetBin(),
+                            "CASH_BACK"
                         ));
             } catch (ActivityFailure e) {
                 log.error("Block float activity failed: {}", e.getMessage());
@@ -298,7 +364,8 @@ public class HybridCashbackWorkflowImpl implements HybridCashbackWorkflow {
                         input.targetBin(),
                         null,
                         input.geofenceLat(),
-                        input.geofenceLng()
+                        input.geofenceLng(),
+                        "CASH_BACK"
                 ));
             } catch (ActivityFailure e) {
                 log.error("Credit agent float activity failed: {}", e.getMessage());

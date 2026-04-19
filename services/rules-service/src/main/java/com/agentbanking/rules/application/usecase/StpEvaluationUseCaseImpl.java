@@ -1,7 +1,6 @@
 package com.agentbanking.rules.application.usecase;
 
 import com.agentbanking.rules.domain.model.AgentTier;
-import com.agentbanking.rules.domain.model.FeeConfigRecord;
 import com.agentbanking.rules.domain.model.StpDecision;
 import com.agentbanking.rules.domain.port.in.StpEvaluationUseCase;
 import com.agentbanking.rules.domain.service.StpDecisionService;
@@ -33,6 +32,7 @@ public class StpEvaluationUseCaseImpl implements StpEvaluationUseCase {
 
         StpDecision decision = stpDecisionService.evaluate(
             command.transactionType(),
+            command.agentId(),
             command.customerMykad(),
             command.amount(),
             tier,

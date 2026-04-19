@@ -7,18 +7,7 @@ import com.agentbanking.orchestrator.domain.model.WorkflowResult;
 import com.agentbanking.orchestrator.domain.model.WorkflowStatus;
 import com.agentbanking.orchestrator.domain.port.out.CbsServicePort.*;
 import com.agentbanking.orchestrator.domain.port.out.EventPublisherPort.TransactionCompletedEvent;
-import com.agentbanking.orchestrator.domain.port.out.LedgerServicePort.AccountValidationInput;
-import com.agentbanking.orchestrator.domain.port.out.LedgerServicePort.AccountValidationResult;
-import com.agentbanking.orchestrator.domain.port.out.LedgerServicePort.FloatBlockInput;
-import com.agentbanking.orchestrator.domain.port.out.LedgerServicePort.FloatBlockResult;
-import com.agentbanking.orchestrator.domain.port.out.LedgerServicePort.FloatCommitInput;
-import com.agentbanking.orchestrator.domain.port.out.LedgerServicePort.FloatCreditInput;
-import com.agentbanking.orchestrator.domain.port.out.LedgerServicePort.FloatCreditResult;
-import com.agentbanking.orchestrator.domain.port.out.LedgerServicePort.FloatReleaseInput;
-import com.agentbanking.orchestrator.domain.port.out.RulesServicePort.VelocityCheckInput;
-import com.agentbanking.orchestrator.domain.port.out.RulesServicePort.VelocityCheckResult;
-import com.agentbanking.orchestrator.domain.port.out.RulesServicePort.FeeCalculationInput;
-import com.agentbanking.orchestrator.domain.port.out.RulesServicePort.FeeCalculationResult;
+import com.agentbanking.orchestrator.domain.port.out.LedgerServicePort.*;
 import com.agentbanking.orchestrator.domain.port.out.RulesServicePort.*;
 import com.agentbanking.orchestrator.application.activity.ValidateAccountActivity;
 import com.agentbanking.orchestrator.application.activity.CreditAgentFloatActivity;
@@ -40,6 +29,7 @@ public class DepositWorkflowImpl implements DepositWorkflow {
 
     private static final Logger log = Workflow.getLogger(DepositWorkflowImpl.class);
 
+    private GetDailyMetricsActivity getDailyMetricsActivity;
     private CheckVelocityActivity checkVelocityActivity;
     private EvaluateStpActivity evaluateStpActivity;
     private CalculateFeesActivity calculateFeesActivity;
@@ -54,6 +44,7 @@ public class DepositWorkflowImpl implements DepositWorkflow {
     private WorkflowStatus currentStatus = WorkflowStatus.PENDING;
 
     public DepositWorkflowImpl(
+            GetDailyMetricsActivity getDailyMetricsActivity,
             CheckVelocityActivity checkVelocityActivity,
             EvaluateStpActivity evaluateStpActivity,
             CalculateFeesActivity calculateFeesActivity,
@@ -64,6 +55,7 @@ public class DepositWorkflowImpl implements DepositWorkflow {
             PublishKafkaEventActivity publishKafkaEventActivity,
             SaveResolutionCaseActivity saveResolutionCaseActivity,
             PersistWorkflowResultActivity persistWorkflowResultActivity) {
+        this.getDailyMetricsActivity = getDailyMetricsActivity;
         this.checkVelocityActivity = checkVelocityActivity;
         this.evaluateStpActivity = evaluateStpActivity;
         this.calculateFeesActivity = calculateFeesActivity;
@@ -78,52 +70,46 @@ public class DepositWorkflowImpl implements DepositWorkflow {
 
     @SuppressWarnings("SpringJavaAutowiredMembersInspection")
     public DepositWorkflowImpl() {
-        // CheckVelocity: 3s | Retry 1x (use SHORT_TIMEOUT from config)
+        this.getDailyMetricsActivity = Workflow.newActivityStub(GetDailyMetricsActivity.class, ActivityOptions.newBuilder()
+                .setStartToCloseTimeout(Duration.ofSeconds(30))
+                .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(3).build())
+                .build());
         this.checkVelocityActivity = Workflow.newActivityStub(CheckVelocityActivity.class, ActivityOptions.newBuilder()
                 .setStartToCloseTimeout(Duration.ofSeconds(30))
                 .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(3).build())
                 .build());
-        // EvaluateStp: 2s | Retry 1x
         this.evaluateStpActivity = Workflow.newActivityStub(EvaluateStpActivity.class, ActivityOptions.newBuilder()
                 .setStartToCloseTimeout(Duration.ofSeconds(30))
                 .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(3).build())
                 .build());
-        // CalculateFees: 2s | Retry 1x
         this.calculateFeesActivity = Workflow.newActivityStub(CalculateFeesActivity.class, ActivityOptions.newBuilder()
                 .setStartToCloseTimeout(Duration.ofSeconds(30))
                 .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(3).build())
                 .build());
-        // ValidateAccount: 5s | Retry 1x
         this.validateAccountActivity = Workflow.newActivityStub(ValidateAccountActivity.class, ActivityOptions.newBuilder()
                 .setStartToCloseTimeout(Duration.ofSeconds(30))
                 .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(3).build())
                 .build());
-        // CreditAgentFloat: 5s | Retry 1x (financial)
         this.creditAgentFloatActivity = Workflow.newActivityStub(CreditAgentFloatActivity.class, ActivityOptions.newBuilder()
                 .setStartToCloseTimeout(Duration.ofSeconds(30))
                 .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(3).build())
                 .build());
-        // ReleaseFloat: 5s | Retry 1x
         this.releaseFloatActivity = Workflow.newActivityStub(ReleaseFloatActivity.class, ActivityOptions.newBuilder()
                 .setStartToCloseTimeout(Duration.ofSeconds(30))
                 .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(3).build())
                 .build());
-        // PostToCBS: 10s | Retry 1x
         this.postToCBSActivity = Workflow.newActivityStub(PostToCBSActivity.class, ActivityOptions.newBuilder()
                 .setStartToCloseTimeout(Duration.ofSeconds(60))
                 .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(3).build())
                 .build());
-        // PublishKafkaEvent: 5s | Retry 1x (no retry - don't block on Kafka failure)
         this.publishKafkaEventActivity = Workflow.newActivityStub(PublishKafkaEventActivity.class, ActivityOptions.newBuilder()
                 .setStartToCloseTimeout(Duration.ofSeconds(30))
                 .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(3).build())
                 .build());
-        // SaveResolutionCase: 5s | Retry 1x
         this.saveResolutionCaseActivity = Workflow.newActivityStub(SaveResolutionCaseActivity.class, ActivityOptions.newBuilder()
                 .setStartToCloseTimeout(Duration.ofSeconds(30))
                 .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(3).build())
                 .build());
-        // PersistWorkflowResult: 5s | Retry 1x
         this.persistWorkflowResultActivity = Workflow.newActivityStub(PersistWorkflowResultActivity.class, ActivityOptions.newBuilder()
                 .setStartToCloseTimeout(Duration.ofSeconds(30))
                 .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(3).build())
@@ -136,9 +122,20 @@ public class DepositWorkflowImpl implements DepositWorkflow {
         currentStatus = WorkflowStatus.RUNNING;
 
         try {
+            // Task: Fetch metrics
+            DailyMetricsResult metrics = getDailyMetricsActivity.getDailyMetrics(input.agentId());
+
             // Step 1: Check velocity
             VelocityCheckResult velocityResult = checkVelocityActivity.checkVelocity(
-                    new VelocityCheckInput(input.agentId(), input.amount(), input.customerMykad()));
+                    new VelocityCheckInput(
+                        input.agentId(), 
+                        "CASH_DEPOSIT",
+                        input.amount(), 
+                        input.customerMykad(),
+                        metrics.transactionCountToday(),
+                        metrics.amountToday()
+                    ));
+            
             if (!velocityResult.passed()) {
                 currentStatus = WorkflowStatus.FAILED;
                 WorkflowResult failResult = WorkflowResult.failed(velocityResult.errorCode(), "Velocity check failed", "DECLINE");
@@ -157,9 +154,9 @@ public class DepositWorkflowImpl implements DepositWorkflow {
                                 input.amount().toString(),
                                 input.customerMykad(),
                                 input.agentTier(),
-                                0,
-                                "0",
-                                "0"
+                                metrics.transactionCountToday(),
+                                metrics.amountToday().toString(),
+                                metrics.todayTotalAmount().toString()
                         )
                 );
             } catch (ActivityFailure e) {
@@ -221,7 +218,8 @@ public class DepositWorkflowImpl implements DepositWorkflow {
                                 input.targetBin(),
                                 input.idempotencyKey(), // referenceNumber fallback
                                 input.geofenceLat(),
-                                input.geofenceLng()
+                                input.geofenceLng(),
+                                "CASH_DEPOSIT"
                         )
                 );
             } catch (ActivityFailure e) {

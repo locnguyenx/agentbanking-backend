@@ -1,0 +1,166 @@
+Starting a Gradle Daemon, 2 busy and 3 incompatible and 2 stopped Daemons could not be reused, use --status for details
+> Task :common:compileJava UP-TO-DATE
+> Task :common:processResources NO-SOURCE
+> Task :common:classes UP-TO-DATE
+> Task :common:jar UP-TO-DATE
+> Task :common:compileTestFixturesJava UP-TO-DATE
+> Task :common:processTestFixturesResources NO-SOURCE
+> Task :common:testFixturesClasses UP-TO-DATE
+> Task :common:testFixturesJar UP-TO-DATE
+> Task :gateway:compileJava UP-TO-DATE
+> Task :gateway:processResources UP-TO-DATE
+> Task :gateway:classes UP-TO-DATE
+> Task :gateway:compileTestJava UP-TO-DATE
+> Task :gateway:processTestResources UP-TO-DATE
+> Task :gateway:testClasses UP-TO-DATE
+
+> Task :gateway:cleanE2eTestData
+=== E2E Test Data Cleanup ===
+Gateway URL: http://localhost:8080
+Auth URL: http://localhost:8087
+Onboarding URL: http://localhost:8083
+
+13:18:43.891 [main] ERROR io.netty.resolver.dns.DnsServerAddressStreamProviders -- Unable to load io.netty.resolver.dns.macos.MacOSDnsServerAddressStreamProvider, fallback to system defaults. This may result in incorrect DNS resolutions on MacOS. Check whether you have a dependency on 'io.netty:netty-resolver-dns-native-macos'. Use DEBUG level to see the full stack: java.lang.UnsatisfiedLinkError: failed to load the required native library
+Admin token obtained successfully
+
+--- Cleaning test users ---
+  Deleting user: agent001 (ad643a55-b00c-4f41-afe1-a0a8d8cf9402)
+    Deleted successfully
+
+--- Cleaning test agents ---
+
+=== Cleanup Complete ===
+
+> Task :gateway:e2eTest
+
+SelfContainedOrchestratorE2ETest > Setup: Get test token > Get or create test agent token PASSED
+
+SelfContainedOrchestratorE2ETest > Setup: Get test token > Create or get agent via onboarding service PASSED
+
+SelfContainedOrchestratorE2ETest > Setup: Get test token > Top up agent float balance SKIPPED
+
+SelfContainedOrchestratorE2ETest > BDD-TO: Workflow Router Dispatch > BDD-TO-03: Cash Deposit completes successfully with side effects FAILED
+    org.opentest4j.AssertionFailedError at SelfContainedOrchestratorE2ETest.java:352
+
+SelfContainedOrchestratorE2ETest > BDD-TO: Workflow Router Dispatch > BDD-TO-06: Router rejects unsupported transaction type PASSED
+
+SelfContainedOrchestratorE2ETest > BDD-TO: Workflow Router Dispatch > BDD-TO-05: DuitNow Transfer completes successfully with side effects FAILED
+    org.opentest4j.AssertionFailedError at SelfContainedOrchestratorE2ETest.java:399
+
+SelfContainedOrchestratorE2ETest > BDD-TO: Workflow Router Dispatch > BDD-TO-02: On-Us Withdrawal completes successfully with side effects FAILED
+    org.opentest4j.AssertionFailedError at SelfContainedOrchestratorE2ETest.java:330
+
+SelfContainedOrchestratorE2ETest > BDD-TO: Workflow Router Dispatch > BDD-TO-01: Off-Us Withdrawal completes successfully with side effects FAILED
+    org.opentest4j.AssertionFailedError at SelfContainedOrchestratorE2ETest.java:308
+
+SelfContainedOrchestratorE2ETest > BDD-TO: Workflow Router Dispatch > BDD-TO-04: Bill Payment completes successfully with side effects FAILED
+    org.opentest4j.AssertionFailedError at SelfContainedOrchestratorE2ETest.java:377
+
+SelfContainedOrchestratorE2ETest > BDD-TO-NEW: New Transaction Types E2E > BDD-TO-NEW-02: PIN-based Purchase completes successfully with side effects FAILED
+    org.opentest4j.AssertionFailedError at SelfContainedOrchestratorE2ETest.java:475
+
+SelfContainedOrchestratorE2ETest > BDD-TO-NEW: New Transaction Types E2E > BDD-TO-NEW-01: Cashless Payment completes successfully with side effects FAILED
+    org.opentest4j.AssertionFailedError at SelfContainedOrchestratorE2ETest.java:454
+
+SelfContainedOrchestratorE2ETest > BDD-TO-NEW: New Transaction Types E2E > BDD-TO-NEW-03: Prepaid Topup completes successfully with side effects FAILED
+    org.opentest4j.AssertionFailedError at SelfContainedOrchestratorE2ETest.java:497
+
+SelfContainedOrchestratorE2ETest > BDD-TO-NEW: New Transaction Types E2E > BDD-TO-NEW-07: PIN Purchase completes successfully with side effects FAILED
+    org.opentest4j.AssertionFailedError at SelfContainedOrchestratorE2ETest.java:585
+
+SelfContainedOrchestratorE2ETest > BDD-TO-NEW: New Transaction Types E2E > BDD-TO-NEW-06: ESSP Purchase completes successfully with side effects FAILED
+    org.opentest4j.AssertionFailedError at SelfContainedOrchestratorE2ETest.java:563
+
+SelfContainedOrchestratorE2ETest > BDD-TO-NEW: New Transaction Types E2E > BDD-TO-NEW-04: E-Wallet Withdrawal completes successfully with side effects FAILED
+    java.util.concurrent.TimeoutException at TimeoutExceptionFactory.java:29
+
+SelfContainedOrchestratorE2ETest > BDD-TO-NEW: New Transaction Types E2E > BDD-TO-NEW-05: E-Wallet Topup completes successfully with side effects FAILED
+    org.opentest4j.AssertionFailedError at SelfContainedOrchestratorE2ETest.java:541
+
+SelfContainedOrchestratorE2ETest > BDD-TO-NEW: New Transaction Types E2E > BDD-TO-NEW-09: Hybrid Cashback completes successfully with side effects FAILED
+    org.opentest4j.AssertionFailedError at SelfContainedOrchestratorE2ETest.java:629
+
+SelfContainedOrchestratorE2ETest > BDD-TO-NEW: New Transaction Types E2E > BDD-TO-NEW-08: Retail Sale completes successfully with side effects FAILED
+    org.opentest4j.AssertionFailedError at SelfContainedOrchestratorE2ETest.java:607
+
+SelfContainedOrchestratorE2ETest > BDD-POLL: Polling Endpoint > BDD-POLL-01: Poll returns PENDING status for running workflow PASSED
+
+SelfContainedOrchestratorE2ETest > BDD-POLL: Polling Endpoint > BDD-POLL-04: Poll for non-existent workflowId returns 404 PASSED
+
+SelfContainedOrchestratorE2ETest > BDD-IDE: Idempotency > BDD-IDE-01: Duplicate workflow start returns existing status PASSED
+
+SelfContainedOrchestratorE2ETest > Security: Authentication > Transaction request without auth token PASSED
+
+SelfContainedOrchestratorE2ETest > BDD-WF: Workflow Lifecycle > BDD-WF-01: Workflow starts and returns PENDING status immediately PASSED
+
+SelfContainedOrchestratorE2ETest > BDD-WF: Workflow Lifecycle > BDD-WF-02: Poll returns COMPLETED status with transaction details PASSED
+
+SelfContainedOrchestratorE2ETest > BDD-WF: Workflow Lifecycle > BDD-WF-03: Poll returns FAILED status with error details PASSED
+
+SelfContainedOrchestratorE2ETest > BDD-WF-HP-W: Withdrawal Happy Path > BDD-WF-HP-W01: Off-Us withdrawal completes successfully FAILED
+    org.opentest4j.AssertionFailedError at SelfContainedOrchestratorE2ETest.java:1014
+
+SelfContainedOrchestratorE2ETest > BDD-WF-HP-W: Withdrawal Happy Path > BDD-WF-HP-W02: On-Us withdrawal starts WithdrawalOnUsWorkflow PASSED
+
+SelfContainedOrchestratorE2ETest > BDD-WF-EC-W: Withdrawal Edge Cases > BDD-WF-EC-W04: Insufficient float - workflow fails at float block FAILED
+    org.opentest4j.AssertionFailedError at SelfContainedOrchestratorE2ETest.java:1107
+
+SelfContainedOrchestratorE2ETest > BDD-WF-EC-W: Withdrawal Edge Cases > BDD-WF-EC-W05: Velocity check fails - workflow fails before float block FAILED
+    org.opentest4j.AssertionFailedError at SelfContainedOrchestratorE2ETest.java:1152
+
+SelfContainedOrchestratorE2ETest > BDD-WF-D: Deposit Workflow > BDD-WF-HP-D01: Cash deposit completes successfully FAILED
+    org.opentest4j.AssertionFailedError at SelfContainedOrchestratorE2ETest.java:1210
+
+SelfContainedOrchestratorE2ETest > BDD-WF-D: Deposit Workflow > BDD-WF-EC-D02: High-value deposit requires biometric verification PASSED
+
+SelfContainedOrchestratorE2ETest > BDD-WF-D: Deposit Workflow > BDD-WF-EC-D01: Deposit to invalid account - fails before money moves PASSED
+
+SelfContainedOrchestratorE2ETest > BDD-WF-BP: Bill Payment Workflow > BDD-WF-EC-BP01: Invalid biller reference - float released PASSED
+
+SelfContainedOrchestratorE2ETest > BDD-WF-BP: Bill Payment Workflow > BDD-WF-HP-BP01: Bill payment completes successfully FAILED
+    org.opentest4j.AssertionFailedError at SelfContainedOrchestratorE2ETest.java:1313
+
+SelfContainedOrchestratorE2ETest > BDD-WF-DN: DuitNow Transfer Workflow > BDD-WF-HP-DN01: DuitNow transfer via mobile proxy completes successfully FAILED
+    org.opentest4j.AssertionFailedError at SelfContainedOrchestratorE2ETest.java:1394
+
+SelfContainedOrchestratorE2ETest > BDD-WF-DN: DuitNow Transfer Workflow > BDD-WF-EC-DN01: Proxy not found - float released PASSED
+
+SelfContainedOrchestratorE2ETest > BDD-WF-DN: DuitNow Transfer Workflow > BDD-WF-HP-DN03: DuitNow transfer via BRN proxy PASSED
+
+SelfContainedOrchestratorE2ETest > BDD-WF-DN: DuitNow Transfer Workflow > BDD-WF-HP-DN02: DuitNow transfer via MyKad proxy PASSED
+
+SelfContainedOrchestratorE2ETest > BDD-STP: STP Evaluation End-to-End > BDD-STP-02: High value - triggers PENDING_REVIEW (NON_STP) PASSED
+
+SelfContainedOrchestratorE2ETest > BDD-STP: STP Evaluation End-to-End > BDD-STP-04: Bill payment - FULL_STP path PASSED
+
+SelfContainedOrchestratorE2ETest > BDD-STP: STP Evaluation End-to-End > BDD-STP-03: Deposit - FULL_STP path PASSED
+
+SelfContainedOrchestratorE2ETest > BDD-STP: STP Evaluation End-to-End > BDD-STP-01: Full STP - transaction completes immediately PASSED
+
+SelfContainedOrchestratorE2ETest > BDD-STP: STP Evaluation End-to-End > BDD-STP-06: Invalid transaction - rejects at gateway PASSED
+
+SelfContainedOrchestratorE2ETest > BDD-STP: STP Evaluation End-to-End > BDD-STP-07: Verify pendingReason is captured in PENDING_REVIEW status PASSED
+
+SelfContainedOrchestratorE2ETest > BDD-STP: STP Evaluation End-to-End > BDD-STP-05: DuitNow transfer - FULL_STP path PASSED
+
+45 tests completed, 20 failed, 1 skipped
+
+> Task :gateway:e2eTest FAILED
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':gateway:e2eTest'.
+> There were failing tests. See the report at: file:///Users/me/myprojects/agentbanking-backend/.worktrees/bdd-coverage/gateway/build/reports/tests/e2eTest/index.html
+
+* Try:
+> Run with --scan to get full insights.
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/8.5/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD FAILED in 8m 15s
+10 actionable tasks: 2 executed, 8 up-to-date

@@ -64,49 +64,49 @@ task cleanAllData {
         // Clean orchestrator database
         exec {
             workingDir '.'
-            commandLine 'docker', 'compose', 'exec', '-T', 'postgres-orchestrator', 'psql', '-U', 'postgres', '-d', 'orchestrator_db', '-c', 'TRUNCATE TABLE transaction_record, transaction_resolution_case, audit_logs RESTART IDENTITY CASCADE'
+            commandLine 'docker', 'compose', 'exec', '-T', 'postgres-shared', 'psql', '-U', 'postgres', '-d', 'orchestrator_db', '-c', 'TRUNCATE TABLE transaction_record, transaction_resolution_case, audit_logs RESTART IDENTITY CASCADE'
             ignoreExitValue = true
         }
         
         // Clean ledger database
         exec {
             workingDir '.'
-            commandLine 'docker', 'compose', 'exec', '-T', 'postgres-ledger', 'psql', '-U', 'postgres', '-d', 'ledger_db', '-c', 'TRUNCATE TABLE ledger_transaction, journal_entry, settlement_summary, agent_float RESTART IDENTITY CASCADE'
+            commandLine 'docker', 'compose', 'exec', '-T', 'postgres-shared', 'psql', '-U', 'postgres', '-d', 'ledger_db', '-c', 'TRUNCATE TABLE ledger_transaction, journal_entry, settlement_summary, agent_float RESTART IDENTITY CASCADE'
             ignoreExitValue = true
         }
         
         // Clean rules database
         exec {
             workingDir '.'
-            commandLine 'docker', 'compose', 'exec', '-T', 'postgres-rules', 'psql', '-U', 'postgres', '-d', 'rules_db', '-c', 'TRUNCATE TABLE velocity_rule, fee_config, audit_logs RESTART IDENTITY CASCADE'
+            commandLine 'docker', 'compose', 'exec', '-T', 'postgres-shared', 'psql', '-U', 'postgres', '-d', 'rules_db', '-c', 'TRUNCATE TABLE velocity_rule, fee_config, audit_logs RESTART IDENTITY CASCADE'
             ignoreExitValue = true
         }
         
         // Clean biller database
         exec {
             workingDir '.'
-            commandLine 'docker', 'compose', 'exec', '-T', 'postgres-biller', 'psql', '-U', 'postgres', '-d', 'biller_db', '-c', 'TRUNCATE TABLE biller_config, bill_payment, essp_transaction, ewallet_transaction, topup_transaction, audit_logs RESTART IDENTITY CASCADE'
+            commandLine 'docker', 'compose', 'exec', '-T', 'postgres-shared', 'psql', '-U', 'postgres', '-d', 'biller_db', '-c', 'TRUNCATE TABLE biller_config, bill_payment, essp_transaction, ewallet_transaction, topup_transaction, audit_logs RESTART IDENTITY CASCADE'
             ignoreExitValue = true
         }
         
         // Clean onboarding database - need to use correct user and tables
         exec {
             workingDir '.'
-            commandLine 'docker', 'compose', 'exec', '-T', 'postgres-onboarding', 'psql', '-U', 'postgres', '-d', 'onboarding_db', '-c', 'TRUNCATE TABLE agent, agent_onboarding, kyc_verification, onboarding_decision, backoffice_users, user_permissions, audit_log RESTART IDENTITY CASCADE'
+            commandLine 'docker', 'compose', 'exec', '-T', 'postgres-shared', 'psql', '-U', 'postgres', '-d', 'onboarding_db', '-c', 'TRUNCATE TABLE agent, agent_onboarding, kyc_verification, onboarding_decision, backoffice_users, user_permissions, audit_log RESTART IDENTITY CASCADE'
             ignoreExitValue = true
         }
         
         // Clean audit database
         exec {
             workingDir '.'
-            commandLine 'docker', 'compose', 'exec', '-T', 'postgres-audit', 'psql', '-U', 'postgres', '-d', 'audit_db', '-c', 'TRUNCATE TABLE audit_logs RESTART IDENTITY CASCADE'
+            commandLine 'docker', 'compose', 'exec', '-T', 'postgres-shared', 'psql', '-U', 'postgres', '-d', 'auditdb', '-c', 'TRUNCATE TABLE audit_logs RESTART IDENTITY CASCADE'
             ignoreExitValue = true
         }
         
         // Clean auth database - need correct user
         exec {
             workingDir '.'
-            commandLine 'docker', 'compose', 'exec', '-T', 'postgres-auth', 'psql', '-U', 'auth_user', '-d', 'authdb', '-c', 'TRUNCATE TABLE user_roles, role_permissions, permissions, roles, token_blacklist, sessions, users RESTART IDENTITY CASCADE'
+            commandLine 'docker', 'compose', 'exec', '-T', 'postgres-shared', 'psql', '-U', 'auth_user', '-d', 'authdb', '-c', 'TRUNCATE TABLE user_roles, role_permissions, permissions, roles, token_blacklist, sessions, users RESTART IDENTITY CASCADE'
             ignoreExitValue = true
         }
         
@@ -125,7 +125,7 @@ task loadAuthSeedData {
         // Apply the auth seed migration directly to the database
         exec {
             workingDir '.'
-            commandLine 'docker', 'compose', 'exec', '-T', 'postgres-auth', 'psql', '-U', 'auth_user', '-d', 'authdb', '-f', '/tmp/V1__auth_system_seed.sql'
+            commandLine 'docker', 'compose', 'exec', '-T', 'postgres-shared', 'psql', '-U', 'auth_user', '-d', 'authdb', '-f', '/tmp/V1__auth_system_seed.sql'
             ignoreExitValue = true
         }
         
@@ -141,7 +141,7 @@ task recreateDatabaseSchema {
     doLast {
         println "Recreating database schema using Flyway..."
         
-        // For each service database, clear Flyway history and force migration
+        // For each service database, define connection info
         def services = [
             [name: 'orchestrator', db: 'orchestrator_db', user: 'postgres'],
             [name: 'ledger', db: 'ledger_db', user: 'postgres'],
@@ -149,26 +149,36 @@ task recreateDatabaseSchema {
             [name: 'onboarding', db: 'onboarding_db', user: 'postgres'],
             [name: 'biller', db: 'biller_db', user: 'postgres'],
             [name: 'switch', db: 'switch_db', user: 'postgres'],
-            [name: 'audit', db: 'audit_db', user: 'postgres']
+            [name: 'audit', db: 'auditdb', user: 'postgres'],
+            [name: 'auth', db: 'authdb', user: 'auth_user']
         ]
+
+        println "Stopping services to ensure no locks on database..."
+        
+        // Stop all application services, keep postgres running
+        exec {
+            workingDir '.'
+            commandLine 'docker', 'compose', '--profile', 'all', 'stop', 'orchestrator-service', 'ledger-service', 'rules-service', 'onboarding-service', 'biller-service', 'switch-adapter-service', 'audit-service', 'auth-iam-service', 'gateway', 'backoffice'
+            ignoreExitValue = true
+        }
         
         services.each { service ->
             println "Recreating schema for ${service.name} database..."
             
-            // Clear Flyway schema history to force migration
+            // Drop and recreate public schema to force fresh migration
             exec {
                 workingDir '.'
-                commandLine 'docker', 'compose', 'exec', '-T', "postgres-${service.name}", 'psql', '-U', service.user, '-d', service.db, '-c', 'DELETE FROM flyway_schema_history;'
+                commandLine 'docker', 'compose', 'exec', '-T', "postgres-shared", 'psql', '-U', 'postgres', '-d', service.db, '-c', "DROP SCHEMA public CASCADE; CREATE SCHEMA public; GRANT ALL ON SCHEMA public TO public; GRANT ALL ON SCHEMA public TO postgres; GRANT ALL ON SCHEMA public TO ${service.user == 'postgres' ? 'postgres' : service.user};"
                 ignoreExitValue = true
             }
         }
         
-        println "Schema history cleared. Now restarting services to trigger Flyway migrations..."
+        println "Schema history cleared. Now starting services back up to trigger Flyway migrations..."
         
-        // Restart all services to trigger Flyway migrations
+        // Start all services
         exec {
             workingDir '.'
-            commandLine 'docker', 'compose', 'restart'
+            commandLine 'docker', 'compose', '--profile', 'all', 'up', '-d'
             ignoreExitValue = true
         }
         
@@ -187,6 +197,9 @@ task resetSystem {
     dependsOn cleanAllData
     dependsOn recreateDatabaseSchema
     dependsOn loadAuthSeedData
+
+    recreateDatabaseSchema.mustRunAfter cleanAllData
+    loadAuthSeedData.mustRunAfter recreateDatabaseSchema
     
     doLast {
         println "System reset complete! All data cleaned, schema recreated, auth seed data loaded."

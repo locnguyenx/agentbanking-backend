@@ -16,5 +16,6 @@ public enum TransactionType {
     ESSP_PURCHASE,
     PIN_PURCHASE,
     CASHLESS_PAYMENT,
-    CASH_BACK
+    CASH_BACK,
+    RETAIL_SALE
 }

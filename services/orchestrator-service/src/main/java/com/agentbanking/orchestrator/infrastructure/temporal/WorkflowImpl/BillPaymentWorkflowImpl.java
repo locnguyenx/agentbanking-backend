@@ -27,6 +27,7 @@ public class BillPaymentWorkflowImpl implements BillPaymentWorkflow {
 
     private static final Logger log = Workflow.getLogger(BillPaymentWorkflowImpl.class);
 
+    private GetDailyMetricsActivity getDailyMetricsActivity;
     private CheckVelocityActivity checkVelocityActivity;
     private EvaluateStpActivity evaluateStpActivity;
     private CalculateFeesActivity calculateFeesActivity;
@@ -43,6 +44,7 @@ public class BillPaymentWorkflowImpl implements BillPaymentWorkflow {
     private WorkflowStatus currentStatus = WorkflowStatus.PENDING;
 
     public BillPaymentWorkflowImpl(
+            GetDailyMetricsActivity getDailyMetricsActivity,
             CheckVelocityActivity checkVelocityActivity,
             EvaluateStpActivity evaluateStpActivity,
             CalculateFeesActivity calculateFeesActivity,
@@ -55,6 +57,7 @@ public class BillPaymentWorkflowImpl implements BillPaymentWorkflow {
             PublishKafkaEventActivity publishKafkaEventActivity,
             SaveResolutionCaseActivity saveResolutionCaseActivity,
             PersistWorkflowResultActivity persistWorkflowResultActivity) {
+        this.getDailyMetricsActivity = getDailyMetricsActivity;
         this.checkVelocityActivity = checkVelocityActivity;
         this.evaluateStpActivity = evaluateStpActivity;
         this.calculateFeesActivity = calculateFeesActivity;
@@ -71,62 +74,54 @@ public class BillPaymentWorkflowImpl implements BillPaymentWorkflow {
 
     @SuppressWarnings("SpringJavaAutowiredMembersInspection")
     public BillPaymentWorkflowImpl() {
-        // CheckVelocity: 3s | Retry 1x
+        this.getDailyMetricsActivity = Workflow.newActivityStub(GetDailyMetricsActivity.class, ActivityOptions.newBuilder()
+                .setStartToCloseTimeout(Duration.ofSeconds(30))
+                .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(3).build())
+                .build());
         this.checkVelocityActivity = Workflow.newActivityStub(CheckVelocityActivity.class, ActivityOptions.newBuilder()
                 .setStartToCloseTimeout(Duration.ofSeconds(30))
                 .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(3).build())
                 .build());
-        // EvaluateStp: 2s | Retry 1x
         this.evaluateStpActivity = Workflow.newActivityStub(EvaluateStpActivity.class, ActivityOptions.newBuilder()
                 .setStartToCloseTimeout(Duration.ofSeconds(30))
                 .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(3).build())
                 .build());
-        // CalculateFees: 2s | Retry 1x
         this.calculateFeesActivity = Workflow.newActivityStub(CalculateFeesActivity.class, ActivityOptions.newBuilder()
                 .setStartToCloseTimeout(Duration.ofSeconds(30))
                 .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(3).build())
                 .build());
-        // BlockFloat: 5s | Retry 1x (financial)
         this.blockFloatActivity = Workflow.newActivityStub(BlockFloatActivity.class, ActivityOptions.newBuilder()
                 .setStartToCloseTimeout(Duration.ofSeconds(30))
                 .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(3).build())
                 .build());
-        // CommitFloat: 5s | Retry 1x
         this.commitFloatActivity = Workflow.newActivityStub(CommitFloatActivity.class, ActivityOptions.newBuilder()
                 .setStartToCloseTimeout(Duration.ofSeconds(30))
                 .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(3).build())
                 .build());
-        // ReleaseFloat: 5s | Retry 1x
         this.releaseFloatActivity = Workflow.newActivityStub(ReleaseFloatActivity.class, ActivityOptions.newBuilder()
                 .setStartToCloseTimeout(Duration.ofSeconds(30))
                 .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(3).build())
                 .build());
-        // ValidateBill: 3s | Retry 1x
         this.validateBillActivity = Workflow.newActivityStub(ValidateBillActivity.class, ActivityOptions.newBuilder()
                 .setStartToCloseTimeout(Duration.ofSeconds(30))
                 .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(3).build())
                 .build());
-        // PayBiller: 10s | Retry 1x
         this.payBillerActivity = Workflow.newActivityStub(PayBillerActivity.class, ActivityOptions.newBuilder()
                 .setStartToCloseTimeout(Duration.ofSeconds(60))
                 .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(3).build())
                 .build());
-        // NotifyBiller: 5s | Retry 1x
         this.notifyBillerActivity = Workflow.newActivityStub(NotifyBillerActivity.class, ActivityOptions.newBuilder()
                 .setStartToCloseTimeout(Duration.ofSeconds(30))
                 .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(3).build())
                 .build());
-        // PublishKafkaEvent: 5s | Retry 1x
         this.publishKafkaEventActivity = Workflow.newActivityStub(PublishKafkaEventActivity.class, ActivityOptions.newBuilder()
                 .setStartToCloseTimeout(Duration.ofSeconds(30))
                 .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(3).build())
                 .build());
-        // SaveResolutionCase: 5s | Retry 1x
         this.saveResolutionCaseActivity = Workflow.newActivityStub(SaveResolutionCaseActivity.class, ActivityOptions.newBuilder()
                 .setStartToCloseTimeout(Duration.ofSeconds(30))
                 .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(3).build())
                 .build());
-        // PersistWorkflowResult: 5s | Retry 1x
         this.persistWorkflowResultActivity = Workflow.newActivityStub(PersistWorkflowResultActivity.class, ActivityOptions.newBuilder()
                 .setStartToCloseTimeout(Duration.ofSeconds(30))
                 .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(3).build())
@@ -139,9 +134,20 @@ public class BillPaymentWorkflowImpl implements BillPaymentWorkflow {
         currentStatus = WorkflowStatus.RUNNING;
 
         try {
+            // Task: Fetch metrics
+            DailyMetricsResult metrics = getDailyMetricsActivity.getDailyMetrics(input.agentId());
+
             // Step 1: Check velocity
             VelocityCheckResult velocityResult = checkVelocityActivity.checkVelocity(
-                    new VelocityCheckInput(input.agentId(), input.amount(), input.customerMykad()));
+                    new VelocityCheckInput(
+                        input.agentId(), 
+                        "BILL_PAYMENT",
+                        input.amount(), 
+                        input.customerMykad(),
+                        metrics.transactionCountToday(),
+                        metrics.amountToday()
+                    ));
+            
             if (!velocityResult.passed()) {
                 currentStatus = WorkflowStatus.FAILED;
                 return WorkflowResult.failed(velocityResult.errorCode(), "Velocity check failed", "DECLINE");
@@ -155,9 +161,9 @@ public class BillPaymentWorkflowImpl implements BillPaymentWorkflow {
                             input.amount().toString(),
                             input.customerMykad(),
                             input.agentTier(),
-                            0,
-                            "0",
-                            "0"
+                            metrics.transactionCountToday(),
+                            metrics.amountToday().toString(),
+                            metrics.todayTotalAmount().toString()
                     )
             );
             if (!stpDecision.approved()) {
@@ -186,7 +192,8 @@ public class BillPaymentWorkflowImpl implements BillPaymentWorkflow {
                                 input.geofenceLat(),
                                 input.geofenceLng(),
                                 input.agentTier(),
-                                input.targetBin()
+                                input.targetBin(),
+                                "JOMPAY"
                         )
                 );
             } catch (ActivityFailure e) {

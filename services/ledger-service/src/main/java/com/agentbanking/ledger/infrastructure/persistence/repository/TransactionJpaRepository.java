@@ -46,6 +46,16 @@ public interface TransactionJpaRepository extends JpaRepository<TransactionEntit
     List<UUID> findDistinctAgentIdsByCompletedAtBetween(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
 
     List<TransactionEntity> findByAgentIdAndCompletedAtBetween(UUID agentId, LocalDateTime start, LocalDateTime end);
+    
+    long countByAgentIdAndStatusAndCompletedAtBetween(UUID agentId, TransactionStatus status, LocalDateTime start, LocalDateTime end);
+
+    @Query("SELECT COALESCE(SUM(t.amount), 0) FROM TransactionEntity t WHERE t.agentId = :agentId AND t.status = :status AND t.completedAt BETWEEN :start AND :end")
+    BigDecimal sumAmountByAgentIdAndStatusAndCompletedAtBetween(
+        @Param("agentId") UUID agentId, 
+        @Param("status") TransactionStatus status, 
+        @Param("start") LocalDateTime start, 
+        @Param("end") LocalDateTime end
+    );
 
     List<TransactionEntity> findByCreatedAtBetween(LocalDateTime start, LocalDateTime end);
 }

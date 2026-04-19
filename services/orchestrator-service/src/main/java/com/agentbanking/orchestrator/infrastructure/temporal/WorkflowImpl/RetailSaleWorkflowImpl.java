@@ -18,6 +18,7 @@ import com.agentbanking.orchestrator.application.workflow.RetailSaleWorkflow;
 import com.agentbanking.orchestrator.domain.model.WorkflowResult;
 import com.agentbanking.orchestrator.domain.model.WorkflowStatus;
 import com.agentbanking.orchestrator.domain.port.out.LedgerServicePort.*;
+import com.agentbanking.orchestrator.domain.port.out.RulesServicePort.*;
 
 import io.temporal.activity.ActivityOptions;
 import io.temporal.common.RetryOptions;
@@ -36,6 +37,9 @@ public class RetailSaleWorkflowImpl implements RetailSaleWorkflow {
 
     private static final Logger log = Workflow.getLogger(RetailSaleWorkflowImpl.class);
 
+    private GetDailyMetricsActivity getDailyMetricsActivity;
+    private CheckVelocityActivity checkVelocityActivity;
+    private EvaluateStpActivity evaluateStpActivity;
     private CalculateMDRActivity calculateMDRActivity;
     private GenerateDynamicQRActivity generateDynamicQRActivity;
     private WaitForQRPaymentActivity waitForQRPaymentActivity;
@@ -50,6 +54,9 @@ public class RetailSaleWorkflowImpl implements RetailSaleWorkflow {
     private WorkflowStatus currentStatus = WorkflowStatus.PENDING;
 
     public RetailSaleWorkflowImpl(
+            GetDailyMetricsActivity getDailyMetricsActivity,
+            CheckVelocityActivity checkVelocityActivity,
+            EvaluateStpActivity evaluateStpActivity,
             CalculateMDRActivity calculateMDRActivity,
             GenerateDynamicQRActivity generateDynamicQRActivity,
             WaitForQRPaymentActivity waitForQRPaymentActivity,
@@ -60,6 +67,9 @@ public class RetailSaleWorkflowImpl implements RetailSaleWorkflow {
             CommitFloatActivity commitFloatActivity,
             ReleaseFloatActivity releaseFloatActivity,
             PersistWorkflowResultActivity persistWorkflowResultActivity) {
+        this.getDailyMetricsActivity = getDailyMetricsActivity;
+        this.checkVelocityActivity = checkVelocityActivity;
+        this.evaluateStpActivity = evaluateStpActivity;
         this.calculateMDRActivity = calculateMDRActivity;
         this.generateDynamicQRActivity = generateDynamicQRActivity;
         this.waitForQRPaymentActivity = waitForQRPaymentActivity;
@@ -74,6 +84,18 @@ public class RetailSaleWorkflowImpl implements RetailSaleWorkflow {
 
     @SuppressWarnings("SpringJavaAutowiredMembersInspection")
     public RetailSaleWorkflowImpl() {
+        this.getDailyMetricsActivity = Workflow.newActivityStub(GetDailyMetricsActivity.class, ActivityOptions.newBuilder()
+                .setStartToCloseTimeout(Duration.ofSeconds(30))
+                .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(3).build())
+                .build());
+        this.checkVelocityActivity = Workflow.newActivityStub(CheckVelocityActivity.class, ActivityOptions.newBuilder()
+                .setStartToCloseTimeout(Duration.ofSeconds(30))
+                .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(3).build())
+                .build());
+        this.evaluateStpActivity = Workflow.newActivityStub(EvaluateStpActivity.class, ActivityOptions.newBuilder()
+                .setStartToCloseTimeout(Duration.ofSeconds(30))
+                .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(3).build())
+                .build());
         this.calculateMDRActivity = Workflow.newActivityStub(CalculateMDRActivity.class, ActivityOptions.newBuilder()
                 .setStartToCloseTimeout(Duration.ofSeconds(30))
                 .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(3).build())
@@ -122,6 +144,49 @@ public class RetailSaleWorkflowImpl implements RetailSaleWorkflow {
         currentStatus = WorkflowStatus.RUNNING;
 
         try {
+            // Task: Fetch metrics
+            DailyMetricsResult metrics = getDailyMetricsActivity.getDailyMetrics(input.agentId());
+
+            // Step 1: Check velocity
+            VelocityCheckResult velocityResult = checkVelocityActivity.checkVelocity(
+                    new VelocityCheckInput(
+                        input.agentId(), 
+                        "RETAIL_SALE",
+                        input.amount(), 
+                        input.paymentMethod(),
+                        metrics.transactionCountToday(),
+                        metrics.amountToday()
+                    ));
+            
+            if (!velocityResult.passed()) {
+                currentStatus = WorkflowStatus.FAILED;
+                WorkflowResult failResult = WorkflowResult.failed(velocityResult.errorCode(), "Velocity check failed", "DECLINE");
+                persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
+                        input.idempotencyKey(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null, "Velocity check failed"));
+                return failResult;
+            }
+
+            // Step 2: Evaluate STP
+            StpDecision stpDecision = evaluateStpActivity.evaluateStp(
+                    new EvaluateStpActivity.Input(
+                            "RETAIL_SALE",
+                            input.agentId().toString(),
+                            input.amount().toString(),
+                            input.paymentMethod(),
+                            input.agentTier(),
+                            metrics.transactionCountToday(),
+                            metrics.amountToday().toString(),
+                            metrics.todayTotalAmount().toString()
+                    )
+            );
+            if (!stpDecision.approved()) {
+                currentStatus = WorkflowStatus.PENDING_REVIEW;
+                WorkflowResult reviewResult = WorkflowResult.failed("ERR_STP_REVIEW", stpDecision.reason(), "REVIEW");
+                persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
+                        input.idempotencyKey(), "PENDING_REVIEW", reviewResult.errorCode(), reviewResult.errorMessage(), null, null, null, stpDecision.reason()));
+                return reviewResult;
+            }
+
             var mdrResult = calculateMDRActivity.calculate("RETAIL_SALE", input.paymentMethod(), input.amount());
             
             FloatBlockResult blockResult;
@@ -138,13 +203,14 @@ public class RetailSaleWorkflowImpl implements RetailSaleWorkflow {
                                 input.geofenceLat(),
                                 input.geofenceLng(),
                                 input.agentTier(),
-                                input.targetBin()
+                                input.targetBin(),
+                                "RETAIL_SALE"
                         )
                 );
             } catch (ActivityFailure e) {
                 log.error("Activity failed in blockFloat: {}", e.getMessage());
                 currentStatus = WorkflowStatus.FAILED;
-                WorkflowResult failResult = WorkflowResult.failed("ERR_ACTIVITY_FAILED", "Block float activity failed: " + e.getMessage(), "DECLINE");
+                WorkflowResult failResult = WorkflowResult.failed("ERR_ACTIVITY_FAILURE", "Block float activity failed: " + e.getMessage(), "DECLINE");
                 persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
                         input.idempotencyKey(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null, "Activity failure: " + e.getMessage()));
                 return failResult;
@@ -167,7 +233,7 @@ public class RetailSaleWorkflowImpl implements RetailSaleWorkflow {
                     log.error("Activity failed in generateQR: {}", e.getMessage());
                     releaseFloatActivity.releaseFloat(new FloatReleaseInput(input.agentId(), input.amount(), transactionId));
                     currentStatus = WorkflowStatus.FAILED;
-                    WorkflowResult failResult = WorkflowResult.failed("ERR_ACTIVITY_FAILED", "QR generation activity failed: " + e.getMessage(), "DECLINE");
+                    WorkflowResult failResult = WorkflowResult.failed("ERR_ACTIVITY_FAILURE", "QR generation activity failed: " + e.getMessage(), "DECLINE");
                     persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
                             input.idempotencyKey(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null, "Activity failure: " + e.getMessage()));
                     return failResult;
@@ -188,7 +254,7 @@ public class RetailSaleWorkflowImpl implements RetailSaleWorkflow {
                     log.error("Activity failed in waitForPayment: {}", e.getMessage());
                     releaseFloatActivity.releaseFloat(new FloatReleaseInput(input.agentId(), input.amount(), transactionId));
                     currentStatus = WorkflowStatus.FAILED;
-                    WorkflowResult failResult = WorkflowResult.failed("ERR_ACTIVITY_FAILED", "Wait for payment activity failed: " + e.getMessage(), "DECLINE");
+                    WorkflowResult failResult = WorkflowResult.failed("ERR_ACTIVITY_FAILURE", "Wait for payment activity failed: " + e.getMessage(), "DECLINE");
                     persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
                             input.idempotencyKey(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null, "Activity failure: " + e.getMessage()));
                     return failResult;
@@ -209,7 +275,7 @@ public class RetailSaleWorkflowImpl implements RetailSaleWorkflow {
                     log.error("Activity failed in sendRTP: {}", e.getMessage());
                     releaseFloatActivity.releaseFloat(new FloatReleaseInput(input.agentId(), input.amount(), transactionId));
                     currentStatus = WorkflowStatus.FAILED;
-                    WorkflowResult failResult = WorkflowResult.failed("ERR_ACTIVITY_FAILED", "RTP send activity failed: " + e.getMessage(), "DECLINE");
+                    WorkflowResult failResult = WorkflowResult.failed("ERR_ACTIVITY_FAILURE", "RTP send activity failed: " + e.getMessage(), "DECLINE");
                     persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
                             input.idempotencyKey(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null, "Activity failure: " + e.getMessage()));
                     return failResult;
@@ -230,7 +296,7 @@ public class RetailSaleWorkflowImpl implements RetailSaleWorkflow {
                     log.error("Activity failed in waitForApproval: {}", e.getMessage());
                     releaseFloatActivity.releaseFloat(new FloatReleaseInput(input.agentId(), input.amount(), transactionId));
                     currentStatus = WorkflowStatus.FAILED;
-                    WorkflowResult failResult = WorkflowResult.failed("ERR_ACTIVITY_FAILED", "Wait for RTP approval activity failed: " + e.getMessage(), "DECLINE");
+                    WorkflowResult failResult = WorkflowResult.failed("ERR_ACTIVITY_FAILURE", "Wait for RTP approval activity failed: " + e.getMessage(), "DECLINE");
                     persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
                             input.idempotencyKey(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null, "Activity failure: " + e.getMessage()));
                     return failResult;
@@ -254,7 +320,7 @@ public class RetailSaleWorkflowImpl implements RetailSaleWorkflow {
             } catch (ActivityFailure e) {
                 log.error("Activity failed in commitFloat: {}", e.getMessage());
                 currentStatus = WorkflowStatus.FAILED;
-                WorkflowResult failResult = WorkflowResult.failed("ERR_ACTIVITY_FAILED", "Commit float activity failed: " + e.getMessage(), "REVIEW");
+                WorkflowResult failResult = WorkflowResult.failed("ERR_ACTIVITY_FAILURE", "Commit float activity failed: " + e.getMessage(), "REVIEW");
                 persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
                         input.idempotencyKey(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null, "Activity failure: " + e.getMessage()));
                 return failResult;

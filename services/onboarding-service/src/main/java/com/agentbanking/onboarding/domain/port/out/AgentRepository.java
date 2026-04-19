@@ -15,4 +15,5 @@ public interface AgentRepository {
     long countAll();
     boolean hasPendingTransactions(UUID agentId);
     long countByStatus(AgentStatus status);
+    void deleteById(UUID agentId);
 }

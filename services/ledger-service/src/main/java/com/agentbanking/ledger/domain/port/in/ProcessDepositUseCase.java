@@ -8,7 +8,9 @@ public interface ProcessDepositUseCase {
     Map<String, Object> processDeposit(UUID agentId, BigDecimal amount,
                                        BigDecimal customerFee, BigDecimal agentCommission,
                                        BigDecimal bankShare, String idempotencyKey,
-                                       String destinationAccount, String agentTier,
-                                       String targetBin, String referenceNumber,
-                                       BigDecimal geofenceLat, BigDecimal geofenceLng);
+                                       String destinationAccount,
+                                       String agentTier, String targetBin,
+                                       String referenceNumber,
+                                       BigDecimal geofenceLat, BigDecimal geofenceLng,
+                                       String transactionType);
 }

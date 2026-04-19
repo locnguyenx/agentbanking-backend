@@ -219,7 +219,7 @@ spring:
         - id: rules-service
           uri: ${rules-service.url:http://rules-service:8081}
           predicates:
-            - Path=/internal/fees/**, /internal/check-velocity, /internal/limits/**, /internal/transactions/quote, /internal/audit-logs
+            - Path=/internal/fees/**, /internal/check-velocity, /internal/velocity-rules, /internal/limits/**, /internal/transactions/quote, /internal/audit-logs
           filters:
             - RewritePath=/internal/(?<segment>.*), /internal/${segment}
         

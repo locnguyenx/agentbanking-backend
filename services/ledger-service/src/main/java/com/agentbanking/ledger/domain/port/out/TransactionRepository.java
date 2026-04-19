@@ -23,6 +23,8 @@ public interface TransactionRepository {
     boolean existsByAgentIdAndStatusIn(UUID agentId, List<TransactionStatus> statuses);
     List<UUID> findAgentIdsWithTransactionsOnDate(LocalDate date);
     List<TransactionRecord> findByAgentIdAndCompletedDate(UUID agentId, LocalDate date);
+    long countByAgentIdAndStatusAndCompletedAtBetween(UUID agentId, TransactionStatus status, java.time.LocalDateTime start, java.time.LocalDateTime end);
+    BigDecimal sumAmountByAgentIdAndStatusAndCompletedAtBetween(UUID agentId, TransactionStatus status, java.time.LocalDateTime start, java.time.LocalDateTime end);
     List<TransactionRecord> findByAgentId(UUID agentId);
     List<TransactionRecord> findByAgentIdAndStatus(UUID agentId, TransactionStatus status);
 }

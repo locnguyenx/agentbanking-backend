@@ -128,4 +128,16 @@ public class JpaTransactionRepository implements TransactionRepository {
         }
         return records;
     }
+
+    @Override
+    public long countByAgentIdAndStatusAndCompletedAtBetween(UUID agentId, TransactionStatus status,
+                                                            java.time.LocalDateTime start, java.time.LocalDateTime end) {
+        return jpaRepository.countByAgentIdAndStatusAndCompletedAtBetween(agentId, status, start, end);
+    }
+
+    @Override
+    public BigDecimal sumAmountByAgentIdAndStatusAndCompletedAtBetween(UUID agentId, TransactionStatus status,
+                                                                      java.time.LocalDateTime start, java.time.LocalDateTime end) {
+        return jpaRepository.sumAmountByAgentIdAndStatusAndCompletedAtBetween(agentId, status, start, end);
+    }
 }

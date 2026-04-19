@@ -27,6 +27,7 @@ public class WithdrawalWorkflowImpl implements WithdrawalWorkflow {
 
     private static final Logger log = Workflow.getLogger(WithdrawalWorkflowImpl.class);
 
+    private GetDailyMetricsActivity getDailyMetricsActivity;
     private CheckVelocityActivity checkVelocityActivity;
     private EvaluateStpActivity evaluateStpActivity;
     private CalculateFeesActivity calculateFeesActivity;
@@ -42,6 +43,7 @@ public class WithdrawalWorkflowImpl implements WithdrawalWorkflow {
     private WorkflowStatus currentStatus = WorkflowStatus.PENDING;
 
     public WithdrawalWorkflowImpl(
+            GetDailyMetricsActivity getDailyMetricsActivity,
             CheckVelocityActivity checkVelocityActivity,
             EvaluateStpActivity evaluateStpActivity,
             CalculateFeesActivity calculateFeesActivity,
@@ -53,6 +55,7 @@ public class WithdrawalWorkflowImpl implements WithdrawalWorkflow {
             PublishKafkaEventActivity publishKafkaEventActivity,
             SaveResolutionCaseActivity saveResolutionCaseActivity,
             PersistWorkflowResultActivity persistWorkflowResultActivity) {
+        this.getDailyMetricsActivity = getDailyMetricsActivity;
         this.checkVelocityActivity = checkVelocityActivity;
         this.evaluateStpActivity = evaluateStpActivity;
         this.calculateFeesActivity = calculateFeesActivity;
@@ -68,6 +71,14 @@ public class WithdrawalWorkflowImpl implements WithdrawalWorkflow {
 
     @SuppressWarnings("SpringJavaAutowiredMembersInspection")
     public WithdrawalWorkflowImpl() {
+        // GetDailyMetricsActivity: StartToClose 5s | Retry 3x
+        this.getDailyMetricsActivity = Workflow.newActivityStub(GetDailyMetricsActivity.class, ActivityOptions.newBuilder()
+                .setStartToCloseTimeout(Duration.ofSeconds(30))
+                .setRetryOptions(RetryOptions.newBuilder()
+                        .setMaximumAttempts(3)
+                        .build())
+                .build());
+
         // CheckVelocity: StartToClose 3s | Retry 1x (for testing)
         this.checkVelocityActivity = Workflow.newActivityStub(CheckVelocityActivity.class, ActivityOptions.newBuilder()
                 .setStartToCloseTimeout(Duration.ofSeconds(30))
@@ -144,7 +155,7 @@ public class WithdrawalWorkflowImpl implements WithdrawalWorkflow {
                         .setInitialInterval(Duration.ofSeconds(1))
                         .setMaximumInterval(Duration.ofSeconds(2))
                         .setBackoffCoefficient(2)
-                        .setMaximumAttempts(3) // Only 1 attempt - fail fast, don't retry
+                        .setMaximumAttempts(3) // Only 3 attempts - fail fast, don't retry forever
                         .build())
                 .build());
 
@@ -177,8 +188,19 @@ public class WithdrawalWorkflowImpl implements WithdrawalWorkflow {
         currentStatus = WorkflowStatus.RUNNING;
 
         try {
+            // Fetch daily metrics from ledger
+            DailyMetricsResult metrics = getDailyMetricsActivity.getDailyMetrics(input.agentId());
+
             VelocityCheckResult velocityResult = checkVelocityActivity.checkVelocity(
-                    new VelocityCheckInput(input.agentId(), input.amount(), input.customerMykad()));
+                    new VelocityCheckInput(
+                        input.agentId(), 
+                        "CASH_WITHDRAWAL",
+                        input.amount(), 
+                        input.customerMykad(),
+                        metrics.transactionCountToday(),
+                        metrics.amountToday()
+                    ));
+            
             if (!velocityResult.passed()) {
                 currentStatus = WorkflowStatus.FAILED;
                 WorkflowResult failResult = WorkflowResult.failed(velocityResult.errorCode(), "Velocity check failed", "DECLINE");
@@ -196,9 +218,9 @@ public class WithdrawalWorkflowImpl implements WithdrawalWorkflow {
                                 input.amount().toString(),
                                 input.customerMykad(),
                                 input.agentTier(),
-                                0,
-                                "0",
-                                "0"
+                                metrics.transactionCountToday(),
+                                metrics.amountToday().toString(),
+                                metrics.todayTotalAmount().toString()
                         )
                 );
             } catch (ActivityFailure e) {
@@ -246,7 +268,8 @@ public class WithdrawalWorkflowImpl implements WithdrawalWorkflow {
                             input.geofenceLat(),
                             input.geofenceLng(),
                             input.agentTier(),
-                            input.targetBin()
+                            input.targetBin(),
+                            "CASH_WITHDRAWAL"
                     )
             );
             if (!blockResult.success()) {
