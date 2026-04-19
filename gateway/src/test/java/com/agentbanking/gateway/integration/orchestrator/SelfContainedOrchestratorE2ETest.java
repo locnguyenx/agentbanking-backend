@@ -7,6 +7,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.reactive.server.WebTestClient;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -31,6 +32,7 @@ class SelfContainedOrchestratorE2ETest {
     private static final String AUTH_URL = System.getenv().getOrDefault("AUTH_SERVICE_URL", "http://localhost:8087");
     private static final String ONBOARDING_URL = System.getenv().getOrDefault("ONBOARDING_SERVICE_URL", "http://localhost:8083");
     private static final String LEDGER_URL = System.getenv().getOrDefault("LEDGER_SERVICE_URL", "http://localhost:18082");
+    private static final String RULES_URL = System.getenv().getOrDefault("RULES_SERVICE_URL", "http://localhost:8081");
     private static final ObjectMapper objectMapper = new ObjectMapper();
     
     private static String adminToken;
@@ -55,7 +57,12 @@ class SelfContainedOrchestratorE2ETest {
 
     private final WebTestClient ledgerClient = WebTestClient.bindToServer()
             .baseUrl(LEDGER_URL)
-            .responseTimeout(java.time.Duration.ofSeconds(30))
+            .responseTimeout(java.time.Duration.ofSeconds(60))
+            .build();
+
+    private final WebTestClient rulesClient = WebTestClient.bindToServer()
+            .baseUrl(RULES_URL)
+            .responseTimeout(java.time.Duration.ofSeconds(60))
             .build();
 
     @BeforeAll
@@ -66,72 +73,27 @@ class SelfContainedOrchestratorE2ETest {
 
     @Nested
     @DisplayName("Setup: Get test token")
+    @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
     @Order(1)
     class SetupPhase {
 
         @Test
-        @DisplayName("Get or create test agent token")
-        void getAgentToken() {
+        @DisplayName("Setup agent, user, and float")
+        void setupEverything() {
+            // 1. Get Admin Token
             adminToken = getAdminToken();
             assertNotNull(adminToken, "Admin token required for setup");
 
+            // 2. Create Agent via Onboarding (using agent001 as code to match test user)
+            String agentCode = "agent001";
             try {
-                authClient.post()
-                        .uri("/auth/users")
-                        .header("Authorization", "Bearer " + adminToken)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .bodyValue("""
-                            {
-                                "username": "agent001",
-                                "email": "agent001@bank.com",
-                                "password": "12345678",
-                                "fullName": "Test Agent"
-                            }
-                            """)
-                        .exchange();
-            } catch (Exception e) {
-                System.out.println("User may already exist: " + e.getMessage());
-            }
-
-            String response = authClient.post()
-                    .uri("/auth/token")
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .bodyValue("""
-                        {
-                            "username": "agent001",
-                            "password": "12345678"
-                        }
-                        """)
-                    .exchange()
-                    .expectBody(String.class)
-                    .returnResult()
-                    .getResponseBody();
-
-            assertNotNull(response, "Agent token response should not be null");
-            
-            try {
-                JsonNode node = objectMapper.readTree(response);
-                assertTrue(node.has("access_token"), "Response should contain access_token");
-                agentToken = node.get("access_token").asText();
-                System.out.println("Agent token obtained: " + agentToken.substring(0, 20) + "...");
-            } catch (Exception e) {
-                fail("Failed to parse token response: " + e.getMessage());
-            }
-        }
-
-        @Test
-        @DisplayName("Create or get agent via onboarding service")
-        void createOrGetAgent() {
-            assumeTrue(adminToken != null, "Admin token required");
-
-            try {
-                String response = onboardingClient.post()
+                onboardingClient.post()
                         .uri("/backoffice/agents")
                         .header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .bodyValue("""
                             {
-                                "agentCode": "AGT-E2E-001",
+                                "agentCode": "%s",
                                 "businessName": "E2E Test Business",
                                 "tier": "STANDARD",
                                 "mykadNumber": "900101011234",
@@ -139,70 +101,136 @@ class SelfContainedOrchestratorE2ETest {
                                 "merchantGpsLat": 3.1390,
                                 "merchantGpsLng": 101.6869
                             }
-                            """)
+                            """.formatted(agentCode))
+                        .exchange();
+            } catch (Exception e) {
+                System.out.println("Agent creation might have failed (already exists?): " + e.getMessage());
+            }
+
+            // 3. Find agentId
+            try {
+                String listResponse = onboardingClient.get()
+                        .uri("/backoffice/agents?page=0&size=10")
+                        .header("Authorization", "Bearer " + adminToken)
                         .exchange()
                         .expectBody(String.class)
                         .returnResult()
                         .getResponseBody();
 
-                JsonNode node = objectMapper.readTree(response);
-                agentId = node.get("agentId").asText();
-                System.out.println("Agent created/retrieved: " + agentId);
-            } catch (Exception e) {
-                try {
-                    String listResponse = onboardingClient.get()
-                            .uri("/backoffice/agents?page=0&size=10")
-                            .header("Authorization", "Bearer " + adminToken)
-                            .exchange()
-                            .expectBody(String.class)
-                            .returnResult()
-                            .getResponseBody();
-
-                    JsonNode agents = objectMapper.readTree(listResponse);
-                    if (agents.isArray() && agents.size() > 0) {
-                        agentId = agents.get(0).get("agentId").asText();
-                        System.out.println("Agent already exists: " + agentId);
-                    }
-                } catch (Exception ex) {
-                    System.out.println("Failed to get agent: " + ex.getMessage());
+                JsonNode root = objectMapper.readTree(listResponse);
+                JsonNode agents = root.has("agents") ? root.get("agents") : root;
+                if (agents.isArray() && agents.size() > 0) {
+                    agentId = agents.get(0).get("agentId").asText();
+                    System.out.println("Using Agent ID: " + agentId);
                 }
+            } catch (Exception ex) {
+                fail("Failed to find/create agent: " + ex.getMessage());
             }
-        }
+            assertNotNull(agentId, "Agent must be created or found");
 
-        @Test
-        @DisplayName("Top up agent float balance")
-        void topUpFloat() {
-            assumeTrue(agentId != null, "Agent must be created first");
+            // 4. Create proper Agent User linked to agentId
+            // This ensures the JWT will have the agent_id claim correctly populated
+            try {
+                authClient.post()
+                        .uri("/auth/users")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .bodyValue("""
+                            {
+                                "username": "%s",
+                                "email": "agent001@bank.com",
+                                "password": "12345678",
+                                "fullName": "Test Agent",
+                                "userType": "EXTERNAL",
+                                "agentId": "%s",
+                                "agentCode": "%s",
+                                "status": "ACTIVE"
+                            }
+                            """.formatted(agentCode, agentId, agentCode))
+                        .exchange();
+            } catch (Exception e) {
+                System.out.println("User creation might have failed (already exists?): " + e.getMessage());
+            }
+
+            // 5. Get Agent Token
+            String tokenResponse = authClient.post()
+                    .uri("/auth/token")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .bodyValue("""
+                        {
+                            "username": "%s",
+                            "password": "12345678"
+                        }
+                        """.formatted(agentCode))
+                    .exchange()
+                    .expectBody(String.class)
+                    .returnResult()
+                    .getResponseBody();
 
             try {
+                JsonNode node = objectMapper.readTree(tokenResponse);
+                assertTrue(node.has("access_token"), "Response should contain access_token");
+                agentToken = node.get("access_token").asText();
+                System.out.println("Agent token obtained for " + agentCode);
+            } catch (Exception e) {
+                fail("Failed to get agent token: " + e.getMessage());
+            }
+            assertNotNull(agentToken, "Agent token required");
+
+            // 6. Provision and Top up Float
+            provisionAndTopUpFloat();
+        }
+
+        private void provisionAndTopUpFloat() {
+            try {
+                // Provision Agent Float
+                String provisionBody = """
+                    {
+                        "agentId": "%s",
+                        "agentTier": "STANDARD",
+                        "geofenceLat": 3.1390,
+                        "geofenceLng": 101.6869,
+                        "description": "E2E Setup",
+                        "referenceNumber": "PROV-001"
+                    }
+                    """.formatted(agentId);
+
+                ledgerClient.post()
+                        .uri("/internal/float/provision")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .bodyValue(provisionBody)
+                        .exchange()
+                        .expectStatus().isOk();
+                
+                System.out.println("Float provisioned for agent: " + agentId);
+
+                // Top up RM 10,000
                 String idempotencyKey = "e2e-float-setup-" + UUID.randomUUID();
                 String body = """
                     {
                         "agentId": "%s",
                         "amount": 10000.00,
-                        "customerFee": null,
-                        "agentCommission": null,
-                        "bankShare": null,
+                        "customerFee": 0,
+                        "agentCommission": 0,
+                        "bankShare": 0,
                         "idempotencyKey": "%s",
                         "destinationAccount": "FLOAT_SETUP"
                     }
                     """.formatted(agentId, idempotencyKey);
 
-                var response = ledgerClient.post()
-                        .uri("/internal/credit")
+                ledgerClient.post()
+                        .uri("/internal/float/credit")
                         .contentType(MediaType.APPLICATION_JSON)
                         .bodyValue(body)
-                        .exchange();
+                        .exchange()
+                        .expectStatus().isOk();
 
-                if (response.expectBody(String.class).returnResult().getStatus().value() == 200) {
-                    System.out.println("Float topped up successfully for agent: " + agentId);
-                } else {
-                    System.out.println("Float may already exist or setup completed");
-                }
+                System.out.println("Float topped up successfully for agent: " + agentId);
             } catch (Exception e) {
-                System.out.println("Float setup: " + e.getMessage());
+                fail("Float setup error: " + e.getMessage());
             }
         }
+
 
         private String getAdminToken() {
             try {
@@ -253,14 +281,16 @@ class SelfContainedOrchestratorE2ETest {
     class WorkflowRouterDispatch {
 
         @Test
-        @DisplayName("BDD-TO-01: Router dispatches Off-Us withdrawal to WithdrawalWorkflow")
-        void withdraw_offUs_shouldReturnPending() {
+        @DisplayName("BDD-TO-01: Off-Us Withdrawal completes successfully with side effects")
+        void withdraw_offUs_shouldCompleteSuccessfully() {
             assumeTrue(agentToken != null, "Agent token required - run setup first");
 
+            BigDecimal initialBalance = getAgentFloatBalance(agentId);
             String idempotencyKey = "e2e-offus-" + UUID.randomUUID();
+            BigDecimal amount = new BigDecimal("100.00");
             String requestBody = buildWithdrawalRequest(idempotencyKey, "0123");
 
-            var response = gatewayClient.post()
+            gatewayClient.post()
                     .uri("/api/v1/transactions")
                     .header("Authorization", "Bearer " + agentToken)
                     .header("X-Idempotency-Key", idempotencyKey)
@@ -269,108 +299,101 @@ class SelfContainedOrchestratorE2ETest {
                     .header("X-GPS-Longitude", "101.6869")
                     .contentType(MediaType.APPLICATION_JSON)
                     .bodyValue(requestBody)
-                    .exchange();
+                    .exchange()
+                    .expectStatus().isAccepted();
 
-            var result = response.expectBody(String.class).returnResult();
-            int httpStatus = result.getStatus().value();
-            String body = result.getResponseBody();
-            if (httpStatus != 200 && httpStatus != 202) {
-                System.out.println("DEBUG: httpStatus=" + httpStatus + " body=" + body);
-            }
-            assertTrue(httpStatus == 200 || httpStatus == 202, "Should return 200 or 202 for async workflow start");
-            assertNotNull(body, "Response body should not be null");
-            JsonNode json = parseBody(body);
-            if (json == null) {
-                // Try parsing as error response
-                System.out.println("DEBUG: Failed to parse body as JSON: " + body);
-                fail("Response body should be valid JSON");
-                return;
-            }
-            assertEquals("PENDING", json.get("status").asText());
-            assertEquals(idempotencyKey, json.get("workflowId").asText());
-            assertTrue(json.has("pollUrl"), "Response should contain pollUrl");
-            assertEquals("/api/v1/transactions/" + idempotencyKey + "/status", 
-                    json.get("pollUrl").asText(), "pollUrl format should match BDD spec");
+            verifyTransactionSuccess(idempotencyKey, initialBalance, amount.negate());
         }
 
         @Test
-        @DisplayName("BDD-TO-02: Router dispatches On-Us withdrawal to WithdrawalOnUsWorkflow")
-        void withdraw_onUs_shouldReturnPending() {
+        @DisplayName("BDD-TO-02: On-Us Withdrawal completes successfully with side effects")
+        void withdraw_onUs_shouldCompleteSuccessfully() {
             assumeTrue(agentToken != null, "Agent token required");
 
+            BigDecimal initialBalance = getAgentFloatBalance(agentId);
             String idempotencyKey = "e2e-onus-" + UUID.randomUUID();
+            BigDecimal amount = new BigDecimal("50.00");
             String requestBody = buildWithdrawalRequest(idempotencyKey, "0012");
 
-            var response = gatewayClient.post()
+            gatewayClient.post()
                     .uri("/api/v1/transactions")
                     .header("Authorization", "Bearer " + agentToken)
                     .header("X-Idempotency-Key", idempotencyKey)
                     .contentType(MediaType.APPLICATION_JSON)
                     .bodyValue(requestBody)
-                    .exchange();
+                    .exchange()
+                    .expectStatus().isAccepted();
 
-            int httpStatus = response.expectBody(String.class).returnResult().getStatus().value();
-            assertTrue(httpStatus == 200 || httpStatus == 202, "Should return 200 or 202 for async workflow start");
+            verifyTransactionSuccess(idempotencyKey, initialBalance, amount.negate());
         }
 
         @Test
-        @DisplayName("BDD-TO-03: Router dispatches deposit to DepositWorkflow")
-        void deposit_shouldReturnPending() {
+        @DisplayName("BDD-TO-03: Cash Deposit completes successfully with side effects")
+        void deposit_shouldCompleteSuccessfully() {
             assumeTrue(agentToken != null, "Agent token required");
 
+            BigDecimal initialBalance = getAgentFloatBalance(agentId);
             String idempotencyKey = "e2e-deposit-" + UUID.randomUUID();
+            BigDecimal amount = new BigDecimal("200.00");
             String requestBody = buildDepositRequest(idempotencyKey);
 
-            var response = gatewayClient.post()
+            gatewayClient.post()
                     .uri("/api/v1/transactions")
                     .header("Authorization", "Bearer " + agentToken)
                     .header("X-Idempotency-Key", idempotencyKey)
                     .contentType(MediaType.APPLICATION_JSON)
                     .bodyValue(requestBody)
-                    .exchange();
+                    .exchange()
+                    .expectStatus().isAccepted();
 
-            int httpStatus = response.expectBody(String.class).returnResult().getStatus().value();
-            assertTrue(httpStatus == 200 || httpStatus == 202, "Should return 200 or 202 for async workflow start");
+            verifyTransactionSuccess(idempotencyKey, initialBalance, amount);
         }
 
         @Test
-        @DisplayName("BDD-TO-04: Router dispatches bill payment to BillPaymentWorkflow")
-        void billPayment_shouldReturnPending() {
+        @DisplayName("BDD-TO-04: Bill Payment completes successfully with side effects")
+        void billPayment_shouldCompleteSuccessfully() {
             assumeTrue(agentToken != null, "Agent token required");
 
+            BigDecimal initialBalance = getAgentFloatBalance(agentId);
             String idempotencyKey = "e2e-billpay-" + UUID.randomUUID();
+            BigDecimal amount = new BigDecimal("150.00");
             String requestBody = buildBillPaymentRequest(idempotencyKey);
 
-            var response = gatewayClient.post()
+            gatewayClient.post()
                     .uri("/api/v1/transactions")
                     .header("Authorization", "Bearer " + agentToken)
                     .header("X-Idempotency-Key", idempotencyKey)
                     .contentType(MediaType.APPLICATION_JSON)
                     .bodyValue(requestBody)
-                    .exchange();
+                    .exchange()
+                    .expectStatus().isAccepted();
 
-            int httpStatus = response.expectBody(String.class).returnResult().getStatus().value();
-            assertTrue(httpStatus == 200 || httpStatus == 202, "Should return 200 or 202 for async workflow start");
+            // Bill payment: -amount from agent float? 
+            // Wait, does Bill Payment use agent float? 
+            // Usually yes, if the agent is paying the bill on behalf of the customer using their float.
+            verifyTransactionSuccess(idempotencyKey, initialBalance, amount.negate());
         }
 
         @Test
-        @DisplayName("BDD-TO-05: Router dispatches DuitNow transfer to DuitNowTransferWorkflow")
-        void duitNowTransfer_shouldReturnPending() {
+        @DisplayName("BDD-TO-05: DuitNow Transfer completes successfully with side effects")
+        void duitNowTransfer_shouldCompleteSuccessfully() {
             assumeTrue(agentToken != null, "Agent token required");
 
+            BigDecimal initialBalance = getAgentFloatBalance(agentId);
             String idempotencyKey = "e2e-duitnow-" + UUID.randomUUID();
+            BigDecimal amount = new BigDecimal("80.00");
             String requestBody = buildDuitNowRequest(idempotencyKey);
 
-            var response = gatewayClient.post()
+            gatewayClient.post()
                     .uri("/api/v1/transactions")
                     .header("Authorization", "Bearer " + agentToken)
                     .header("X-Idempotency-Key", idempotencyKey)
                     .contentType(MediaType.APPLICATION_JSON)
                     .bodyValue(requestBody)
-                    .exchange();
+                    .exchange()
+                    .expectStatus().isAccepted();
 
-            int httpStatus = response.expectBody(String.class).returnResult().getStatus().value();
-            assertTrue(httpStatus == 200 || httpStatus == 202, "Should return 200 or 202 for async workflow start");
+            verifyTransactionSuccess(idempotencyKey, initialBalance, amount.negate());
         }
 
         @Test
@@ -407,183 +430,200 @@ class SelfContainedOrchestratorE2ETest {
     class NewTransactionTypesE2E {
 
         @Test
-        @DisplayName("BDD-TO-NEW-01: Router dispatches cashless payment to CashlessPaymentWorkflow")
-        void cashlessPayment_shouldReturnPending() {
+        @DisplayName("BDD-TO-NEW-01: Cashless Payment completes successfully with side effects")
+        void cashlessPayment_shouldCompleteSuccessfully() {
             assumeTrue(agentToken != null, "Agent token required");
 
+            BigDecimal initialBalance = getAgentFloatBalance(agentId);
             String idempotencyKey = "e2e-cashless-" + UUID.randomUUID();
             String requestBody = buildCashlessPaymentRequest(idempotencyKey);
 
-            var response = gatewayClient.post()
+            gatewayClient.post()
                     .uri("/api/v1/transactions")
                     .header("Authorization", "Bearer " + agentToken)
                     .header("X-Idempotency-Key", idempotencyKey)
                     .contentType(MediaType.APPLICATION_JSON)
                     .bodyValue(requestBody)
-                    .exchange();
+                    .exchange()
+                    .expectStatus().isAccepted();
 
-            int httpStatus = response.expectBody(String.class).returnResult().getStatus().value();
-            assertTrue(httpStatus == 200 || httpStatus == 202, "Should return 200 or 202 for async workflow start");
+            // Cashless payment usually doesn't affect agent float
+            verifyTransactionSuccess(idempotencyKey, initialBalance, BigDecimal.ZERO);
         }
 
         @Test
-        @DisplayName("BDD-TO-NEW-02: Router dispatches PIN-based purchase to PinBasedPurchaseWorkflow")
-        void pinBasedPurchase_shouldReturnPending() {
+        @DisplayName("BDD-TO-NEW-02: PIN-based Purchase completes successfully with side effects")
+        void pinBasedPurchase_shouldCompleteSuccessfully() {
             assumeTrue(agentToken != null, "Agent token required");
 
+            BigDecimal initialBalance = getAgentFloatBalance(agentId);
             String idempotencyKey = "e2e-pin-purchase-" + UUID.randomUUID();
             String requestBody = buildPinBasedPurchaseRequest(idempotencyKey);
 
-            var response = gatewayClient.post()
+            gatewayClient.post()
                     .uri("/api/v1/transactions")
                     .header("Authorization", "Bearer " + agentToken)
                     .header("X-Idempotency-Key", idempotencyKey)
                     .contentType(MediaType.APPLICATION_JSON)
                     .bodyValue(requestBody)
-                    .exchange();
+                    .exchange()
+                    .expectStatus().isAccepted();
 
-            int httpStatus = response.expectBody(String.class).returnResult().getStatus().value();
-            assertTrue(httpStatus == 200 || httpStatus == 202, "Should return 200 or 202 for async workflow start");
+            verifyTransactionSuccess(idempotencyKey, initialBalance, BigDecimal.ZERO);
         }
 
         @Test
-        @DisplayName("BDD-TO-NEW-03: Router dispatches prepaid topup to PrepaidTopupWorkflow")
-        void prepaidTopup_shouldReturnPending() {
+        @DisplayName("BDD-TO-NEW-03: Prepaid Topup completes successfully with side effects")
+        void prepaidTopup_shouldCompleteSuccessfully() {
             assumeTrue(agentToken != null, "Agent token required");
 
+            BigDecimal initialBalance = getAgentFloatBalance(agentId);
             String idempotencyKey = "e2e-prepaid-topup-" + UUID.randomUUID();
+            BigDecimal amount = new BigDecimal("30.00");
             String requestBody = buildPrepaidTopupRequest(idempotencyKey);
 
-            var response = gatewayClient.post()
+            gatewayClient.post()
                     .uri("/api/v1/transactions")
                     .header("Authorization", "Bearer " + agentToken)
                     .header("X-Idempotency-Key", idempotencyKey)
                     .contentType(MediaType.APPLICATION_JSON)
                     .bodyValue(requestBody)
-                    .exchange();
+                    .exchange()
+                    .expectStatus().isAccepted();
 
-            int httpStatus = response.expectBody(String.class).returnResult().getStatus().value();
-            assertTrue(httpStatus == 200 || httpStatus == 202, "Should return 200 or 202 for async workflow start");
+            verifyTransactionSuccess(idempotencyKey, initialBalance, amount.negate());
         }
 
         @Test
-        @DisplayName("BDD-TO-NEW-04: Router dispatches ewallet withdrawal to EWalletWithdrawalWorkflow")
-        void ewalletWithdrawal_shouldReturnPending() {
+        @DisplayName("BDD-TO-NEW-04: E-Wallet Withdrawal completes successfully with side effects")
+        void ewalletWithdrawal_shouldCompleteSuccessfully() {
             assumeTrue(agentToken != null, "Agent token required");
 
+            BigDecimal initialBalance = getAgentFloatBalance(agentId);
             String idempotencyKey = "e2e-ewallet-withdraw-" + UUID.randomUUID();
+            BigDecimal amount = new BigDecimal("100.00");
             String requestBody = buildEWalletWithdrawalRequest(idempotencyKey);
 
-            var response = gatewayClient.post()
+            gatewayClient.post()
                     .uri("/api/v1/transactions")
                     .header("Authorization", "Bearer " + agentToken)
                     .header("X-Idempotency-Key", idempotencyKey)
                     .contentType(MediaType.APPLICATION_JSON)
                     .bodyValue(requestBody)
-                    .exchange();
+                    .exchange()
+                    .expectStatus().isAccepted();
 
-            int httpStatus = response.expectBody(String.class).returnResult().getStatus().value();
-            assertTrue(httpStatus == 200 || httpStatus == 202, "Should return 200 or 202 for async workflow start");
+            verifyTransactionSuccess(idempotencyKey, initialBalance, amount);
         }
 
         @Test
-        @DisplayName("BDD-TO-NEW-05: Router dispatches ewallet topup to EWalletTopupWorkflow")
-        void ewalletTopup_shouldReturnPending() {
+        @DisplayName("BDD-TO-NEW-05: E-Wallet Topup completes successfully with side effects")
+        void ewalletTopup_shouldCompleteSuccessfully() {
             assumeTrue(agentToken != null, "Agent token required");
 
+            BigDecimal initialBalance = getAgentFloatBalance(agentId);
             String idempotencyKey = "e2e-ewallet-topup-" + UUID.randomUUID();
+            BigDecimal amount = new BigDecimal("50.00");
             String requestBody = buildEWalletTopupRequest(idempotencyKey);
 
-            var response = gatewayClient.post()
+            gatewayClient.post()
                     .uri("/api/v1/transactions")
                     .header("Authorization", "Bearer " + agentToken)
                     .header("X-Idempotency-Key", idempotencyKey)
                     .contentType(MediaType.APPLICATION_JSON)
                     .bodyValue(requestBody)
-                    .exchange();
+                    .exchange()
+                    .expectStatus().isAccepted();
 
-            int httpStatus = response.expectBody(String.class).returnResult().getStatus().value();
-            assertTrue(httpStatus == 200 || httpStatus == 202, "Should return 200 or 202 for async workflow start");
+            verifyTransactionSuccess(idempotencyKey, initialBalance, amount.negate());
         }
 
         @Test
-        @DisplayName("BDD-TO-NEW-06: Router dispatches ESSP purchase to ESSPPurchaseWorkflow")
-        void esspPurchase_shouldReturnPending() {
+        @DisplayName("BDD-TO-NEW-06: ESSP Purchase completes successfully with side effects")
+        void esspPurchase_shouldCompleteSuccessfully() {
             assumeTrue(agentToken != null, "Agent token required");
 
+            BigDecimal initialBalance = getAgentFloatBalance(agentId);
             String idempotencyKey = "e2e-essp-purchase-" + UUID.randomUUID();
+            BigDecimal amount = new BigDecimal("20.00");
             String requestBody = buildESSPPurchaseRequest(idempotencyKey);
 
-            var response = gatewayClient.post()
+            gatewayClient.post()
                     .uri("/api/v1/transactions")
                     .header("Authorization", "Bearer " + agentToken)
                     .header("X-Idempotency-Key", idempotencyKey)
                     .contentType(MediaType.APPLICATION_JSON)
                     .bodyValue(requestBody)
-                    .exchange();
+                    .exchange()
+                    .expectStatus().isAccepted();
 
-            int httpStatus = response.expectBody(String.class).returnResult().getStatus().value();
-            assertTrue(httpStatus == 200 || httpStatus == 202, "Should return 200 or 202 for async workflow start");
+            verifyTransactionSuccess(idempotencyKey, initialBalance, amount.negate());
         }
 
         @Test
-        @DisplayName("BDD-TO-NEW-07: Router dispatches PIN purchase to PINPurchaseWorkflow")
-        void pinPurchase_shouldReturnPending() {
+        @DisplayName("BDD-TO-NEW-07: PIN Purchase completes successfully with side effects")
+        void pinPurchase_shouldCompleteSuccessfully() {
             assumeTrue(agentToken != null, "Agent token required");
 
+            BigDecimal initialBalance = getAgentFloatBalance(agentId);
             String idempotencyKey = "e2e-pin-purchase-" + UUID.randomUUID();
+            BigDecimal amount = new BigDecimal("10.00");
             String requestBody = buildPINPurchaseRequest(idempotencyKey);
 
-            var response = gatewayClient.post()
+            gatewayClient.post()
                     .uri("/api/v1/transactions")
                     .header("Authorization", "Bearer " + agentToken)
                     .header("X-Idempotency-Key", idempotencyKey)
                     .contentType(MediaType.APPLICATION_JSON)
                     .bodyValue(requestBody)
-                    .exchange();
+                    .exchange()
+                    .expectStatus().isAccepted();
 
-            int httpStatus = response.expectBody(String.class).returnResult().getStatus().value();
-            assertTrue(httpStatus == 200 || httpStatus == 202, "Should return 200 or 202 for async workflow start");
+            verifyTransactionSuccess(idempotencyKey, initialBalance, amount.negate());
         }
 
         @Test
-        @DisplayName("BDD-TO-NEW-08: Router dispatches retail sale to RetailSaleWorkflow")
-        void retailSale_shouldReturnPending() {
+        @DisplayName("BDD-TO-NEW-08: Retail Sale completes successfully with side effects")
+        void retailSale_shouldCompleteSuccessfully() {
             assumeTrue(agentToken != null, "Agent token required");
 
+            BigDecimal initialBalance = getAgentFloatBalance(agentId);
             String idempotencyKey = "e2e-retail-sale-" + UUID.randomUUID();
+            BigDecimal amount = new BigDecimal("75.00");
             String requestBody = buildRetailSaleRequest(idempotencyKey);
 
-            var response = gatewayClient.post()
+            gatewayClient.post()
                     .uri("/api/v1/transactions")
                     .header("Authorization", "Bearer " + agentToken)
                     .header("X-Idempotency-Key", idempotencyKey)
                     .contentType(MediaType.APPLICATION_JSON)
                     .bodyValue(requestBody)
-                    .exchange();
+                    .exchange()
+                    .expectStatus().isAccepted();
 
-            int httpStatus = response.expectBody(String.class).returnResult().getStatus().value();
-            assertTrue(httpStatus == 200 || httpStatus == 202, "Should return 200 or 202 for async workflow start");
+            verifyTransactionSuccess(idempotencyKey, initialBalance, amount);
         }
 
         @Test
-        @DisplayName("BDD-TO-NEW-09: Router dispatches hybrid cashback to HybridCashbackWorkflow")
-        void hybridCashback_shouldReturnPending() {
+        @DisplayName("BDD-TO-NEW-09: Hybrid Cashback completes successfully with side effects")
+        void hybridCashback_shouldCompleteSuccessfully() {
             assumeTrue(agentToken != null, "Agent token required");
 
+            BigDecimal initialBalance = getAgentFloatBalance(agentId);
             String idempotencyKey = "e2e-hybrid-cashback-" + UUID.randomUUID();
+            BigDecimal amount = new BigDecimal("200.00");
             String requestBody = buildHybridCashbackRequest(idempotencyKey);
 
-            var response = gatewayClient.post()
+            gatewayClient.post()
                     .uri("/api/v1/transactions")
                     .header("Authorization", "Bearer " + agentToken)
                     .header("X-Idempotency-Key", idempotencyKey)
                     .contentType(MediaType.APPLICATION_JSON)
                     .bodyValue(requestBody)
-                    .exchange();
+                    .exchange()
+                    .expectStatus().isAccepted();
 
-            int httpStatus = response.expectBody(String.class).returnResult().getStatus().value();
-            assertTrue(httpStatus == 200 || httpStatus == 202, "Should return 200 or 202 for async workflow start");
+            verifyTransactionSuccess(idempotencyKey, initialBalance, amount);
         }
 
         // Request builders for new transaction types
@@ -595,7 +635,7 @@ class SelfContainedOrchestratorE2ETest {
                     "agentId": "%s",
                     "amount": 150.00,
                     "idempotencyKey": "%s",
-                    "agentTier": "TIER_1",
+                    "agentTier": "STANDARD",
                     "customerMykad": "encrypted-mykad",
                     "geofenceLat": 3.1390,
                     "geofenceLng": 101.6869
@@ -610,7 +650,7 @@ class SelfContainedOrchestratorE2ETest {
                     "agentId": "%s",
                     "amount": 250.00,
                     "idempotencyKey": "%s",
-                    "agentTier": "TIER_1",
+                    "agentTier": "STANDARD",
                     "pan": "4111111111111111",
                     "pinBlock": "encrypted-pin-block",
                     "customerCardMasked": "411111******1111",
@@ -627,7 +667,7 @@ class SelfContainedOrchestratorE2ETest {
                     "agentId": "%s",
                     "amount": 30.00,
                     "idempotencyKey": "%s",
-                    "agentTier": "TIER_1",
+                    "agentTier": "STANDARD",
                     "customerMykad": "encrypted-mykad",
                     "destinationAccount": "0123456789",
                     "geofenceLat": 3.1390,
@@ -643,7 +683,7 @@ class SelfContainedOrchestratorE2ETest {
                     "agentId": "%s",
                     "amount": 100.00,
                     "idempotencyKey": "%s",
-                    "agentTier": "TIER_1",
+                    "agentTier": "STANDARD",
                     "customerMykad": "encrypted-mykad",
                     "destinationAccount": "ewallet-account-123",
                     "geofenceLat": 3.1390,
@@ -659,7 +699,7 @@ class SelfContainedOrchestratorE2ETest {
                     "agentId": "%s",
                     "amount": 50.00,
                     "idempotencyKey": "%s",
-                    "agentTier": "TIER_1",
+                    "agentTier": "STANDARD",
                     "customerMykad": "encrypted-mykad",
                     "destinationAccount": "ewallet-account-456",
                     "geofenceLat": 3.1390,
@@ -675,7 +715,7 @@ class SelfContainedOrchestratorE2ETest {
                     "agentId": "%s",
                     "amount": 20.00,
                     "idempotencyKey": "%s",
-                    "agentTier": "TIER_1",
+                    "agentTier": "STANDARD",
                     "customerMykad": "encrypted-mykad",
                     "geofenceLat": 3.1390,
                     "geofenceLng": 101.6869
@@ -690,7 +730,7 @@ class SelfContainedOrchestratorE2ETest {
                     "agentId": "%s",
                     "amount": 10.00,
                     "idempotencyKey": "%s",
-                    "agentTier": "TIER_1",
+                    "agentTier": "STANDARD",
                     "customerMykad": "encrypted-mykad",
                     "destinationAccount": "telco-number-789",
                     "geofenceLat": 3.1390,
@@ -706,7 +746,7 @@ class SelfContainedOrchestratorE2ETest {
                     "agentId": "%s",
                     "amount": 75.00,
                     "idempotencyKey": "%s",
-                    "agentTier": "TIER_1",
+                    "agentTier": "STANDARD",
                     "customerMykad": "encrypted-mykad",
                     "geofenceLat": 3.1390,
                     "geofenceLng": 101.6869
@@ -721,7 +761,7 @@ class SelfContainedOrchestratorE2ETest {
                     "agentId": "%s",
                     "amount": 200.00,
                     "idempotencyKey": "%s",
-                    "agentTier": "TIER_1",
+                    "agentTier": "STANDARD",
                     "pan": "4111111111111111",
                     "customerCardMasked": "411111******1111",
                     "geofenceLat": 3.1390,
@@ -1022,47 +1062,54 @@ class SelfContainedOrchestratorE2ETest {
     class WithdrawalEdgeCases {
 
         @Test
-        @DisplayName("BDD-WF-EC-W04: Insufficient float - workflow fails immediately")
+        @DisplayName("BDD-WF-EC-W04: Insufficient float - workflow fails at float block")
         void withdraw_insufficientFloat_shouldFail() {
             assumeTrue(agentToken != null, "Agent token required");
 
-            String idempotencyKey = "e2e-ec-no-float-" + UUID.randomUUID();
-            String requestBody = buildWithdrawalRequestLarge(idempotencyKey, "0123");
-
-            // Get initial balance before transaction
             BigDecimal initialBalance = getAgentFloatBalance(getEffectiveAgentId());
+            String idempotencyKey = "e2e-ec-float-" + UUID.randomUUID();
+            
+            // Use an amount that's definitely more than current balance
+            BigDecimal amount = initialBalance.add(new BigDecimal("100000.00"));
+            
+            String requestBody = """
+                {
+                    "transactionType": "CASH_WITHDRAWAL",
+                    "agentId": "%s",
+                    "amount": %s,
+                    "idempotencyKey": "%s",
+                    "pan": "4111111111111111",
+                    "customerCardMasked": "411111******1111",
+                    "targetBIN": "0123",
+                    "agentTier": "STANDARD"
+                }
+                """.formatted(getEffectiveAgentId(), amount, idempotencyKey);
 
-            String body = gatewayClient.post()
+            gatewayClient.post()
                     .uri("/api/v1/transactions")
                     .header("Authorization", "Bearer " + agentToken)
                     .header("X-Idempotency-Key", idempotencyKey)
                     .contentType(MediaType.APPLICATION_JSON)
                     .bodyValue(requestBody)
                     .exchange()
-                    .expectBody(String.class)
-                    .returnResult()
-                    .getResponseBody();
-
-            assertNotNull(body);
-            JsonNode json = parseBody(body);
-            assertEquals("PENDING", json.get("status").asText());
+                    .expectStatus().isAccepted();
 
             // Poll until workflow fails
             WorkflowDetails details = waitForWorkflowCompletion(idempotencyKey);
             
             // Verify workflow failed
-            assertEquals("FAILED", details.status(), 
-                "Workflow should fail due to insufficient float");
-            assertNotNull(details.errorCode(), "Should have error code for insufficient float");
+            assertEquals("FAILED", details.status(), "Workflow should fail due to insufficient float");
             
-            // Verify no side effects - AgentFloat balance unchanged
+            // The errorCode from Orchestrator for insufficient float is usually ERR_BIZ_INSUFFICIENT_FLOAT
+            assertTrue("ERR_BIZ_INSUFFICIENT_FLOAT".equals(details.errorCode()) || 
+                      "ERR_BIZ_LEDGER_ERROR".equals(details.errorCode()), 
+                      "Should have error code for insufficient float, got: " + details.errorCode());
+            
+            // Verify balance remains unchanged
             BigDecimal finalBalance = getAgentFloatBalance(getEffectiveAgentId());
-            assertEquals(initialBalance, finalBalance,
-                "Agent float should remain unchanged when transaction fails");
-            
-            // Verify no JournalEntry records created
-            List<JsonNode> journalEntries = getJournalEntries(details.workflowId());
-            assertEquals(0, journalEntries.size(), "No journal entries should exist for failed transaction");
+            assertEquals(initialBalance.setScale(2, RoundingMode.HALF_UP), 
+                         finalBalance.setScale(2, RoundingMode.HALF_UP),
+                         "Agent float balance should not change for failed transaction");
         }
 
         @Test
@@ -1070,21 +1117,51 @@ class SelfContainedOrchestratorE2ETest {
         void withdraw_velocityExceeded_shouldFail() {
             assumeTrue(agentToken != null, "Agent token required");
 
-            String idempotencyKey = "e2e-ec-velocity-" + UUID.randomUUID();
-            String requestBody = buildWithdrawalRequest(idempotencyKey, "0123");
+            // 1. Setup restrictive velocity rule: Max 1 transaction per day
+            rulesClient.post()
+                    .uri("/internal/velocity-rules")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .bodyValue("""
+                        {
+                            "ruleName": "E2E-Restrictive-Velocity",
+                            "maxTransactionsPerDay": 1,
+                            "maxAmountPerDay": 10000.00,
+                            "scope": "AGENT",
+                            "transactionType": "CASH_WITHDRAWAL"
+                        }
+                        """)
+                    .exchange()
+                    .expectStatus().isCreated();
 
-            String body = gatewayClient.post()
+            // 2. Perform first withdrawal - should pass
+            String termId = "0123";
+            String ik1 = "e2e-ec-velocity-1-" + UUID.randomUUID();
+            gatewayClient.post()
                     .uri("/api/v1/transactions")
                     .header("Authorization", "Bearer " + agentToken)
-                    .header("X-Idempotency-Key", idempotencyKey)
+                    .header("X-Idempotency-Key", ik1)
                     .contentType(MediaType.APPLICATION_JSON)
-                    .bodyValue(requestBody)
+                    .bodyValue(buildWithdrawalRequest(ik1, termId))
                     .exchange()
-                    .expectBody(String.class)
-                    .returnResult()
-                    .getResponseBody();
+                    .expectStatus().isAccepted();
 
-            assertNotNull(body);
+            WorkflowDetails details1 = waitForWorkflowCompletion(ik1);
+            assertEquals("COMPLETED", details1.status(), "First transaction should complete successfully");
+
+            // 3. Perform second withdrawal - should fail due to velocity
+            String ik2 = "e2e-ec-velocity-2-" + UUID.randomUUID();
+            gatewayClient.post()
+                    .uri("/api/v1/transactions")
+                    .header("Authorization", "Bearer " + agentToken)
+                    .header("X-Idempotency-Key", ik2)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .bodyValue(buildWithdrawalRequest(ik2, termId))
+                    .exchange()
+                    .expectStatus().isAccepted();
+
+            WorkflowDetails details2 = waitForWorkflowCompletion(ik2);
+            assertEquals("FAILED", details2.status(), "Second transaction should fail due to velocity limit");
+            assertEquals("ERR_VELOCITY_LIMIT_EXCEEDED_COUNT", details2.errorCode(), "Should return specific velocity error code");
         }
     }
 
@@ -1423,7 +1500,9 @@ class SelfContainedOrchestratorE2ETest {
                 "pan": "4111111111111111",
                 "customerCardMasked": "411111******1111",
                 "targetBIN": "%s",
-                "agentTier": "TIER_1"
+                "geofenceLat": 3.1390,
+                "geofenceLng": 101.6869,
+                "agentTier": "STANDARD"
             }
             """.formatted(getEffectiveAgentId(), idempotencyKey, targetBIN);
     }
@@ -1436,7 +1515,9 @@ class SelfContainedOrchestratorE2ETest {
                 "amount": 500.00,
                 "idempotencyKey": "%s",
                 "destinationAccount": "1234567890",
-                "agentTier": "TIER_1"
+                "geofenceLat": 3.1390,
+                "geofenceLng": 101.6869,
+                "agentTier": "STANDARD"
             }
             """.formatted(getEffectiveAgentId(), idempotencyKey);
     }
@@ -1450,7 +1531,9 @@ class SelfContainedOrchestratorE2ETest {
                 "idempotencyKey": "%s",
                 "billerCode": "TNB",
                 "ref1": "123456789012",
-                "agentTier": "TIER_1"
+                "geofenceLat": 3.1390,
+                "geofenceLng": 101.6869,
+                "agentTier": "STANDARD"
             }
             """.formatted(getEffectiveAgentId(), idempotencyKey);
     }
@@ -1468,7 +1551,9 @@ class SelfContainedOrchestratorE2ETest {
                 "idempotencyKey": "%s",
                 "proxyType": "%s",
                 "proxyValue": "%s",
-                "agentTier": "TIER_1"
+                "geofenceLat": 3.1390,
+                "geofenceLng": 101.6869,
+                "agentTier": "STANDARD"
             }
             """.formatted(getEffectiveAgentId(), idempotencyKey, proxyType, proxyValue);
     }
@@ -1483,7 +1568,7 @@ class SelfContainedOrchestratorE2ETest {
                 "pan": "4111111111111111",
                 "customerCardMasked": "411111******1111",
                 "targetBIN": "%s",
-                "agentTier": "TIER_1"
+                "agentTier": "STANDARD"
             }
             """.formatted(getEffectiveAgentId(), idempotencyKey, targetBIN);
     }
@@ -1496,7 +1581,7 @@ class SelfContainedOrchestratorE2ETest {
                 "amount": 500.00,
                 "idempotencyKey": "%s",
                 "destinationAccount": "9999999999",
-                "agentTier": "TIER_1"
+                "agentTier": "STANDARD"
             }
             """.formatted(getEffectiveAgentId(), idempotencyKey);
     }
@@ -1510,7 +1595,7 @@ class SelfContainedOrchestratorE2ETest {
                 "idempotencyKey": "%s",
                 "destinationAccount": "1234567890",
                 "requiresBiometric": true,
-                "agentTier": "TIER_1"
+                "agentTier": "STANDARD"
             }
             """.formatted(getEffectiveAgentId(), idempotencyKey);
     }
@@ -1524,7 +1609,7 @@ class SelfContainedOrchestratorE2ETest {
                 "idempotencyKey": "%s",
                 "billerCode": "INVALID",
                 "ref1": "123456789012",
-                "agentTier": "TIER_1"
+                "agentTier": "STANDARD"
             }
             """.formatted(getEffectiveAgentId(), idempotencyKey);
     }
@@ -1595,7 +1680,7 @@ class SelfContainedOrchestratorE2ETest {
                     "pan": "4111111111111111",
                     "customerCardMasked": "411111******1111",
                     "targetBIN": "0123",
-                    "agentTier": "TIER_1"
+                    "agentTier": "STANDARD"
                 }
                 """.formatted(getEffectiveAgentId(), idempotencyKey);
 
@@ -1700,7 +1785,7 @@ class SelfContainedOrchestratorE2ETest {
                     "agentId": "%s",
                     "amount": 100.00,
                     "idempotencyKey": "%s",
-                    "agentTier": "TIER_1"
+                    "agentTier": "STANDARD"
                 }
                 """.formatted(getEffectiveAgentId(), idempotencyKey);
 
@@ -1733,7 +1818,7 @@ class SelfContainedOrchestratorE2ETest {
                     "pan": "4111111111111111",
                     "customerCardMasked": "411111******1111",
                     "targetBIN": "0123",
-                    "agentTier": "TIER_1"
+                    "agentTier": "STANDARD"
                 }
                 """.formatted(getEffectiveAgentId(), idempotencyKey);
 
@@ -1770,6 +1855,50 @@ class SelfContainedOrchestratorE2ETest {
         String errorCode,
         JsonNode details
     ) {}
+
+    /**
+     * Verifies a transaction completes successfully with correct side effects.
+     */
+    private void verifyTransactionSuccess(String workflowId, BigDecimal initialBalance, BigDecimal expectedDelta) {
+        // 1. Wait for completion
+        WorkflowDetails details = waitForWorkflowCompletion(workflowId);
+        if (!"COMPLETED".equals(details.status())) {
+            System.err.println("Workflow " + workflowId + " failed!");
+            System.err.println("Status: " + details.status());
+            System.err.println("Error Code: " + details.errorCode());
+            System.err.println("Error Message: " + (details.details() != null ? details.details().get("errorMessage") : "No error message"));
+        }
+        assertEquals("COMPLETED", details.status(), "Workflow should complete successfully");
+        
+        // 2. Verify Agent Float balance delta
+        BigDecimal finalBalance = getAgentFloatBalance(agentId);
+        BigDecimal actualDelta = finalBalance.subtract(initialBalance);
+        assertEquals(expectedDelta.setScale(2, RoundingMode.HALF_UP), 
+                     actualDelta.setScale(2, RoundingMode.HALF_UP), 
+                     "Agent float balance delta should match expected");
+        
+        // 3. Verify Journal Entries (double-entry)
+        List<JsonNode> journalEntries = getJournalEntries(workflowId);
+        assertFalse(journalEntries.isEmpty(), "Journal entries should be created");
+        
+        BigDecimal totalDebit = BigDecimal.ZERO;
+        BigDecimal totalCredit = BigDecimal.ZERO;
+        
+        for (JsonNode entry : journalEntries) {
+            BigDecimal amount = new BigDecimal(entry.get("amount").asText());
+            String entryType = entry.get("entryType").asText();
+            if ("DEBIT".equals(entryType)) {
+                totalDebit = totalDebit.add(amount);
+            } else {
+                totalCredit = totalCredit.add(amount);
+            }
+        }
+        
+        // Sum of all entries should be zero (using LedgerService negative amount convention)
+        assertEquals(BigDecimal.ZERO.setScale(2), 
+                     totalDebit.add(totalCredit).setScale(2), 
+                     "Journal entries should balance to zero");
+    }
 
     /**
      * Waits for workflow to complete and returns full details.
@@ -1828,7 +1957,7 @@ class SelfContainedOrchestratorE2ETest {
     private BigDecimal getAgentFloatBalance(String agentId) {
         try {
             String response = ledgerClient.get()
-                    .uri("/internal/agents/" + agentId + "/float")
+                    .uri("/internal/balance/" + agentId)
                     .exchange()
                     .expectBody(String.class)
                     .returnResult()

@@ -20,9 +20,8 @@ public class LedgerServiceClientFallbackFactory implements FallbackFactory<Ledge
         return new LedgerServiceClient() {
             @Override
             public FloatBlockResult blockFloat(FloatBlockInput input) {
-                log.warn("Ledger service unavailable, auto-approving float block for agent: {}", input.agentId());
-                // Auto-approve with a generated transaction ID for testing
-                return new FloatBlockResult(true, UUID.randomUUID(), "LEDGER_UNAVAILABLE");
+                log.error("Ledger service unavailable, failing float block for agent: {}", input.agentId());
+                return new FloatBlockResult(false, null, "ERR_SYS_LEDGER_UNAVAILABLE");
             }
 
             @Override
@@ -81,6 +80,12 @@ public class LedgerServiceClientFallbackFactory implements FallbackFactory<Ledge
                     "2024-01-01T12:00:00Z",
                     "2024-01-01T12:01:00Z"
                 );
+            }
+
+            @Override
+            public DailyMetricsResult getDailyMetrics(UUID agentId) {
+                log.warn("Ledger service unavailable, returning default metrics for agent: {}", agentId);
+                return new DailyMetricsResult(0, BigDecimal.ZERO, BigDecimal.ZERO);
             }
         };
     }

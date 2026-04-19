@@ -35,12 +35,13 @@ public class ProcessDepositUseCaseImpl implements ProcessDepositUseCase {
                                                BigDecimal bankShare, String idempotencyKey,
                                                String customerMykad, String billerCode,
                                                String ref1, String ref2,
-                                               BigDecimal geofenceLat, BigDecimal geofenceLng) {
-        log.info("Processing deposit for agent: {}, amount: {}", agentId, amount);
+                                               BigDecimal geofenceLat, BigDecimal geofenceLng,
+                                               String transactionType) {
+        log.info("Processing deposit for agent: {}, amount: {}, type: {}", agentId, amount, transactionType);
 
         try {
             Map<String, Object> result = ledgerService.processDeposit(agentId, amount, customerFee, agentCommission,
-                    bankShare, idempotencyKey, customerMykad, billerCode, ref1, ref2, geofenceLat, geofenceLng);
+                    bankShare, idempotencyKey, customerMykad, billerCode, ref1, ref2, geofenceLat, geofenceLng, transactionType);
 
             if (result != null) {
                 transactionEventPublisher.publish(new TransactionEvent(
@@ -48,7 +49,7 @@ public class ProcessDepositUseCaseImpl implements ProcessDepositUseCase {
                     String.valueOf(result.get("status")),
                     result.get("transactionId") instanceof UUID ? (UUID) result.get("transactionId") : UUID.fromString(String.valueOf(result.get("transactionId"))),
                     agentId,
-                    "CASH_DEPOSIT",
+                    transactionType != null ? transactionType : "CASH_DEPOSIT",
                     amount,
                     "MYR",
                     null,

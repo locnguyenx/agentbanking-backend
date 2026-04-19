@@ -13,6 +13,7 @@ import com.agentbanking.orchestrator.application.workflow.ESSPPurchaseWorkflow;
 import com.agentbanking.orchestrator.domain.model.WorkflowResult;
 import com.agentbanking.orchestrator.domain.model.WorkflowStatus;
 import com.agentbanking.orchestrator.domain.port.out.LedgerServicePort.*;
+import com.agentbanking.orchestrator.domain.port.out.RulesServicePort.*;
 
 import io.temporal.activity.ActivityOptions;
 import io.temporal.common.RetryOptions;
@@ -31,6 +32,9 @@ public class ESSPPurchaseWorkflowImpl implements ESSPPurchaseWorkflow {
 
     private static final Logger log = Workflow.getLogger(ESSPPurchaseWorkflowImpl.class);
 
+    private GetDailyMetricsActivity getDailyMetricsActivity;
+    private CheckVelocityActivity checkVelocityActivity;
+    private EvaluateStpActivity evaluateStpActivity;
     private ValidateESSPPurchaseActivity validateESSPPurchaseActivity;
     private PurchaseESSPActivity purchaseESSPActivity;
     private BlockFloatActivity blockFloatActivity;
@@ -42,6 +46,9 @@ public class ESSPPurchaseWorkflowImpl implements ESSPPurchaseWorkflow {
     private WorkflowStatus currentStatus = WorkflowStatus.PENDING;
 
     public ESSPPurchaseWorkflowImpl(
+            GetDailyMetricsActivity getDailyMetricsActivity,
+            CheckVelocityActivity checkVelocityActivity,
+            EvaluateStpActivity evaluateStpActivity,
             ValidateESSPPurchaseActivity validateESSPPurchaseActivity,
             PurchaseESSPActivity purchaseESSPActivity,
             BlockFloatActivity blockFloatActivity,
@@ -49,6 +56,9 @@ public class ESSPPurchaseWorkflowImpl implements ESSPPurchaseWorkflow {
             ReleaseFloatActivity releaseFloatActivity,
             CreditAgentFloatActivity creditAgentFloatActivity,
             PersistWorkflowResultActivity persistWorkflowResultActivity) {
+        this.getDailyMetricsActivity = getDailyMetricsActivity;
+        this.checkVelocityActivity = checkVelocityActivity;
+        this.evaluateStpActivity = evaluateStpActivity;
         this.validateESSPPurchaseActivity = validateESSPPurchaseActivity;
         this.purchaseESSPActivity = purchaseESSPActivity;
         this.blockFloatActivity = blockFloatActivity;
@@ -60,6 +70,18 @@ public class ESSPPurchaseWorkflowImpl implements ESSPPurchaseWorkflow {
 
     @SuppressWarnings("SpringJavaAutowiredMembersInspection")
     public ESSPPurchaseWorkflowImpl() {
+        this.getDailyMetricsActivity = Workflow.newActivityStub(GetDailyMetricsActivity.class, ActivityOptions.newBuilder()
+                .setStartToCloseTimeout(Duration.ofSeconds(30))
+                .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(3).build())
+                .build());
+        this.checkVelocityActivity = Workflow.newActivityStub(CheckVelocityActivity.class, ActivityOptions.newBuilder()
+                .setStartToCloseTimeout(Duration.ofSeconds(30))
+                .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(3).build())
+                .build());
+        this.evaluateStpActivity = Workflow.newActivityStub(EvaluateStpActivity.class, ActivityOptions.newBuilder()
+                .setStartToCloseTimeout(Duration.ofSeconds(30))
+                .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(3).build())
+                .build());
         this.validateESSPPurchaseActivity = Workflow.newActivityStub(ValidateESSPPurchaseActivity.class, ActivityOptions.newBuilder()
                 .setStartToCloseTimeout(Duration.ofSeconds(30))
                 .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(3).build())
@@ -96,6 +118,49 @@ public class ESSPPurchaseWorkflowImpl implements ESSPPurchaseWorkflow {
         currentStatus = WorkflowStatus.RUNNING;
 
         try {
+            // Task: Fetch metrics
+            DailyMetricsResult metrics = getDailyMetricsActivity.getDailyMetrics(input.agentId());
+
+            // Step 1: Check velocity
+            VelocityCheckResult velocityResult = checkVelocityActivity.checkVelocity(
+                    new VelocityCheckInput(
+                        input.agentId(), 
+                        "ESSP_PURCHASE",
+                        input.amount(), 
+                        input.customerMykad(),
+                        metrics.transactionCountToday(),
+                        metrics.amountToday()
+                    ));
+            
+            if (!velocityResult.passed()) {
+                currentStatus = WorkflowStatus.FAILED;
+                WorkflowResult failResult = WorkflowResult.failed(velocityResult.errorCode(), "Velocity check failed", "DECLINE");
+                persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
+                        Workflow.getInfo().getWorkflowId(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null, "Velocity check failed"));
+                return failResult;
+            }
+
+            // Step 2: Evaluate STP
+            StpDecision stpDecision = evaluateStpActivity.evaluateStp(
+                    new EvaluateStpActivity.Input(
+                            "ESSP_PURCHASE",
+                            input.agentId().toString(),
+                            input.amount().toString(),
+                            input.customerMykad(),
+                            input.agentTier(),
+                            metrics.transactionCountToday(),
+                            metrics.amountToday().toString(),
+                            metrics.todayTotalAmount().toString()
+                    )
+            );
+            if (!stpDecision.approved()) {
+                currentStatus = WorkflowStatus.PENDING_REVIEW;
+                WorkflowResult reviewResult = WorkflowResult.failed("ERR_STP_REVIEW", stpDecision.reason(), "REVIEW");
+                persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
+                        Workflow.getInfo().getWorkflowId(), "PENDING_REVIEW", reviewResult.errorCode(), reviewResult.errorMessage(), null, null, null, stpDecision.reason()));
+                return reviewResult;
+            }
+
             ESSPValidationResult validationResult;
             try {
                 validationResult = validateESSPPurchaseActivity.validate(input.amount());
@@ -129,7 +194,8 @@ public class ESSPPurchaseWorkflowImpl implements ESSPPurchaseWorkflow {
                             input.geofenceLat(),
                             input.geofenceLng(),
                             input.agentTier(),
-                            input.targetBin()
+                            input.targetBin(),
+                            "ESSP_PURCHASE"
                     )
             );
             } catch (ActivityFailure e) {
@@ -194,7 +260,8 @@ public class ESSPPurchaseWorkflowImpl implements ESSPPurchaseWorkflow {
                             input.targetBin(),
                             purchaseResult.certificateNumber(),
                             input.geofenceLat(),
-                            input.geofenceLng()
+                            input.geofenceLng(),
+                            "ESSP_PURCHASE"
                     )
             );
             } catch (ActivityFailure e) {

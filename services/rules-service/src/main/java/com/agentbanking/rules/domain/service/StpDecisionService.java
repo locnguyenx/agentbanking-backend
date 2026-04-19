@@ -4,6 +4,7 @@ import com.agentbanking.rules.domain.model.AgentTier;
 import com.agentbanking.rules.domain.model.FeeConfigRecord;
 import com.agentbanking.rules.domain.model.StpCategory;
 import com.agentbanking.rules.domain.model.StpDecision;
+import com.agentbanking.rules.domain.model.TransactionType;
 import java.math.BigDecimal;
 
 public class StpDecisionService {
@@ -17,13 +18,16 @@ public class StpDecisionService {
         this.limitEnforcementService = limitEnforcementService;
     }
 
-    public StpDecision evaluate(String transactionType, String customerMykad,
+    public StpDecision evaluate(String transactionTypeStr, String agentId, String customerMykad,
                                  BigDecimal amount, AgentTier agentTier,
                                  int transactionCountToday, BigDecimal amountToday,
                                  FeeConfigRecord feeConfig, BigDecimal todayTotalAmount) {
+        
+        TransactionType transactionType = TransactionType.fromFrontend(transactionTypeStr);
+        
         // Check velocity
         VelocityCheckService.VelocityCheckResult velocityResult = velocityCheckService
-            .check(transactionCountToday, amountToday);
+            .check(agentId, transactionType, transactionCountToday, amountToday);
 
         // Check limits
         boolean limitPassed = limitEnforcementService

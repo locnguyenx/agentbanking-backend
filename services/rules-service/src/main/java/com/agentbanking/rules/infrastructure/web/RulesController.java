@@ -3,7 +3,9 @@ package com.agentbanking.rules.infrastructure.web;
 import com.agentbanking.rules.domain.model.AgentTier;
 import com.agentbanking.rules.domain.model.FeeType;
 import com.agentbanking.rules.domain.model.TransactionType;
+import com.agentbanking.rules.domain.model.VelocityScope;
 import com.agentbanking.rules.domain.port.in.CreateFeeConfigUseCase;
+import com.agentbanking.rules.domain.port.in.CreateVelocityRuleUseCase;
 import com.agentbanking.rules.domain.port.in.FeeQueryUseCase;
 import com.agentbanking.rules.domain.port.in.FeeQueryUseCase.FeeQueryResult;
 import com.agentbanking.rules.domain.port.in.VelocityCheckUseCase;
@@ -26,23 +28,28 @@ public class RulesController {
     private final FeeQueryUseCase feeQueryUseCase;
     private final VelocityCheckUseCase velocityCheckUseCase;
     private final CreateFeeConfigUseCase createFeeConfigUseCase;
+    private final CreateVelocityRuleUseCase createVelocityRuleUseCase;
     private final TransactionQuoteUseCase transactionQuoteUseCase;
 
     public RulesController(FeeQueryUseCase feeQueryUseCase,
                            VelocityCheckUseCase velocityCheckUseCase,
                            CreateFeeConfigUseCase createFeeConfigUseCase,
+                           CreateVelocityRuleUseCase createVelocityRuleUseCase,
                            TransactionQuoteUseCase transactionQuoteUseCase) {
         this.feeQueryUseCase = feeQueryUseCase;
         this.velocityCheckUseCase = velocityCheckUseCase;
         this.createFeeConfigUseCase = createFeeConfigUseCase;
+        this.createVelocityRuleUseCase = createVelocityRuleUseCase;
         this.transactionQuoteUseCase = transactionQuoteUseCase;
     }
 
-    @PostMapping("/fees/calculate")
+    @PostMapping("/calculate-fees")
     public ResponseEntity<Map<String, Object>> calculateFees(
-            @RequestParam String transactionType,
-            @RequestParam String agentTier,
-            @RequestParam BigDecimal amount) {
+            @RequestBody Map<String, Object> request) {
+        String transactionType = (String) request.get("transactionType");
+        String agentTier = (String) request.get("agentTier");
+        BigDecimal amount = new BigDecimal(request.get("amount").toString());
+
         TransactionType txType = TransactionType.fromFrontend(transactionType);
         AgentTier tier = AgentTier.valueOf(agentTier);
 
@@ -51,11 +58,10 @@ public class RulesController {
         return ResponseEntity.ok(Map.of(
             "customerFee", result.customerFee(),
             "agentCommission", result.agentCommission(),
-            "bankShare", result.bankShare(),
-            "transactionType", transactionType,
-            "agentTier", agentTier
+            "bankShare", result.bankShare()
         ));
     }
+
 
     @GetMapping("/fees/{transactionType}/{agentTier}")
     public ResponseEntity<Map<String, Object>> getFeeConfig(
@@ -111,16 +117,56 @@ public class RulesController {
         }
     }
 
+    @PostMapping("/velocity-rules")
+    public ResponseEntity<Map<String, Object>> createVelocityRule(@RequestBody Map<String, Object> request) {
+        try {
+            String ruleName = (String) request.get("ruleName");
+            int maxTransactionsPerDay = ((Number) request.get("maxTransactionsPerDay")).intValue();
+            BigDecimal maxAmountPerDay = new BigDecimal(request.get("maxAmountPerDay").toString());
+            VelocityScope scope = VelocityScope.valueOf((String) request.get("scope"));
+            TransactionType transactionType = request.get("transactionType") != null 
+                ? TransactionType.fromFrontend((String) request.get("transactionType")) 
+                : null;
+
+            CreateVelocityRuleUseCase.CreateVelocityRuleCommand command = new CreateVelocityRuleUseCase.CreateVelocityRuleCommand(
+                ruleName, maxTransactionsPerDay, maxAmountPerDay, scope, transactionType
+            );
+
+            CreateVelocityRuleUseCase.CreateVelocityRuleResult result = createVelocityRuleUseCase.createVelocityRule(command);
+
+            return ResponseEntity.status(201).body(Map.of(
+                "ruleId", result.ruleId().toString(),
+                "status", result.status()
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of(
+                "status", "FAILED",
+                "error", Map.of("code", "ERR_VELOCITY_RULE_CREATE_FAILED", "message", e.getMessage() != null ? e.getMessage() : "Unknown error")
+            ));
+        }
+    }
+
     @PostMapping("/check-velocity")
     public ResponseEntity<Map<String, Object>> checkVelocity(
             @RequestBody Map<String, Object> request) {
+        String agentId = request.get("agentId") != null ? (String) request.get("agentId") : "";
+        String transactionTypeStr = request.get("transactionType") != null ? (String) request.get("transactionType") : "";
+        TransactionType transactionType = null;
+        if (!transactionTypeStr.isEmpty()) {
+            try {
+                transactionType = TransactionType.valueOf(transactionTypeStr);
+            } catch (IllegalArgumentException e) {
+                // Ignore invalid transaction types
+            }
+        }
+
         int transactionCountToday = request.get("transactionCountToday") != null 
-            ? (Integer) request.get("transactionCountToday") : 0;
+            ? ((Number) request.get("transactionCountToday")).intValue() : 0;
         BigDecimal amountToday = request.get("amountToday") != null 
             ? new BigDecimal(request.get("amountToday").toString()) 
             : BigDecimal.ZERO;
 
-        var result = velocityCheckUseCase.check(transactionCountToday, amountToday);
+        var result = velocityCheckUseCase.check(agentId, transactionType, transactionCountToday, amountToday);
 
         return ResponseEntity.ok(Map.of(
             "passed", result.passed(),

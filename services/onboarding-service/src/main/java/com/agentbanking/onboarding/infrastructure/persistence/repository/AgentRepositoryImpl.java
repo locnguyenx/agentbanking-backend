@@ -63,4 +63,8 @@ public class AgentRepositoryImpl implements AgentRepository {
     public long countByStatus(AgentStatus status) {
         return jpaRepository.findByStatus(status, PageRequest.of(0, 1)).getTotalElements();
     }
+    @Override
+    public void deleteById(UUID agentId) {
+        jpaRepository.deleteById(agentId);
+    }
 }

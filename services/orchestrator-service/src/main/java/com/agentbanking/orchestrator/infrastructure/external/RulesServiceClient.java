@@ -1,6 +1,5 @@
 package com.agentbanking.orchestrator.infrastructure.external;
 
-import com.agentbanking.orchestrator.domain.port.out.RulesServicePort;
 import com.agentbanking.orchestrator.domain.port.out.RulesServicePort.VelocityCheckInput;
 import com.agentbanking.orchestrator.domain.port.out.RulesServicePort.VelocityCheckResult;
 import com.agentbanking.orchestrator.domain.port.out.RulesServicePort.FeeCalculationInput;

@@ -5,7 +5,7 @@ spring:
   application:
     name: auth-iam-service
   datasource:
-    url: jdbc:postgresql://localhost:5432/authdb
+    url: jdbc:postgresql://postgres-auth:5432/authdb
     username: auth_user
     password: auth_password
     driver-class-name: org.postgresql.Driver
@@ -17,11 +17,11 @@ spring:
       hibernate:
         format_sql: true
   flyway:
-    enabled: false
+    enabled: true
     locations: classpath:db/migration
     baseline-on-migrate: true
   redis:
-    host: localhost
+    host: redis
     port: 6379
     timeout: 10s
   kafka:

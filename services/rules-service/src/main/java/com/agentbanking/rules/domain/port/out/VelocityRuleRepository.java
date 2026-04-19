@@ -5,4 +5,5 @@ import java.util.List;
 
 public interface VelocityRuleRepository {
     List<VelocityRuleRecord> findActiveRules();
+    VelocityRuleRecord save(VelocityRuleRecord rule);
 }

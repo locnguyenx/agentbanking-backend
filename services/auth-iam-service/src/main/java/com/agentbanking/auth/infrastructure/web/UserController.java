@@ -2,6 +2,7 @@ package com.agentbanking.auth.infrastructure.web;
 
 import com.agentbanking.auth.application.usecase.AuditLogServiceImpl;
 import com.agentbanking.auth.application.usecase.ManageUserUseCaseImpl;
+import com.agentbanking.auth.domain.model.UserType;
 import com.agentbanking.common.audit.AuditAction;
 import com.agentbanking.common.audit.AuditLogRecord;
 import com.agentbanking.common.audit.AuditOutcome;
@@ -75,8 +76,8 @@ public class UserController {
                 userDto.password(),
                 userDto.fullName(),
                 null, // status
-                null, // userType
-                null, // agentId
+                userDto.userType() != null ? UserType.valueOf(userDto.userType()) : UserType.INTERNAL,
+                userDto.agentId(),
                 null, // agentCode
                 null, // mustChangePassword
                 null, // temporaryPasswordExpiresAt
@@ -105,8 +106,8 @@ public class UserController {
                 userDto.password(),
                 userDto.fullName(),
                 null, // status
-                null, // userType
-                null, // agentId
+                userDto.userType() != null ? UserType.valueOf(userDto.userType()) : UserType.EXTERNAL,
+                userDto.agentId(),
                 null, // agentCode
                 null, // mustChangePassword
                 null, // temporaryPasswordExpiresAt

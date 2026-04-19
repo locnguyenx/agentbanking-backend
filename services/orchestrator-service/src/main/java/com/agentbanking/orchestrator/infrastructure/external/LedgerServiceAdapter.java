@@ -59,4 +59,10 @@ public class LedgerServiceAdapter implements LedgerServicePort {
         log.info("Fetching transaction details from ledger for: {}", transactionId);
         return ledgerServiceClient.getTransaction(transactionId);
     }
+
+    @Override
+    public DailyMetricsResult getDailyMetrics(UUID agentId) {
+        log.info("Fetching daily metrics for agent: {}", agentId);
+        return ledgerServiceClient.getDailyMetrics(agentId);
+    }
 }

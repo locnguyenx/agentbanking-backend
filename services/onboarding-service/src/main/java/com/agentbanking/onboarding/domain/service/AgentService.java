@@ -91,9 +91,12 @@ public class AgentService {
                 return failedAgent;
             }
         } catch (Exception e) {
-            AgentRecord failedAgent = updateUserCreationStatus(savedAgent, UserCreationStatus.FAILED, e.getMessage());
-            publishAgentCreatedEvent(failedAgent);
-            return failedAgent;
+            if (savedAgent != null) {
+                AgentRecord failedAgent = updateUserCreationStatus(savedAgent, UserCreationStatus.FAILED, e.getMessage());
+                publishAgentCreatedEvent(failedAgent);
+                return failedAgent;
+            }
+            throw new RuntimeException("Failed to create agent and savedAgent is null", e);
         }
     }
 
@@ -180,6 +183,10 @@ public class AgentService {
 
     public Optional<AgentRecord> findById(UUID agentId) {
         return agentRepository.findById(agentId);
+    }
+
+    public void hardDeleteAgent(UUID agentId) {
+        agentRepository.deleteById(agentId);
     }
 
     private void publishAgentCreatedEvent(AgentRecord agent) {

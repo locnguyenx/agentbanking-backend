@@ -14,6 +14,7 @@ import com.agentbanking.orchestrator.domain.port.out.LedgerServicePort.FloatReve
 import com.agentbanking.orchestrator.domain.port.out.LedgerServicePort.AccountValidationInput;
 import com.agentbanking.orchestrator.domain.port.out.LedgerServicePort.AccountValidationResult;
 import com.agentbanking.orchestrator.domain.port.out.LedgerServicePort.TransactionDetailsResult;
+import com.agentbanking.orchestrator.domain.port.out.LedgerServicePort.DailyMetricsResult;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -25,19 +26,19 @@ import java.util.UUID;
 @FeignClient(name = "ledger-service", url = "${ledger-service.url}", path = "/internal", fallbackFactory = LedgerServiceClientFallbackFactory.class)
 public interface LedgerServiceClient {
 
-    @PostMapping("/debit")
+    @PostMapping("/float/block")
     FloatBlockResult blockFloat(@RequestBody FloatBlockInput input);
 
-    @PostMapping("/credit")
+    @PostMapping("/float/commit")
     FloatCommitResult commitFloat(@RequestBody FloatCommitInput input);
 
-    @PostMapping("/release")
+    @PostMapping("/float/release")
     FloatReleaseResult releaseFloat(@RequestBody FloatReleaseInput input);
 
-    @PostMapping("/credit-agent")
+    @PostMapping("/float/credit")
     FloatCreditResult creditAgentFloat(@RequestBody FloatCreditInput input);
 
-    @PostMapping("/reverse")
+    @PostMapping("/float/reverse")
     FloatReverseResult reverseCreditFloat(@RequestBody FloatReverseInput input);
 
     @PostMapping("/validate-account")
@@ -45,4 +46,7 @@ public interface LedgerServiceClient {
 
     @GetMapping("/transactions/{transactionId}")
     TransactionDetailsResult getTransaction(@PathVariable("transactionId") UUID transactionId);
+
+    @GetMapping("/metrics/{agentId}")
+    DailyMetricsResult getDailyMetrics(@PathVariable("agentId") UUID agentId);
 }

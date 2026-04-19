@@ -10,12 +10,9 @@ import com.agentbanking.orchestrator.application.activity.CreditAgentFloatActivi
 import com.agentbanking.orchestrator.application.workflow.PINPurchaseWorkflow;
 import com.agentbanking.orchestrator.domain.model.WorkflowResult;
 import com.agentbanking.orchestrator.domain.model.WorkflowStatus;
-import com.agentbanking.orchestrator.domain.port.out.LedgerServicePort.FloatBlockInput;
-import com.agentbanking.orchestrator.domain.port.out.LedgerServicePort.FloatBlockResult;
-import com.agentbanking.orchestrator.domain.port.out.LedgerServicePort.FloatCommitInput;
-import com.agentbanking.orchestrator.domain.port.out.LedgerServicePort.FloatCreditInput;
-import com.agentbanking.orchestrator.domain.port.out.LedgerServicePort.FloatReleaseInput;
+import com.agentbanking.orchestrator.domain.port.out.LedgerServicePort.*;
 import com.agentbanking.orchestrator.domain.port.out.PINInventoryPort.PINGenerationResult;
+import com.agentbanking.orchestrator.domain.port.out.RulesServicePort.*;
 
 import io.temporal.activity.ActivityOptions;
 import io.temporal.common.RetryOptions;
@@ -34,6 +31,9 @@ public class PINPurchaseWorkflowImpl implements PINPurchaseWorkflow {
 
     private static final Logger log = Workflow.getLogger(PINPurchaseWorkflowImpl.class);
 
+    private GetDailyMetricsActivity getDailyMetricsActivity;
+    private CheckVelocityActivity checkVelocityActivity;
+    private EvaluateStpActivity evaluateStpActivity;
     private ValidatePINInventoryActivity validatePINInventoryActivity;
     private GeneratePINActivity generatePINActivity;
     private BlockFloatActivity blockFloatActivity;
@@ -45,6 +45,9 @@ public class PINPurchaseWorkflowImpl implements PINPurchaseWorkflow {
     private WorkflowStatus currentStatus = WorkflowStatus.PENDING;
 
     public PINPurchaseWorkflowImpl(
+            GetDailyMetricsActivity getDailyMetricsActivity,
+            CheckVelocityActivity checkVelocityActivity,
+            EvaluateStpActivity evaluateStpActivity,
             ValidatePINInventoryActivity validatePINInventoryActivity,
             GeneratePINActivity generatePINActivity,
             BlockFloatActivity blockFloatActivity,
@@ -52,6 +55,9 @@ public class PINPurchaseWorkflowImpl implements PINPurchaseWorkflow {
             ReleaseFloatActivity releaseFloatActivity,
             CreditAgentFloatActivity creditAgentFloatActivity,
             PersistWorkflowResultActivity persistWorkflowResultActivity) {
+        this.getDailyMetricsActivity = getDailyMetricsActivity;
+        this.checkVelocityActivity = checkVelocityActivity;
+        this.evaluateStpActivity = evaluateStpActivity;
         this.validatePINInventoryActivity = validatePINInventoryActivity;
         this.generatePINActivity = generatePINActivity;
         this.blockFloatActivity = blockFloatActivity;
@@ -63,6 +69,18 @@ public class PINPurchaseWorkflowImpl implements PINPurchaseWorkflow {
 
     @SuppressWarnings("SpringJavaAutowiredMembersInspection")
     public PINPurchaseWorkflowImpl() {
+        this.getDailyMetricsActivity = Workflow.newActivityStub(GetDailyMetricsActivity.class, ActivityOptions.newBuilder()
+                .setStartToCloseTimeout(Duration.ofSeconds(30))
+                .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(3).build())
+                .build());
+        this.checkVelocityActivity = Workflow.newActivityStub(CheckVelocityActivity.class, ActivityOptions.newBuilder()
+                .setStartToCloseTimeout(Duration.ofSeconds(30))
+                .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(3).build())
+                .build());
+        this.evaluateStpActivity = Workflow.newActivityStub(EvaluateStpActivity.class, ActivityOptions.newBuilder()
+                .setStartToCloseTimeout(Duration.ofSeconds(30))
+                .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(3).build())
+                .build());
         this.validatePINInventoryActivity = Workflow.newActivityStub(ValidatePINInventoryActivity.class, ActivityOptions.newBuilder()
                 .setStartToCloseTimeout(Duration.ofSeconds(30))
                 .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(3).build())
@@ -100,6 +118,50 @@ public class PINPurchaseWorkflowImpl implements PINPurchaseWorkflow {
 
         try {
             BigDecimal totalAmount = input.faceValue().multiply(BigDecimal.valueOf(input.quantity()));
+
+            // Task: Fetch metrics
+            DailyMetricsResult metrics = getDailyMetricsActivity.getDailyMetrics(input.agentId());
+
+            // Step 1: Check velocity
+            VelocityCheckResult velocityResult = checkVelocityActivity.checkVelocity(
+                    new VelocityCheckInput(
+                        input.agentId(), 
+                        "PIN_PURCHASE",
+                        totalAmount, 
+                        "UNKNOWN",
+                        metrics.transactionCountToday(),
+                        metrics.amountToday()
+                    ));
+            
+            if (!velocityResult.passed()) {
+                currentStatus = WorkflowStatus.FAILED;
+                WorkflowResult failResult = WorkflowResult.failed(velocityResult.errorCode(), "Velocity check failed", "DECLINE");
+                persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
+                        Workflow.getInfo().getWorkflowId(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null, "Velocity check failed"));
+                return failResult;
+            }
+
+            // Step 2: Evaluate STP
+            StpDecision stpDecision = evaluateStpActivity.evaluateStp(
+                    new EvaluateStpActivity.Input(
+                            "PIN_PURCHASE",
+                            input.agentId().toString(),
+                            totalAmount.toString(),
+                            "UNKNOWN",
+                            input.agentTier(),
+                            metrics.transactionCountToday(),
+                            metrics.amountToday().toString(),
+                            metrics.todayTotalAmount().toString()
+                    )
+            );
+            if (!stpDecision.approved()) {
+                currentStatus = WorkflowStatus.PENDING_REVIEW;
+                WorkflowResult reviewResult = WorkflowResult.failed("ERR_STP_REVIEW", stpDecision.reason(), "REVIEW");
+                persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
+                        Workflow.getInfo().getWorkflowId(), "PENDING_REVIEW", reviewResult.errorCode(), reviewResult.errorMessage(), null, null, null, stpDecision.reason()));
+                return reviewResult;
+            }
+
             UUID transactionId;
             PINGenerationResult pinResult;
 
@@ -115,7 +177,7 @@ public class PINPurchaseWorkflowImpl implements PINPurchaseWorkflow {
             } catch (ActivityFailure e) {
                 log.error("validatePINInventoryActivity failed: {}", e.getMessage());
                 currentStatus = WorkflowStatus.FAILED;
-                WorkflowResult failResult = WorkflowResult.failed("ERR_ACTIVITY_FAILED", "PIN inventory validation failed: " + e.getMessage(), "RETRY");
+                WorkflowResult failResult = WorkflowResult.failed("ERR_ACTIVITY_FAILURE", "PIN inventory validation failed: " + e.getMessage(), "RETRY");
                 persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
                         Workflow.getInfo().getWorkflowId(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null, "ActivityFailure: " + e.getMessage()));
                 return failResult;
@@ -134,7 +196,8 @@ public class PINPurchaseWorkflowImpl implements PINPurchaseWorkflow {
                             input.geofenceLat(),
                             input.geofenceLng(),
                             input.agentTier(),
-                            input.targetBin()
+                            input.targetBin(),
+                            "PIN_PURCHASE"
                     )
             );
             if (!blockResult.success()) {
@@ -148,7 +211,7 @@ public class PINPurchaseWorkflowImpl implements PINPurchaseWorkflow {
             } catch (ActivityFailure e) {
                 log.error("blockFloatActivity failed: {}", e.getMessage());
                 currentStatus = WorkflowStatus.FAILED;
-                WorkflowResult failResult = WorkflowResult.failed("ERR_ACTIVITY_FAILED", "Float block failed: " + e.getMessage(), "RETRY");
+                WorkflowResult failResult = WorkflowResult.failed("ERR_ACTIVITY_FAILURE", "Float block failed: " + e.getMessage(), "RETRY");
                 persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
                         Workflow.getInfo().getWorkflowId(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null, "ActivityFailure: " + e.getMessage()));
                 return failResult;
@@ -167,7 +230,7 @@ public class PINPurchaseWorkflowImpl implements PINPurchaseWorkflow {
             } catch (ActivityFailure e) {
                 log.error("generatePINActivity failed: {}", e.getMessage());
                 currentStatus = WorkflowStatus.FAILED;
-                WorkflowResult failResult = WorkflowResult.failed("ERR_ACTIVITY_FAILED", "PIN generation failed: " + e.getMessage(), "RETRY");
+                WorkflowResult failResult = WorkflowResult.failed("ERR_ACTIVITY_FAILURE", "PIN generation failed: " + e.getMessage(), "RETRY");
                 persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
                         Workflow.getInfo().getWorkflowId(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null, "ActivityFailure: " + e.getMessage()));
                 return failResult;
@@ -178,7 +241,7 @@ public class PINPurchaseWorkflowImpl implements PINPurchaseWorkflow {
             } catch (ActivityFailure e) {
                 log.error("commitFloatActivity failed: {}", e.getMessage());
                 currentStatus = WorkflowStatus.FAILED;
-                WorkflowResult failResult = WorkflowResult.failed("ERR_ACTIVITY_FAILED", "Float commit failed: " + e.getMessage(), "RETRY");
+                WorkflowResult failResult = WorkflowResult.failed("ERR_ACTIVITY_FAILURE", "Float commit failed: " + e.getMessage(), "RETRY");
                 persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
                         Workflow.getInfo().getWorkflowId(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null, "ActivityFailure: " + e.getMessage()));
                 return failResult;
@@ -198,13 +261,14 @@ public class PINPurchaseWorkflowImpl implements PINPurchaseWorkflow {
                             input.targetBin(),
                             pinResult.pinCode(),
                             input.geofenceLat(),
-                            input.geofenceLng()
+                            input.geofenceLng(),
+                            "PIN_PURCHASE"
                     )
             );
             } catch (ActivityFailure e) {
                 log.error("creditAgentFloatActivity failed: {}", e.getMessage());
                 currentStatus = WorkflowStatus.FAILED;
-                WorkflowResult failResult = WorkflowResult.failed("ERR_ACTIVITY_FAILED", "Credit agent float failed: " + e.getMessage(), "RETRY");
+                WorkflowResult failResult = WorkflowResult.failed("ERR_ACTIVITY_FAILURE", "Credit agent float failed: " + e.getMessage(), "RETRY");
                 persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
                         Workflow.getInfo().getWorkflowId(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null, "ActivityFailure: " + e.getMessage()));
                 return failResult;

@@ -18,7 +18,8 @@ public class RulesServiceAdapter implements RulesServicePort {
 
     @Override
     public VelocityCheckResult checkVelocity(VelocityCheckInput input) {
-        log.info("Checking velocity for agent: {}", input.agentId());
+        log.info("Checking velocity for agent: {}, type: {}, count: {}, amount: {}", 
+            input.agentId(), input.transactionType(), input.transactionCountToday(), input.amountToday());
         return rulesServiceClient.checkVelocity(input);
     }
 

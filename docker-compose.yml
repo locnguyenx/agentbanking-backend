@@ -1,154 +1,24 @@
 services:
   # ==================== Infrastructure ====================
   
-  # PostgreSQL for Rules Service
-  postgres-rules:
+    # Shared PostgreSQL for all services
+  postgres-shared:
     image: postgres:16-alpine
     profiles: [infra, backend, all]
     environment:
-      POSTGRES_DB: rules_db
+      POSTGRES_DB: postgres
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     ports:
-      - "5433:5432"
+      - "5432:5432"
+    command: postgres -c max_connections=500
     volumes:
-      - pgdata-rules:/var/lib/postgresql/data
-    mem_limit: 256m
+      - postgres-shared-data:/var/lib/postgresql/data
+      - ./db/init-shared-db.sh:/docker-entrypoint-initdb.d/init-shared-db.sh
+      - ./db/seed/auth/V1__auth_system_seed.sql:/tmp/V1__auth_system_seed.sql
+    mem_limit: 512m
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-
-  # PostgreSQL for Ledger Service
-  postgres-ledger:
-    image: postgres:16-alpine
-    profiles: [infra, backend, all]
-    environment:
-      POSTGRES_DB: ledger_db
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-    ports:
-      - "5434:5432"
-    volumes:
-      - pgdata-ledger:/var/lib/postgresql/data
-    mem_limit: 256m
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-
-  # PostgreSQL for Onboarding Service
-  postgres-onboarding:
-    image: postgres:16-alpine
-    profiles: [infra, backend, all]
-    environment:
-      POSTGRES_DB: onboarding_db
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-    ports:
-      - "5435:5432"
-    volumes:
-      - pgdata-onboarding:/var/lib/postgresql/data
-    mem_limit: 256m
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-
-  # PostgreSQL for Switch Adapter Service
-  postgres-switch:
-    image: postgres:16-alpine
-    profiles: [infra, backend, all]
-    environment:
-      POSTGRES_DB: switch_db
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-    ports:
-      - "5436:5432"
-    volumes:
-      - pgdata-switch:/var/lib/postgresql/data
-    mem_limit: 256m
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-
-  # PostgreSQL for Biller Service
-  postgres-biller:
-    image: postgres:16-alpine
-    profiles: [infra, backend, all]
-    environment:
-      POSTGRES_DB: biller_db
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-    ports:
-      - "5437:5432"
-    volumes:
-      - pgdata-biller:/var/lib/postgresql/data
-    mem_limit: 256m
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-
-  # PostgreSQL for Orchestrator Service
-  postgres-orchestrator:
-    image: postgres:16-alpine
-    profiles: [infra, backend, all]
-    environment:
-      POSTGRES_DB: orchestrator_db
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-    ports:
-      - "5438:5432"
-    volumes:
-      - pgdata-orchestrator:/var/lib/postgresql/data
-    mem_limit: 256m
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-
-  # PostgreSQL for Auth/IAM Service
-  postgres-auth:
-    image: postgres:16-alpine
-    profiles: [infra, backend, all]
-    environment:
-      POSTGRES_DB: authdb
-      POSTGRES_USER: auth_user
-      POSTGRES_PASSWORD: auth_password
-    ports:
-      - "5439:5432"
-    volumes:
-      - pgdata-auth:/var/lib/postgresql/data
-    mem_limit: 256m
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U auth_user -d authdb"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-
-  # PostgreSQL for Audit Service
-  postgres-audit:
-    image: postgres:16-alpine
-    profiles: [infra, backend, all]
-    environment:
-      POSTGRES_DB: auditdb
-      POSTGRES_USER: audit_user
-      POSTGRES_PASSWORD: audit_password
-    ports:
-      - "5440:5432"
-    volumes:
-      - postgres-audit-data:/var/lib/postgresql/data
-    mem_limit: 256m
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U audit_user -d auditdb"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -218,13 +88,13 @@ services:
       - "8081:8081"
     mem_limit: 384m
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-rules:5432/rules_db
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-shared:5432/rules_db
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: postgres
       SPRING_FLYWAY_BASELINE_ON_MIGRATE: "true"
       SPRING_DATA_REDIS_HOST: redis
     depends_on:
-      postgres-rules:
+      postgres-shared:
         condition: service_healthy
       redis:
         condition: service_healthy
@@ -244,7 +114,7 @@ services:
       - "18082:8082"
     mem_limit: 384m
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-ledger:5432/ledger_db
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-shared:5432/ledger_db
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: postgres
       SPRING_DATA_REDIS_HOST: redis
@@ -252,7 +122,7 @@ services:
       RULES_SERVICE_URL: http://rules-service:8081
       SWITCH_ADAPTER_SERVICE_URL: http://switch-adapter-service:8084
     depends_on:
-      postgres-ledger:
+      postgres-shared:
         condition: service_healthy
       redis:
         condition: service_healthy
@@ -276,7 +146,7 @@ services:
       - "8083:8083"
     mem_limit: 384m
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-onboarding:5432/onboarding_db
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-shared:5432/onboarding_db
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: postgres
       SERVICES_LEDGER-SERVICE_URL: http://ledger-service:8082
@@ -284,7 +154,7 @@ services:
       AML-SCREENING_URL: http://mock-server:8090
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
     depends_on:
-      postgres-onboarding:
+      postgres-shared:
         condition: service_healthy
       kafka:
         condition: service_healthy
@@ -304,13 +174,14 @@ services:
       - "8084:8084"
     mem_limit: 384m
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-switch:5432/switch_db
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-shared:5432/switch_db
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: postgres
       MOCK_SERVER_URL: http://mock-server:8090
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       SPRING_MAIN_ALLOW_BEAN_DEFINITION_OVERRIDING: "true"
     depends_on:
-      postgres-switch:
+      postgres-shared:
         condition: service_healthy
       mock-server:
         condition: service_healthy
@@ -330,12 +201,12 @@ services:
       - "8085:8085"
     mem_limit: 384m
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-biller:5432/biller_db
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-shared:5432/biller_db
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: postgres
       MOCK_SERVER_URL: http://mock-server:8090
     depends_on:
-      postgres-biller:
+      postgres-shared:
         condition: service_healthy
       mock-server:
         condition: service_healthy
@@ -357,7 +228,7 @@ services:
       - "8086:8086"
     mem_limit: 384m
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-orchestrator:5432/orchestrator_db
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-shared:5432/orchestrator_db
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: postgres
       SPRING_DATA_REDIS_HOST: redis
@@ -369,7 +240,7 @@ services:
       BILLER_SERVICE_URL: http://biller-service:8085
       CBS_CONNECTOR_URL: http://mock-server:8090
     depends_on:
-      postgres-orchestrator:
+      postgres-shared:
         condition: service_healthy
       redis:
         condition: service_healthy
@@ -399,14 +270,15 @@ services:
       - "8087:8087"
     mem_limit: 384m
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-auth:5432/authdb
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-shared:5432/authdb
       SPRING_DATASOURCE_USERNAME: auth_user
       SPRING_DATASOURCE_PASSWORD: auth_password
       SPRING_DATA_REDIS_HOST: redis
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      SPRING_FLYWAY_ENABLED: "true"
       JWT_SECRET: your-super-secret-jwt-key-change-in-production-minimum-32-chars-long
     depends_on:
-      postgres-auth:
+      postgres-shared:
         condition: service_healthy
       redis:
         condition: service_healthy
@@ -428,12 +300,12 @@ services:
       - "8088:8088"
     mem_limit: 256m
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-audit:5432/auditdb
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-shared:5432/auditdb
       SPRING_DATASOURCE_USERNAME: audit_user
       SPRING_DATASOURCE_PASSWORD: audit_password
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
     depends_on:
-      postgres-audit:
+      postgres-shared:
         condition: service_healthy
       kafka:
         condition: service_started
@@ -497,11 +369,11 @@ services:
     environment:
       - DB=postgres12
       - DB_PORT=5432
-      - POSTGRES_SEEDS=temporal-postgres
+      - POSTGRES_SEEDS=postgres-shared
       - POSTGRES_USER=temporal
       - POSTGRES_PWD=temporal
     depends_on:
-      temporal-postgres:
+      postgres-shared:
         condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "pgrep temporal-server > /dev/null 2>&1 || exit 1"]
@@ -510,37 +382,16 @@ services:
       retries: 5
       start_period: 60s
 
-  temporal-postgres:
-    image: postgres:16
-    environment:
-      - POSTGRES_USER=temporal
-      - POSTGRES_PASSWORD=temporal
-      - POSTGRES_DB=temporal
-    volumes:
-      - temporal-postgres-data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U temporal"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
 
   temporal-ui:
     image: temporalio/ui:latest
     profiles: [backend, all]
     ports:
-      - "8082:8080"
+      - "8089:8080"
     environment:
       - TEMPORAL_ADDRESS=temporal:7233
     depends_on:
       - temporal
 
 volumes:
-  pgdata-rules:
-  pgdata-ledger:
-  pgdata-onboarding:
-  pgdata-switch:
-  pgdata-biller:
-  pgdata-orchestrator:
-  pgdata-auth:
-  postgres-audit-data:
-  temporal-postgres-data:
+  postgres-shared-data:

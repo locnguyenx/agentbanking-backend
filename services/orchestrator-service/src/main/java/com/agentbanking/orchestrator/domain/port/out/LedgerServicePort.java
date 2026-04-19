@@ -19,6 +19,14 @@ public interface LedgerServicePort {
 
     TransactionDetailsResult getTransactionDetails(UUID transactionId);
 
+    DailyMetricsResult getDailyMetrics(UUID agentId);
+
+    record DailyMetricsResult(
+        int transactionCountToday,
+        BigDecimal amountToday,
+        BigDecimal todayTotalAmount
+    ) {}
+
     record FloatBlockInput(
         UUID agentId,
         BigDecimal amount,
@@ -30,7 +38,8 @@ public interface LedgerServicePort {
         BigDecimal geofenceLat,
         BigDecimal geofenceLng,
         String agentTier,
-        String targetBin
+        String targetBin,
+        String transactionType
     ) {}
 
     record FloatBlockResult(
@@ -73,7 +82,8 @@ public interface LedgerServicePort {
         String targetBin,
         String referenceNumber,
         BigDecimal geofenceLat,
-        BigDecimal geofenceLng
+        BigDecimal geofenceLng,
+        String transactionType
     ) {}
 
     record FloatCreditResult(

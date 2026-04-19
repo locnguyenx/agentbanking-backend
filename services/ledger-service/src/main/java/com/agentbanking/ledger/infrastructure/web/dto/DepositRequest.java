@@ -19,5 +19,6 @@ public record DepositRequest(
     @JsonProperty("targetBin") String targetBin,
     @JsonProperty("referenceNumber") String referenceNumber,
     @JsonProperty("geofenceLat") BigDecimal geofenceLat,
-    @JsonProperty("geofenceLng") BigDecimal geofenceLng
+    @JsonProperty("geofenceLng") BigDecimal geofenceLng,
+    @JsonProperty("transactionType") String transactionType
 ) {}

@@ -66,7 +66,8 @@ public class LedgerService {
                                                    BigDecimal bankShare, String idempotencyKey,
                                                    String customerCardMasked,
                                                    BigDecimal geofenceLat, BigDecimal geofenceLng,
-                                                   String agentTier, String targetBin) {
+                                                   String agentTier, String targetBin,
+                                                   String transactionType) {
         if (idempotencyKey != null && idempotencyCache.exists(idempotencyKey)) {
             try {
                 return idempotencyCache.get(idempotencyKey, Map.class);
@@ -116,7 +117,7 @@ public class LedgerService {
                 null,
                 idempotencyKey,
                 agentId,
-                TransactionType.CASH_WITHDRAWAL,
+                transactionType != null ? TransactionType.valueOf(transactionType) : TransactionType.CASH_WITHDRAWAL,
                 amount,
                 customerFee,
                 agentCommission,
@@ -200,7 +201,8 @@ public class LedgerService {
                                                BigDecimal bankShare, String idempotencyKey,
                                                String customerMykad, String billerCode, 
                                                String ref1, String ref2,
-                                               BigDecimal geofenceLat, BigDecimal geofenceLng) {
+                                               BigDecimal geofenceLat, BigDecimal geofenceLng,
+                                               String transactionType) {
         if (idempotencyKey != null && idempotencyCache.exists(idempotencyKey)) {
             try {
                 return idempotencyCache.get(idempotencyKey, Map.class);
@@ -227,7 +229,7 @@ public class LedgerService {
                 null,
                 idempotencyKey,
                 agentId,
-                TransactionType.CASH_DEPOSIT,
+                transactionType != null ? TransactionType.valueOf(transactionType) : TransactionType.CASH_DEPOSIT,
                 amount,
                 customerFee,
                 agentCommission,
@@ -342,54 +344,130 @@ public class LedgerService {
                                    String description, String referenceNumber, 
                                    String billerCode, String targetBin, 
                                    String destinationAccount, String ref1, String ref2) {
-        log.info("Provisioning float for agent: {}, tier: {}", agentId, tier);
-        AgentFloatRecord floatRecord = new AgentFloatRecord(
-            null, // floatId
-            agentId, 
-            BigDecimal.ZERO, 
-            BigDecimal.ZERO, // reservedBalance
-            MYR_CURRENCY, 
-            null, // version
-            BigDecimal.valueOf(lat), 
-            BigDecimal.valueOf(lng)
-        );
-        agentFloatRepository.save(floatRecord);
         
-        // Log initialization transaction with metadata
-        var transaction = new TransactionRecord(
-            null, UUID.randomUUID().toString(), agentId, TransactionType.CASH_DEPOSIT,
-            BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO,
-            TransactionStatus.COMPLETED, null, null, null, null, "INITIAL_PROVISION",
-            BigDecimal.valueOf(lat), BigDecimal.valueOf(lng), LocalDateTime.now(), LocalDateTime.now(),
-            tier, targetBin, billerCode, ref1, ref2, destinationAccount
-        );
-        transactionRepository.save(transaction);
+        // Re-use or skip if already exists
+        if (agentFloatRepository.findById(agentId) != null) {
+            log.info("Agent float already exists for agent: {}", agentId);
+            return;
+        }
+
+        try {
+            log.info("Provisioning float for agent: {}, tier: {}", agentId, tier);
+            AgentFloatRecord floatRecord = new AgentFloatRecord(
+                null, // floatId
+                agentId, 
+                BigDecimal.ZERO, 
+                BigDecimal.ZERO, // reservedBalance
+                MYR_CURRENCY, 
+                null, // version
+                BigDecimal.valueOf(lat), 
+                BigDecimal.valueOf(lng)
+            );
+            agentFloatRepository.save(floatRecord);
+            
+            // Log initialization transaction with metadata
+            var transaction = new TransactionRecord(
+                null, UUID.randomUUID().toString(), agentId, TransactionType.CASH_DEPOSIT,
+                BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO,
+                TransactionStatus.COMPLETED, null, null, null, null, "INITIAL_PROVISION",
+                BigDecimal.valueOf(lat), BigDecimal.valueOf(lng), LocalDateTime.now(), LocalDateTime.now(),
+                tier, targetBin, billerCode, ref1, ref2, destinationAccount
+            );
+            transactionRepository.save(transaction);
+        } catch (org.springframework.dao.DataIntegrityViolationException e) {
+            log.info("Agent float concurrently provisioned for agent: {}", agentId);
+        }
     }
 
+    @Transactional
     public Map<String, Object> processRetailSale(UUID merchantId, BigDecimal amount, 
                                                String cardData, String pinBlock, String idempotencyKey,
                                                UUID agentId, String description, String referenceNumber,
                                                String agentTier, String billerCode, String targetBin,
                                                String destinationAccount, String ref1, String ref2) {
         log.info("Processing retail sale for merchant: {}, amount: {}", merchantId, amount);
+        
+        amount = amount.setScale(2, RoundingMode.HALF_UP);
+        BigDecimal mdrRate = new BigDecimal("0.02"); // 2% MDR
+        BigDecimal mdrAmount = amount.multiply(mdrRate).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal netToMerchant = amount.subtract(mdrAmount);
+
+        AgentFloatRecord agentFloat = agentFloatRepository.findByIdWithLock(agentId);
+        if (agentFloat == null) {
+            throw new LedgerException(ErrorCodes.ERR_AGENT_FLOAT_NOT_FOUND, "RETRY");
+        }
+
+        // Retail sale INCREASES float (merchant receiving funds)
+        agentFloatRepository.updateBalance(agentId, netToMerchant);
+
+        var transaction = new TransactionRecord(
+                null, idempotencyKey, agentId, TransactionType.RETAIL_SALE,
+                amount, BigDecimal.ZERO, BigDecimal.ZERO, mdrAmount,
+                TransactionStatus.COMPLETED, null, null, null, null, 
+                referenceNumber != null ? referenceNumber : UUID.randomUUID().toString(),
+                agentFloat.merchantGpsLat(), agentFloat.merchantGpsLng(),
+                LocalDateTime.now(), LocalDateTime.now(),
+                agentTier, targetBin, billerCode, ref1, ref2, destinationAccount
+        );
+        transaction = transactionRepository.save(transaction);
+
+        var journalEntries = new ArrayList<JournalEntryRecord>();
+        journalEntries.add(new JournalEntryRecord(null, transaction.transactionId(), EntryType.CREDIT, "AGENT_FLOAT", netToMerchant, "Retail sale credit", LocalDateTime.now()));
+        journalEntries.add(new JournalEntryRecord(null, transaction.transactionId(), EntryType.CREDIT, "MDR_INCOME", mdrAmount, "MDR fee", LocalDateTime.now()));
+        journalEntries.add(new JournalEntryRecord(null, transaction.transactionId(), EntryType.DEBIT, "CUSTOMER_ACCOUNT", amount.negate(), "Customer debit", LocalDateTime.now()));
+        journalEntryRepository.saveAll(journalEntries);
+
         Map<String, Object> result = new HashMap<>();
         result.put("status", "COMPLETED");
-        result.put("transactionId", UUID.randomUUID().toString());
+        result.put("transactionId", transaction.transactionId().toString());
         result.put("amount", amount);
-        result.put("mdrAmount", amount.multiply(new BigDecimal("0.02")));
-        result.put("netToMerchant", amount.multiply(new BigDecimal("0.98")));
+        result.put("mdrAmount", mdrAmount);
+        result.put("netToMerchant", netToMerchant);
         return result;
     }
 
+    @Transactional
     public Map<String, Object> processPinPurchase(UUID agentId, String productCode, BigDecimal amount, 
                                                  String idempotencyKey, String agentTier, String billerCode,
                                                  String targetBin, String destinationAccount, String ref1, String ref2) {
         log.info("Processing PIN purchase for agent: {}, product: {}", agentId, productCode);
+        
+        amount = amount.setScale(2, RoundingMode.HALF_UP);
+        BigDecimal commission = amount.multiply(new BigDecimal("0.05")).setScale(2, RoundingMode.HALF_UP);
+        
+        AgentFloatRecord agentFloat = agentFloatRepository.findByIdWithLock(agentId);
+        if (agentFloat == null) {
+            throw new LedgerException(ErrorCodes.ERR_AGENT_FLOAT_NOT_FOUND, "RETRY");
+        }
+
+        if (agentFloat.balance().compareTo(amount) < 0) {
+            throw new LedgerException(ErrorCodes.ERR_INSUFFICIENT_FLOAT, "DECLINE", "Insufficient agent float for PIN purchase");
+        }
+
+        // PIN purchase DECREASES float (agent buying inventory)
+        agentFloatRepository.updateBalance(agentId, amount.negate());
+
+        var transaction = new TransactionRecord(
+                null, idempotencyKey, agentId, TransactionType.PIN_PURCHASE,
+                amount, BigDecimal.ZERO, commission, BigDecimal.ZERO,
+                TransactionStatus.COMPLETED, null, null, null, null, 
+                UUID.randomUUID().toString(),
+                agentFloat.merchantGpsLat(), agentFloat.merchantGpsLng(),
+                LocalDateTime.now(), LocalDateTime.now(),
+                agentTier, targetBin, billerCode, ref1, ref2, destinationAccount
+        );
+        transaction = transactionRepository.save(transaction);
+
+        var journalEntries = new ArrayList<JournalEntryRecord>();
+        journalEntries.add(new JournalEntryRecord(null, transaction.transactionId(), EntryType.DEBIT, "AGENT_FLOAT", amount.negate(), "PIN purchase debit", LocalDateTime.now()));
+        journalEntries.add(new JournalEntryRecord(null, transaction.transactionId(), EntryType.CREDIT, "DIGITAL_INVENTORY", amount, "Inventory credit", LocalDateTime.now()));
+        journalEntryRepository.saveAll(journalEntries);
+
         Map<String, Object> result = new HashMap<>();
         result.put("status", "COMPLETED");
-        result.put("transactionId", UUID.randomUUID().toString());
+        result.put("transactionId", transaction.transactionId().toString());
         result.put("pinCode", "PIN-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
-        result.put("commission", amount.multiply(new BigDecimal("0.05")));
+        result.put("commission", commission);
         return result;
     }
 
@@ -409,15 +487,44 @@ public class LedgerService {
         return Optional.ofNullable(transactionRepository.findById(transactionId));
     }
 
+    @Transactional
     public Map<String, Object> processCashBack(UUID merchantId, BigDecimal amount, 
                                              String cardData, String pinBlock, String idempotencyKey) {
         log.info("Processing cash back for merchant: {}, amount: {}", merchantId, amount);
-        // Specialized cash back logic...
+        
+        amount = amount.setScale(2, RoundingMode.HALF_UP);
+        BigDecimal commission = amount.multiply(new BigDecimal("0.01")).setScale(2, RoundingMode.HALF_UP);
+
+        AgentFloatRecord agentFloat = agentFloatRepository.findByIdWithLock(merchantId); // merchantId is agentId here
+        if (agentFloat == null) {
+            throw new LedgerException(ErrorCodes.ERR_AGENT_FLOAT_NOT_FOUND, "RETRY");
+        }
+
+        // Cash back INCREASES float (agent is reimbursed for giving cash to customer?)
+        // Wait, if I give cash RM50 to customer, the bank should credit my float with RM50.
+        agentFloatRepository.updateBalance(merchantId, amount);
+
+        var transaction = new TransactionRecord(
+                null, idempotencyKey, merchantId, TransactionType.CASH_BACK,
+                amount, BigDecimal.ZERO, commission, BigDecimal.ZERO,
+                TransactionStatus.COMPLETED, null, null, null, null, 
+                UUID.randomUUID().toString(),
+                agentFloat.merchantGpsLat(), agentFloat.merchantGpsLng(),
+                LocalDateTime.now(), LocalDateTime.now(),
+                null, null, null, null, null, null
+        );
+        transaction = transactionRepository.save(transaction);
+
+        var journalEntries = new ArrayList<JournalEntryRecord>();
+        journalEntries.add(new JournalEntryRecord(null, transaction.transactionId(), EntryType.CREDIT, "AGENT_FLOAT", amount, "Cashback reimbursement", LocalDateTime.now()));
+        journalEntries.add(new JournalEntryRecord(null, transaction.transactionId(), EntryType.DEBIT, "CUSTOMER_ACCOUNT", amount.negate(), "Cashback debit", LocalDateTime.now()));
+        journalEntryRepository.saveAll(journalEntries);
+
         Map<String, Object> result = new HashMap<>();
         result.put("status", "COMPLETED");
-        result.put("transactionId", UUID.randomUUID().toString());
+        result.put("transactionId", transaction.transactionId().toString());
         result.put("cashBackAmount", amount);
-        result.put("commission", amount.multiply(new BigDecimal("0.01")));
+        result.put("commission", commission);
         return result;
     }
 }

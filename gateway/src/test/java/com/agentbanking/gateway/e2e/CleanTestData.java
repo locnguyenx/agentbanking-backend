@@ -29,7 +29,8 @@ public class CleanTestData {
     // Test user patterns to clean up
     private static final String[] TEST_USER_PATTERNS = {
             "agent001", "operator001", "auditor001", "teller001",
-            "maker001", "checker001", "compliance001", "supervisor001"
+            "maker001", "checker001", "compliance001", "supervisor001",
+            "AGT-E2E-"
     };
 
     // Test agent patterns to clean up
@@ -75,32 +76,44 @@ public class CleanTestData {
     }
 
     private static String getAdminToken() {
-        try {
-            WebTestClient client = WebTestClient.bindToServer().baseUrl(AUTH_URL)
-                    .responseTimeout(java.time.Duration.ofSeconds(30))
-                    .build();
-            String body = """
-                    {
-                        "username": "admin",
-                        "password": "password"
-                    }
-                    """;
+        int maxRetries = 10;
+        int waitMs = 3000;
+        for (int i = 0; i < maxRetries; i++) {
+            try {
+                WebTestClient client = WebTestClient.bindToServer().baseUrl(AUTH_URL)
+                        .responseTimeout(java.time.Duration.ofSeconds(30))
+                        .build();
+                String body = """
+                        {
+                            "username": "admin",
+                            "password": "password"
+                        }
+                        """;
 
-            String response = client.post()
-                    .uri("/auth/token")
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .bodyValue(body)
-                    .exchange()
-                    .expectBody(String.class)
-                    .returnResult()
-                    .getResponseBody();
+                String response = client.post()
+                        .uri("/auth/token")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .bodyValue(body)
+                        .exchange()
+                        .expectBody(String.class)
+                        .returnResult()
+                        .getResponseBody();
 
-            JsonNode node = objectMapper.readTree(response);
-            return node.has("access_token") ? node.get("access_token").asText() : null;
-        } catch (Exception e) {
-            System.out.println("Failed to get admin token: " + e.getMessage());
-            return null;
+                JsonNode node = objectMapper.readTree(response);
+                if (node.has("access_token")) {
+                    return node.get("access_token").asText();
+                }
+            } catch (Exception e) {
+                System.out.println("Wait for auth-service... (" + (i + 1) + ")");
+                try {
+                    Thread.sleep(waitMs);
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    return null;
+                }
+            }
         }
+        return null;
     }
 
     private static void bootstrapAdmin() {
@@ -156,7 +169,7 @@ public class CleanTestData {
                     // Check if this is a test user
                     boolean isTestUser = false;
                     for (String pattern : TEST_USER_PATTERNS) {
-                        if (username.equals(pattern)) {
+                        if (username.startsWith(pattern)) {
                             isTestUser = true;
                             break;
                         }
@@ -216,13 +229,13 @@ public class CleanTestData {
                     }
 
                     if (isTestAgent) {
-                        System.out.println("  Deactivating agent: " + agentCode + " (" + agentId + ")");
+                        System.out.println("  Deleting agent: " + agentCode + " (" + agentId + ")");
                         try {
                             client.delete()
-                                    .uri("/backoffice/agents/" + agentId)
+                                    .uri("/internal/onboarding/agents/" + agentId)
                                     .header("Authorization", "Bearer " + adminToken)
                                     .exchange();
-                            System.out.println("    Deactivated successfully");
+                            System.out.println("    Deleted successfully");
                         } catch (Exception e) {
                             System.out.println("    Deactivate failed: " + e.getMessage());
                         }

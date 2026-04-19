@@ -11,6 +11,7 @@ public interface StpEvaluationUseCase {
 
     record StpEvaluationCommand(
         String transactionType,
+        String agentId,
         String customerMykad,
         BigDecimal amount,
         String agentTier,

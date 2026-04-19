@@ -17,9 +17,9 @@ public class VelocityCheckUseCaseImpl implements VelocityCheckUseCase {
 
     @Override
     @Transactional(readOnly = true)
-    public VelocityCheckResult check(int transactionCountToday, BigDecimal amountToday) {
+    public VelocityCheckResult check(String agentId, com.agentbanking.rules.domain.model.TransactionType transactionType, int transactionCountToday, BigDecimal amountToday) {
         VelocityCheckService.VelocityCheckResult result =
-            velocityCheckService.check(transactionCountToday, amountToday);
+            velocityCheckService.check(agentId, transactionType, transactionCountToday, amountToday);
         return new VelocityCheckResult(result.passed(), result.errorCode());
     }
 }

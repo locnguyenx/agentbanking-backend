@@ -1,7 +1,9 @@
 package com.agentbanking.rules.config;
 
 import com.agentbanking.rules.application.usecase.TransactionQuoteUseCaseImpl;
+import com.agentbanking.rules.domain.port.in.CreateVelocityRuleUseCase;
 import com.agentbanking.rules.domain.port.in.TransactionQuoteUseCase;
+import com.agentbanking.rules.domain.service.CreateVelocityRuleService;
 import com.agentbanking.rules.domain.service.FeeCalculationService;
 import com.agentbanking.rules.domain.service.LimitEnforcementService;
 import com.agentbanking.rules.domain.service.StpDecisionService;
@@ -27,6 +29,11 @@ public class DomainServiceConfig {
     @Bean
     public LimitEnforcementService limitEnforcementService() {
         return new LimitEnforcementService();
+    }
+
+    @Bean
+    public CreateVelocityRuleUseCase createVelocityRuleUseCase(VelocityRuleRepository velocityRuleRepository) {
+        return new CreateVelocityRuleService(velocityRuleRepository);
     }
 
     @Bean

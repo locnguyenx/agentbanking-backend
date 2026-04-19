@@ -78,11 +78,9 @@ public class JwtAuthGatewayFilterFactory
                         .parseSignedClaims(token)
                         .getPayload();
 
-                // Extract agent_id from claims, fall back to subject
-                String agentIdClaim = claims.get("agent_id", String.class);
-                String agentId = (agentIdClaim != null && !agentIdClaim.isBlank()) 
-                    ? agentIdClaim 
-                    : claims.getSubject();
+                // Extract agent_id from claims
+                String agentId = claims.get("agent_id", String.class);
+
 
                 if (agentId == null || agentId.isBlank()) {
                     return onError(exchange, "Missing agent_id claim in token", "ERR_AUTH_INVALID_TOKEN");

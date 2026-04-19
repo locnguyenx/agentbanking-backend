@@ -10,13 +10,14 @@ import java.util.UUID;
 public record WithdrawalRequest(
     @JsonProperty("agentId") @NotNull UUID agentId,
     @JsonProperty("amount") @NotNull @Positive BigDecimal amount,
-    @JsonProperty("customerFee") @NotNull @Positive BigDecimal customerFee,
-    @JsonProperty("agentCommission") @NotNull @Positive BigDecimal agentCommission,
-    @JsonProperty("bankShare") @NotNull @Positive BigDecimal bankShare,
+    @JsonProperty("customerFee") @NotNull @jakarta.validation.constraints.PositiveOrZero BigDecimal customerFee,
+    @JsonProperty("agentCommission") @NotNull @jakarta.validation.constraints.PositiveOrZero BigDecimal agentCommission,
+    @JsonProperty("bankShare") @NotNull @jakarta.validation.constraints.PositiveOrZero BigDecimal bankShare,
     @JsonProperty("idempotencyKey") @NotBlank String idempotencyKey,
-    @JsonProperty("customerCardMasked") @NotBlank String customerCardMasked,
+    @JsonProperty("customerCardMasked") String customerCardMasked,
     @JsonProperty("geofenceLat") BigDecimal geofenceLat,
     @JsonProperty("geofenceLng") BigDecimal geofenceLng,
     @JsonProperty("agentTier") String agentTier,
-    @JsonProperty("targetBin") String targetBin
+    @JsonProperty("targetBin") String targetBin,
+    @JsonProperty("transactionType") String transactionType
 ) {}

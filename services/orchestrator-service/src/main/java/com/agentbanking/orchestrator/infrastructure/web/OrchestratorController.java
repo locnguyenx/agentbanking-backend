@@ -135,10 +135,20 @@ public class OrchestratorController {
         var result = status.result();
         var metadata = result != null ? result.metadata() : Map.<String, Object>of();
         
+        // Convert errorDetails string to JsonNode if possible, or leave as null
+        com.fasterxml.jackson.databind.JsonNode detailsNode = null;
+        if (result != null && result.errorDetails() != null) {
+            try {
+                detailsNode = new com.fasterxml.jackson.databind.ObjectMapper().readTree(result.errorDetails());
+            } catch (Exception e) {
+                // If it's not JSON, we could wrap it in a TextNode but for now just leave null or handle as needed
+            }
+        }
+
         return new WorkflowStatusResponse(
             status.status() != null ? status.status().name() : "UNKNOWN",
             result != null ? result.pendingReason() : null,
-            result != null ? result.errorDetails() : null,
+            detailsNode,
             workflowId,
             null, // transactionType not currently in WorkflowResult
             result != null && result.amount() != null ? result.amount() : BigDecimal.ZERO,

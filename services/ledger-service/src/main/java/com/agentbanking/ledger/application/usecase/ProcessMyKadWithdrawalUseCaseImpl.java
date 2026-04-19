@@ -43,7 +43,8 @@ public class ProcessMyKadWithdrawalUseCaseImpl implements ProcessMyKadWithdrawal
                 command.geofenceLat(),
                 command.geofenceLng(),
                 command.agentTier(),
-                command.targetBin()
+                command.targetBin(),
+                "CASH_WITHDRAWAL"
         );
 
         TransactionResult response = new TransactionResult(
