@@ -43,3 +43,4 @@ secrets/
 build.log
 dependencies.log
 classmap.log
+test_*.txt
