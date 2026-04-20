@@ -145,7 +145,14 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                  - action
                 properties:
+                  action:
+                    type: string
+                    enum: [MANUAL_RETRY, MANUAL_CANCEL, MANUAL_COMPLETE]
+                  reason:
+                    type: string
                   status:
                     type: string
                     example: SUCCESS
@@ -226,8 +233,7 @@ paths:
           content:
             application/json:
               schema:
-                type: string
-                enum: [LOCKED, UNLOCKED]
+                $ref: '#/components/schemas/ComplianceStatusResponse'
         '401':
           description: Unauthorized
           content:
@@ -526,11 +532,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-  /api/v1/onboarding/submit-application:
+  /api/v1/onboarding/submit-application-legacy:
     post:
+      deprecated: true
+      description: "DEPRECATED: Use /api/v1/onboarding/submit-application instead."
       tags:
       - onboarding-controller (onboarding-service)
-      operationId: submitApplication
+      operationId: submitApplicationLegacy
       security:
         - bearerAuth: []
       requestBody:
@@ -556,7 +564,9 @@ paths:
     post:
       tags:
       - reconciliation-controller (ledger-service)
-      operationId: makerPropose
+      operationId: makerProposeActionLegacy
+      deprecated: true
+      description: "DEPRECATED: Use /api/v1/backoffice/discrepancy/maker-propose instead."
       security:
         - bearerAuth: []
       parameters:
@@ -570,48 +580,24 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/DiscrepancyMakerActionRequest'
-        required: true
+              type: object
+              required:
+                - caseId
+                - action
+                - userId
+              properties:
+                caseId:
+                  type: string
+                  format: uuid
+                action:
+                  type: string
+                userId:
+                  type: string
+                reason:
+                  type: string
       responses:
         '200':
           description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TransactionResponse'
-        '400':
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-  /api/v1/backoffice/discrepancy/{caseId}/checker-reject:
-    post:
-      tags:
-      - reconciliation-controller (ledger-service)
-      operationId: checkerReject
-      security:
-        - bearerAuth: []
-      parameters:
-      - name: caseId
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/DiscrepancyCheckerActionRequest'
-        required: true
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TransactionResponse'
         '400':
           description: Bad Request
           content:
@@ -622,7 +608,9 @@ paths:
     post:
       tags:
       - reconciliation-controller (ledger-service)
-      operationId: checkerApprove
+      operationId: checkerApproveActionLegacy
+      deprecated: true
+      description: "DEPRECATED: Use /api/v1/backoffice/discrepancy/checker-approve instead."
       security:
         - bearerAuth: []
       parameters:
@@ -636,21 +624,144 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/DiscrepancyCheckerActionRequest'
-        required: true
+              type: object
+              required:
+                - caseId
+                - userId
+              properties:
+                caseId:
+                  type: string
+                  format: uuid
+                userId:
+                  type: string
+                reason:
+                  type: string
       responses:
         '200':
           description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TransactionResponse'
         '400':
           description: Bad Request
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/backoffice/discrepancy/{caseId}/checker-reject:
+    post:
+      tags:
+      - reconciliation-controller (ledger-service)
+      operationId: checkerRejectActionLegacy
+      deprecated: true
+      description: "DEPRECATED: Use /api/v1/backoffice/transactions/{workflowId}/checker-reject instead."
+      security:
+        - bearerAuth: []
+      parameters:
+      - name: caseId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - caseId
+                - userId
+              properties:
+                caseId:
+                  type: string
+                  format: uuid
+                userId:
+                  type: string
+                reason:
+                  type: string
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/backoffice/discrepancy/maker-propose:
+    post:
+      tags:
+      - discrepancy-controller
+      operationId: makerPropose
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                caseId:
+                  type: string
+                action:
+                  type: string
+                userId:
+                  type: string
+                reason:
+                  type: string
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+  /api/v1/backoffice/discrepancy/checker-approve:
+    post:
+      tags:
+      - discrepancy-controller
+      operationId: checkerApprove
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                caseId:
+                  type: string
+                userId:
+                  type: string
+                reason:
+                  type: string
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal Server Error
   /api/v1/retail/sale:
     post:
       tags:
@@ -878,12 +989,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/TransactionListResponse'
-        '401':
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
   /api/v1/backoffice/settlement:
     get:
       tags:
@@ -905,6 +1010,32 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SettlementResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/backoffice/transactions:
+    get:
+      tags:
+      - resolution-controller (orchestrator-service)
+      operationId: listTransactions
+      security:
+        - bearerAuth: []
+      parameters:
+      - name: status
+        in: query
+        required: false
+        schema:
+          type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BackofficeTransactionListResponse'
         '401':
           description: Unauthorized
           content:
@@ -1036,7 +1167,39 @@ paths:
                 type: object
                 additionalProperties:
                   type: object
-  /api/v1/kyc/biometric:
+  /api/v1/onboarding/submit-application:
+    post:
+      tags:
+      - agent-onboarding-controller (onboarding-service)
+      operationId: submitApplication
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubmissionRequest'
+        required: true
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubmissionResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/onboarding/biometric-match:
     post:
       tags:
       - onboarding-controller (onboarding-service)
@@ -1088,9 +1251,7 @@ paths:
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/AgentResponse'
+                $ref: '#/components/schemas/AgentListResponse'
         '401':
           description: Unauthorized
           content:
@@ -1482,9 +1643,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                additionalProperties:
-                  type: object
+                $ref: '#/components/schemas/BackofficeAuditLogListResponse'
         '401':
           description: Unauthorized
           content:
@@ -1495,7 +1654,7 @@ paths:
     post:
       tags:
       - resolution-controller (orchestrator-service)
-      operationId: makerPropose
+      operationId: makerProposeTransaction
       summary: Maker proposes resolution for a transaction
       description: First step in four-eyes approval - maker proposes an action (COMMIT, ROLLBACK, ESCALATE)
       security:
@@ -1536,7 +1695,7 @@ paths:
     post:
       tags:
       - resolution-controller (orchestrator-service)
-      operationId: checkerApprove
+      operationId: checkerApproveTransaction
       summary: Checker approves proposed resolution
       description: Second step in four-eyes approval - checker approves the maker's proposal
       security:
@@ -1583,7 +1742,7 @@ paths:
     post:
       tags:
       - resolution-controller (orchestrator-service)
-      operationId: checkerReject
+      operationId: checkerRejectTransaction
       summary: Checker rejects proposed resolution
       description: Second step in four-eyes approval - checker rejects the maker's proposal, returning to maker
       security:
@@ -2154,7 +2313,6 @@ components:
     MyKadVerifyRequest:
       required:
       - mykadNumber
-      - name
       type: object
       properties:
         mykadNumber:
@@ -2452,13 +2610,13 @@ components:
           type: string
         status:
           type: string
-          enum: [CREATED, ACTIVE, INACTIVE]
-        effectiveFrom:
+          enum: [ACTIVE, INACTIVE, SUSPENDED, PENDING]
+        createdAt:
           type: string
-          format: date-time
-        effectiveTo:
+          description: ISO-8601 date-time
+        updatedAt:
           type: string
-          format: date-time
+          description: ISO-8601 date-time
     
     # KYC Verify Response
     KycVerifyResponse:
@@ -2469,7 +2627,15 @@ components:
           format: uuid
         status:
           type: string
-          enum: [VERIFIED, PENDING, FAILED]
+          enum: [VERIFIED, PENDING, FAILED, FOUND]
+        fullName:
+          type: string
+        dateOfBirth:
+          type: string
+        age:
+          type: integer
+        amlStatus:
+          type: string
         message:
           type: string
         kycLevel:
@@ -2508,10 +2674,8 @@ components:
           type: string
         createdAt:
           type: string
-          format: date-time
         updatedAt:
           type: string
-          format: date-time
     
     # Balance Response
     BalanceResponse:
@@ -2546,7 +2710,13 @@ components:
         totalTransactions:
           type: integer
         totalVolume:
-          type: string
+          type: number
+        totalCredits:
+          type: number
+        totalDebits:
+          type: number
+        pendingKyc:
+          type: integer
         successRate:
           type: number
         dailyStats:
@@ -2582,22 +2752,22 @@ components:
     SettlementResponse:
       type: object
       properties:
-        settlementId:
-          type: string
-          format: uuid
-        agentId:
-          type: string
+        transactions:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        totalDebits:
+          type: number
+        totalCredits:
+          type: number
+        totalCommissions:
+          type: number
+        netAmount:
+          type: number
         date:
           type: string
           format: date
-        totalTransactions:
-          type: integer
-        totalAmount:
-          type: string
-        commission:
-          type: string
-        status:
-          type: string
     
     # Error Response
     ErrorResponse:
@@ -2621,6 +2791,7 @@ components:
               enum: [DECLINE, RETRY, REVIEW]
             trace_id:
               type: string
+              nullable: true
             timestamp:
               type: string
               format: date-time
@@ -2637,13 +2808,13 @@ components:
 
     # Transaction Start Request
     TransactionStartRequest:
-      required:
-      - transactionType
-      - agentId
-      - amount
-      - idempotencyKey
       type: object
+      required: [transactionType, amount, fundingSource, idempotencyKey]
       properties:
+        idempotencyKey:
+          type: string
+          format: uuid
+          description: Unique key to prevent duplicate transactions.
         transactionType:
           $ref: '#/components/schemas/TransactionType'
         agentId:
@@ -2655,9 +2826,10 @@ components:
           format: double
           minimum: 0.01
           description: Transaction amount in MYR
-        idempotencyKey:
+        fundingSource:
           type: string
-          description: Optional unique key to prevent duplicate transactions. If not provided, server will generate one.
+          enum: [CASH, ACCOUNT, MOBILE]
+          description: Source of funds for the transaction.
         pan:
           type: string
           description: Card number (PAN) - required for CASH_WITHDRAWAL
@@ -3021,4 +3193,131 @@ components:
           enum: [INTERNAL, EXTERNAL]
         mustChangePassword:
           type: boolean
+    
+    # New schemas for alignment
+    ComplianceStatusResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [LOCKED, UNLOCKED]
+        reason:
+          type: string
+        checkedAt:
+          type: string
+          format: date-time
+    
+    AgentListResponse:
+      type: object
+      properties:
+        agents:
+          type: array
+          items:
+            $ref: '#/components/schemas/AgentResponse'
+        stats:
+          $ref: '#/components/schemas/AgentStats'
+        page:
+          type: integer
+        size:
+          type: integer
+
+    AgentStats:
+      type: object
+      properties:
+        total:
+          type: integer
+        active:
+          type: integer
+        suspended:
+          type: integer
+        inactive:
+          type: integer
+
+    BackofficeTransactionListResponse:
+      type: object
+      properties:
+        content:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        total:
+          type: integer
+
+    SubmissionRequest:
+      type: object
+      required:
+        - mykadNumber
+        - extractedName
+        - ssmBusinessName
+        - ssmOwnerName
+        - agentTier
+      properties:
+        mykadNumber:
+          type: string
+        extractedName:
+          type: string
+        ssmBusinessName:
+          type: string
+        ssmOwnerName:
+          type: string
+        agentTier:
+          type: string
+          enum: [MICRO, STANDARD, PREMIER]
+        merchantGpsLat:
+          type: number
+        merchantGpsLng:
+          type: number
+        phoneNumber:
+          type: string
+
+    BackofficeAuditLogListResponse:
+      type: object
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/AuditLogRecord'
+        totalElements:
+          type: integer
+        totalPages:
+          type: integer
+        page:
+          type: integer
+        size:
+          type: integer
+
+    AuditLogRecord:
+      type: object
+      properties:
+        logId:
+          type: string
+          format: uuid
+        entityType:
+          type: string
+        entityId:
+          type: string
+        action:
+          type: string
+        performedBy:
+          type: string
+        changes:
+          type: string
+        ipAddress:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+
+    SubmissionResponse:
+      type: object
+      properties:
+        applicationId:
+          type: string
+          format: uuid
+        status:
+          type: string
+        message:
+          type: string
+
 tags: []

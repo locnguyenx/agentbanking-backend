@@ -22,7 +22,7 @@ Before modifying ANY documentation file (Session Memory, Docs, Skills):
 When the user says "finish session" or similar:
 1.  
 **Update `current-state.md`**
-: Reflect the latest status.
+: Write everything we did so far to current-state.md, ensure to note the end goal, the approach we're taking, the steps we've done so far, and the current failure we're working on
 2.  
 **Update `progress.md`**
 : Log completed milestones.
