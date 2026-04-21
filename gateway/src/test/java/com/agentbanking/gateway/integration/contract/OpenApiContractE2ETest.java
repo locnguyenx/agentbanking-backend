@@ -41,6 +41,7 @@ public class OpenApiContractE2ETest {
     private static String agentToken;
     private static String agentId;
     private static String AGENT_CODE;
+    private static String lastWorkflowId;
 
     private final WebTestClient webClient = WebTestClient.bindToServer()
             .baseUrl(GATEWAY_URL)
@@ -272,6 +273,7 @@ public class OpenApiContractE2ETest {
                 .uri(path + "?agentId=" + agentId)
                 .header("Authorization", "Bearer " + agentToken)
                 .exchange()
+                .expectStatus().isOk()
                 .expectBody(String.class)
                 .returnResult();
 
@@ -298,6 +300,7 @@ public class OpenApiContractE2ETest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(request)
                 .exchange()
+                .expectStatus().isOk()
                 .expectBody(String.class)
                 .returnResult();
 
@@ -321,6 +324,7 @@ public class OpenApiContractE2ETest {
                         .build())
                 .header("Authorization", "Bearer " + agentToken)
                 .exchange()
+                .expectStatus().isOk()
                 .expectBody(String.class)
                 .returnResult();
 
@@ -344,6 +348,7 @@ public class OpenApiContractE2ETest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(request)
                 .exchange()
+                .expectStatus().isOk()
                 .expectBody(String.class)
                 .returnResult();
 
@@ -375,25 +380,31 @@ public class OpenApiContractE2ETest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(request)
                 .exchange()
-                .expectBody(String.class)
+                .expectStatus().isAccepted()
+                .expectBody(JsonNode.class)
                 .returnResult();
 
-        validateContract("POST", path, result.getStatus().value(), result.getResponseBody(), requestBody, null, agentToken);
+        JsonNode body = result.getResponseBody();
+        if (body != null && body.has("workflowId")) {
+            lastWorkflowId = body.get("workflowId").asText();
+        }
+
+        validateContract("POST", path, result.getStatus().value(), result.getResponseBody().toString(), requestBody, null, agentToken);
     }
 
     @Test
     @Order(6)
     void getTransactionStatus_matchesSpec() {
-        if (agentId == null) {
-            System.err.println("Skipping getTransactionStatus_matchesSpec as agent setup failed");
+        if (agentId == null || lastWorkflowId == null) {
+            System.err.println("Skipping getTransactionStatus_matchesSpec - setup or startTransaction failed");
             return;
         }
-        String workflowId = UUID.randomUUID().toString();
-        String path = "/api/v1/transactions/" + workflowId + "/status";
+        String path = "/api/v1/transactions/" + lastWorkflowId + "/status";
         var result = webClient.get()
                 .uri(path)
                 .header("Authorization", "Bearer " + agentToken)
                 .exchange()
+                .expectStatus().isOk()
                 .expectBody(String.class)
                 .returnResult();
 
@@ -408,6 +419,7 @@ public class OpenApiContractE2ETest {
                 .uri(path)
                 .header("Authorization", "Bearer " + adminToken)
                 .exchange()
+                .expectStatus().isOk()
                 .expectBody(String.class)
                 .returnResult();
 
@@ -422,6 +434,7 @@ public class OpenApiContractE2ETest {
                 .uri(path)
                 .header("Authorization", "Bearer " + adminToken)
                 .exchange()
+                .expectStatus().isOk()
                 .expectBody(String.class)
                 .returnResult();
 
@@ -456,6 +469,7 @@ public class OpenApiContractE2ETest {
                 .uri(path)
                 .header("Authorization", "Bearer " + adminToken)
                 .exchange()
+                .expectStatus().isOk()
                 .expectBody(String.class)
                 .returnResult();
 
@@ -470,6 +484,7 @@ public class OpenApiContractE2ETest {
                 .uri(path)
                 .header("Authorization", "Bearer " + adminToken)
                 .exchange()
+                .expectStatus().isOk()
                 .expectBody(String.class)
                 .returnResult();
 
@@ -495,6 +510,7 @@ public class OpenApiContractE2ETest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(request)
                 .exchange()
+                .expectStatus().isOk()
                 .expectBody(String.class)
                 .returnResult();
 
@@ -523,6 +539,7 @@ public class OpenApiContractE2ETest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(request)
                 .exchange()
+                .expectStatus().isCreated()
                 .expectBody(String.class)
                 .returnResult();
 
@@ -545,6 +562,7 @@ public class OpenApiContractE2ETest {
                         .build())
                 .header("Authorization", "Bearer " + adminToken)
                 .exchange()
+                .expectStatus().isOk()
                 .expectBody(String.class)
                 .returnResult();
 
@@ -570,6 +588,7 @@ public class OpenApiContractE2ETest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(request)
                 .exchange()
+                .expectStatus().isBadRequest()
                 .expectBody(String.class)
                 .returnResult();
 
@@ -594,6 +613,7 @@ public class OpenApiContractE2ETest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(request)
                 .exchange()
+                .expectStatus().isBadRequest()
                 .expectBody(String.class)
                 .returnResult();
 

@@ -44,6 +44,10 @@
 | 2026-04-18 | Auth-iam: Fix Flyway V2 migration (remove user_type column) | ✅ |
 | 2026-04-18 | componentTest Gradle task: Run all tests sequentially | ✅ |
 | 2026-04-18 | TEST_ARCHITECTURE.md: Document test design | ✅ |
+| 2026-04-20 | E2E Provisioning: Surgical SQL credentials/state injection | ✅ |
+| 2026-04-20 | Orchestrator Polling: Hardening against type-cast 500s | ✅ |
+| 2026-04-20 | Status Mapping: Terminal state alignment (REJECTED/CANCELLED) | ✅ |
+| 2026-04-20 | Verification: `billPayment` workflow consistency achieved | ✅ |
 
 ### Key Discovery
 

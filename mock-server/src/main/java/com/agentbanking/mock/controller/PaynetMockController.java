@@ -60,4 +60,20 @@ public class PaynetMockController {
             "settlementTime", System.currentTimeMillis()
         );
     }
+
+    @GetMapping("/proxy/resolve")
+    public Map<String, String> resolveProxy(@RequestParam String proxyId, @RequestParam String proxyType) {
+        simulateLatency();
+        Map<String, String> mockData = Map.of(
+            "0123456789", "Loc Nguyen",
+            "60123456789", "Loc Nguyen",
+            "0011223344", "OpenCode AI"
+        );
+
+        if (mockData.containsKey(proxyId)) {
+            return Map.of("name", mockData.get(proxyId), "proxyType", proxyType);
+        }
+
+        throw new IllegalArgumentException("Proxy not found: " + proxyId);
+    }
 }

@@ -2929,6 +2929,7 @@ components:
           description: Workflow identifier
         transactionType:
           type: string
+          nullable: true
           description: Type of transaction
         amount:
           type: number
@@ -2940,21 +2941,61 @@ components:
           description: Fee charged to customer
         referenceNumber:
           type: string
+          nullable: true
           description: External reference number from switch/biller
         errorCode:
           type: string
+          nullable: true
           description: Error code if transaction failed
         errorMessage:
           type: string
+          nullable: true
           description: Human-readable error message
         actionCode:
           type: string
           enum: [DECLINE, RETRY, REVIEW]
+          nullable: true
           description: Recommended action for failed transactions
         completedAt:
           type: string
           format: date-time
+          nullable: true
           description: Timestamp when transaction completed
+        agentTier:
+          type: string
+          nullable: true
+        billerCode:
+          type: string
+          nullable: true
+        customerCardMasked:
+          type: string
+          nullable: true
+        destinationAccount:
+          type: string
+          nullable: true
+        errorDetails:
+          type: object
+          nullable: true
+        geofenceLat:
+          type: number
+          format: double
+          nullable: true
+        geofenceLng:
+          type: number
+          format: double
+          nullable: true
+        pendingReason:
+          type: string
+          nullable: true
+        ref1:
+          type: string
+          nullable: true
+        ref2:
+          type: string
+          nullable: true
+        targetBin:
+          type: string
+          nullable: true
 
     # Force Resolve Request
     ForceResolveRequest:

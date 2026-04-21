@@ -11,10 +11,23 @@ import org.springframework.stereotype.Component;
 @Component
 public class DuitNowProxyClient implements DuitNowProxyGateway {
 
+    private final DuitNowProxyFeignClient proxyFeignClient;
+
+    public DuitNowProxyClient(DuitNowProxyFeignClient proxyFeignClient) {
+        this.proxyFeignClient = proxyFeignClient;
+    }
+
     @Override
     public String resolveProxy(String proxyId, String proxyType) {
-        // Stub: In production, this would call the DuitNow switch API
-        // For now, throw unavailable
-        throw new IllegalStateException(ErrorCodes.ERR_SWITCH_UNAVAILABLE + ": DuitNow proxy service not yet configured");
+        try {
+            java.util.Map<String, String> response = proxyFeignClient.resolveProxy(proxyId, proxyType);
+            if (response != null && response.containsKey("name")) {
+                return response.get("name");
+            }
+            throw new IllegalStateException(ErrorCodes.ERR_SWITCH_UNAVAILABLE + ": Proxy not found in mock server for ID: " + proxyId);
+        } catch (Exception e) {
+            // Log error in real implementation, for now rethrow as unavailable
+            throw new IllegalStateException(ErrorCodes.ERR_SWITCH_UNAVAILABLE + ": DuitNow proxy service failure: " + e.getMessage(), e);
+        }
     }
 }
