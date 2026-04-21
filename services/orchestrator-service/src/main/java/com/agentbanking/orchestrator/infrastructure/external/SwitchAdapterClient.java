@@ -26,6 +26,6 @@ public interface SwitchAdapterClient {
     @PostMapping("/internal/proxy-enquiry")
     ProxyEnquiryResult proxyEnquiry(@RequestBody ProxyEnquiryInput input);
 
-    @PostMapping("/internal/duitnow-transfer")
+    @PostMapping("/internal/duitnow")
     DuitNowTransferResult sendDuitNowTransfer(@RequestBody DuitNowTransferInput input);
 }

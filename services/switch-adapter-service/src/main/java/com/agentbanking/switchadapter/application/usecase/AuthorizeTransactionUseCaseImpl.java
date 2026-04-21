@@ -33,7 +33,7 @@ public class AuthorizeTransactionUseCaseImpl implements AuthorizeTransactionUseC
             MessageType.MT0100,
             "00",
             "PAYNET-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase(),
-            SwitchStatus.APPROVED,
+            SwitchStatus.SUCCESS,
             null,
             0,
             roundedAmount,
@@ -45,7 +45,7 @@ public class AuthorizeTransactionUseCaseImpl implements AuthorizeTransactionUseC
 
         return new AuthorizeTransactionResult(
             record.switchTxId(),
-            "APPROVED",
+            "SUCCESS",
             record.isoResponseCode(),
             record.switchReference()
         );

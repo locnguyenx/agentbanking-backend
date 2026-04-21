@@ -26,7 +26,7 @@ public class SwitchAdapterAdapter implements SwitchAdapterPort {
 
     public SwitchAuthorizationResult authorizeTransactionFallback(SwitchAuthorizationInput input, Exception e) {
         log.error("Switch adapter fallback triggered for transaction: {}", input.internalTransactionId(), e);
-        return new SwitchAuthorizationResult(false, null, "SWITCH_TIMEOUT", "Switch adapter unavailable, reversal will be triggered");
+        return new SwitchAuthorizationResult("FAILED", null, "SWITCH_TIMEOUT", "Switch adapter unavailable, reversal will be triggered");
     }
 
     @Override

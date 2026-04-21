@@ -17,7 +17,7 @@ public class SwitchAdapterClientFallbackFactory implements FallbackFactory<Switc
         return new SwitchAdapterClient() {
             @Override
             public SwitchAuthorizationResult authorizeTransaction(SwitchAuthorizationInput input) {
-                return new SwitchAuthorizationResult(false, null, "SWITCH_TIMEOUT", "SWITCH_TIMEOUT");
+                return new SwitchAuthorizationResult("FAILED", null, "SWITCH_TIMEOUT", "SWITCH_TIMEOUT");
             }
 
             @Override
@@ -32,7 +32,7 @@ public class SwitchAdapterClientFallbackFactory implements FallbackFactory<Switc
 
             @Override
             public DuitNowTransferResult sendDuitNowTransfer(DuitNowTransferInput input) {
-                return new DuitNowTransferResult(false, null, "SWITCH_TIMEOUT");
+                return new DuitNowTransferResult("FAILED", null, "SWITCH_TIMEOUT");
             }
         };
     }

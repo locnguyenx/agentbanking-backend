@@ -29,7 +29,9 @@ class SwitchControllerComponentTest extends AbstractIntegrationTest {
         mockMvc.perform(post("/internal/auth")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
-                .andExpect(jsonPath("$").exists());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("SUCCESS"))
+                .andExpect(jsonPath("$.reference").exists());
     }
 
     @Test
@@ -45,7 +47,8 @@ class SwitchControllerComponentTest extends AbstractIntegrationTest {
         mockMvc.perform(post("/internal/reversal")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
-                .andExpect(jsonPath("$").exists());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("SUCCESS"));
     }
 
     @Test
@@ -62,7 +65,9 @@ class SwitchControllerComponentTest extends AbstractIntegrationTest {
         mockMvc.perform(post("/internal/duitnow")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
-                .andExpect(jsonPath("$").exists());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("SUCCESS"))
+                .andExpect(jsonPath("$.reference").exists());
     }
 
     @Test

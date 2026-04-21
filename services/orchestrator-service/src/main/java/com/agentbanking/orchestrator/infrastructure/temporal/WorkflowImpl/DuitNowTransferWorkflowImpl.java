@@ -268,7 +268,7 @@ public class DuitNowTransferWorkflowImpl implements DuitNowTransferWorkflow {
                         Workflow.getInfo().getWorkflowId(), "FAILED", failResult.errorCode(), failResult.errorMessage(), null, null, null, "Authorize activity failed: " + e.getMessage()));
                 return failResult;
             }
-            if (!transferResult.success()) {
+            if (!transferResult.isSuccess()) {
                 releaseFloatActivity.releaseFloat(
                         new FloatReleaseInput(input.agentId(), totalAmount, transactionId));
 
@@ -304,17 +304,17 @@ public class DuitNowTransferWorkflowImpl implements DuitNowTransferWorkflow {
                 publishKafkaEventActivity.publishCompleted(new TransactionCompletedEvent(
                         transactionId, input.agentId(), input.amount(), fees.customerFee(),
                         fees.agentCommission(), fees.bankShare(), "DUITNOW_TRANSFER",
-                        null, transferResult.paynetReference(), transferResult.paynetReference()));
+                        null, transferResult.reference(), transferResult.reference()));
             } catch (Exception e) {
                 log.warn("Failed to publish Kafka event: {}", e.getMessage());
             }
 
             currentStatus = WorkflowStatus.COMPLETED;
-            WorkflowResult completedResult = WorkflowResult.completed(transactionId, transferResult.paynetReference(),
+            WorkflowResult completedResult = WorkflowResult.completed(transactionId, transferResult.reference(),
                     input.amount(), fees.customerFee());
             persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
                     Workflow.getInfo().getWorkflowId(), "COMPLETED", null, null,
-                    transferResult.paynetReference(), fees.customerFee(), transferResult.paynetReference(), null));
+                    transferResult.reference(), fees.customerFee(), transferResult.reference(), null));
             return completedResult;
 
         } catch (CanceledFailure e) {

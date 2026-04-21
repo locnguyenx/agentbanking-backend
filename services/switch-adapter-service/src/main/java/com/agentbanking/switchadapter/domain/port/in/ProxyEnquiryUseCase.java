@@ -5,7 +5,8 @@ public interface ProxyEnquiryUseCase {
     ProxyEnquiryResult enquiryProxy(String proxyId, String proxyType);
 
     record ProxyEnquiryResult(
-        String name,
-        String proxyType
+        boolean valid,
+        String recipientName,
+        String bankCode
     ) {}
 }

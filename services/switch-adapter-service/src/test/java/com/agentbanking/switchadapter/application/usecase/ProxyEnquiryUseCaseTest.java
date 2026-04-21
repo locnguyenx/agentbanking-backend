@@ -35,8 +35,9 @@ class ProxyEnquiryUseCaseTest {
 
         ProxyEnquiryResult result = useCase.enquiryProxy(proxyId, proxyType);
 
-        assertEquals("AHMAD BIN ABDULLAH", result.name());
-        assertEquals(proxyType, result.proxyType());
+        assertEquals("AHMAD BIN ABDULLAH", result.recipientName());
+        assertTrue(result.valid());
+        assertEquals("999", result.bankCode());
     }
 
     @Test

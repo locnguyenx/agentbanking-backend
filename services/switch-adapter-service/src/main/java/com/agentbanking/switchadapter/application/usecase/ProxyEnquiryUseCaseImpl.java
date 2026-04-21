@@ -18,7 +18,7 @@ public class ProxyEnquiryUseCaseImpl implements ProxyEnquiryUseCase {
     public ProxyEnquiryResult enquiryProxy(String proxyId, String proxyType) {
         try {
             String name = duitNowProxyGateway.resolveProxy(proxyId, proxyType);
-            return new ProxyEnquiryResult(name, proxyType);
+            return new ProxyEnquiryResult(true, name, "999");
         } catch (IllegalArgumentException e) {
             throw e;
         } catch (Exception e) {

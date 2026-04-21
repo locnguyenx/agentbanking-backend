@@ -1,5 +1,6 @@
 package com.agentbanking.orchestrator.domain.port.out;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import java.math.BigDecimal;
 import java.util.UUID;
 
@@ -20,12 +21,17 @@ public interface SwitchAdapterPort {
         UUID internalTransactionId
     ) {}
 
+    @JsonIgnoreProperties(ignoreUnknown = true)
     record SwitchAuthorizationResult(
-        boolean approved,
-        String referenceCode,
+        String status,
+        String reference,
         String responseCode,
         String errorCode
-    ) {}
+    ) {
+        public boolean isApproved() {
+            return "SUCCESS".equalsIgnoreCase(status);
+        }
+    }
 
     record SwitchReversalInput(
         UUID internalTransactionId
@@ -41,6 +47,7 @@ public interface SwitchAdapterPort {
         String proxyValue
     ) {}
 
+    @JsonIgnoreProperties(ignoreUnknown = true)
     record ProxyEnquiryResult(
         boolean valid,
         String recipientName,
@@ -55,9 +62,14 @@ public interface SwitchAdapterPort {
         UUID internalTransactionId
     ) {}
 
+    @JsonIgnoreProperties(ignoreUnknown = true)
     record DuitNowTransferResult(
-        boolean success,
-        String paynetReference,
+        String status,
+        String reference,
         String errorCode
-    ) {}
+    ) {
+        public boolean isSuccess() {
+            return "SUCCESS".equalsIgnoreCase(status);
+        }
+    }
 }

@@ -66,6 +66,7 @@ public class PaynetMockController {
         simulateLatency();
         Map<String, String> mockData = Map.of(
             "0123456789", "Loc Nguyen",
+            "012345678", "Loc Nguyen",
             "60123456789", "Loc Nguyen",
             "0011223344", "OpenCode AI"
         );
@@ -74,6 +75,7 @@ public class PaynetMockController {
             return Map.of("name", mockData.get(proxyId), "proxyType", proxyType);
         }
 
-        throw new IllegalArgumentException("Proxy not found: " + proxyId);
+        throw new org.springframework.web.server.ResponseStatusException(
+            org.springframework.http.HttpStatus.NOT_FOUND, "Proxy not found: " + proxyId);
     }
 }

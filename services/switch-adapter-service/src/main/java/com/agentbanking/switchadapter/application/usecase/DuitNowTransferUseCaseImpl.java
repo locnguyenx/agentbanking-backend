@@ -33,7 +33,7 @@ public class DuitNowTransferUseCaseImpl implements DuitNowTransferUseCase {
             MessageType.ISO20022,
             "ACSC",
             "DN-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase(),
-            SwitchStatus.APPROVED,
+            SwitchStatus.SUCCESS,
             null,
             0,
             roundedAmount,
@@ -45,7 +45,7 @@ public class DuitNowTransferUseCaseImpl implements DuitNowTransferUseCase {
 
         return new DuitNowTransferResult(
             record.switchTxId(),
-            "SETTLED",
+            "SUCCESS",
             record.isoResponseCode(),
             record.switchReference()
         );

@@ -10,6 +10,6 @@ public interface AuthorizeTransactionUseCase {
         UUID switchTxId,
         String status,
         String responseCode,
-        String referenceId
+        String reference
     ) {}
 }

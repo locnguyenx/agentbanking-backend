@@ -284,7 +284,7 @@ public class WithdrawalWorkflowImpl implements WithdrawalWorkflow {
             SwitchAuthorizationResult authResult = authorizeAtSwitchActivity.authorize(
                     new SwitchAuthorizationInput(input.pan(), input.pinBlock(), input.amount(), transactionId));
 
-            if (!authResult.approved()) {
+            if (!authResult.isApproved()) {
                 releaseFloatActivity.releaseFloat(
                         new FloatReleaseInput(input.agentId(), totalAmount, transactionId));
 
@@ -318,17 +318,17 @@ public class WithdrawalWorkflowImpl implements WithdrawalWorkflow {
                 publishKafkaEventActivity.publishCompleted(new TransactionCompletedEvent(
                         transactionId, input.agentId(), input.amount(), fees.customerFee(),
                         fees.agentCommission(), fees.bankShare(), "CASH_WITHDRAWAL",
-                        input.customerCardMasked(), authResult.referenceCode(), authResult.referenceCode()));
+                        input.customerCardMasked(), authResult.reference(), authResult.reference()));
             } catch (Exception e) {
                 log.warn("Failed to publish Kafka event: {}", e.getMessage());
             }
 
             currentStatus = WorkflowStatus.COMPLETED;
-            WorkflowResult completedResult = WorkflowResult.completed(transactionId, authResult.referenceCode(),
+            WorkflowResult completedResult = WorkflowResult.completed(transactionId, authResult.reference(),
                     input.amount(), fees.customerFee());
             persistWorkflowResultActivity.persistResult(new PersistWorkflowResultActivity.Input(
                     Workflow.getInfo().getWorkflowId(), "COMPLETED", null, null,
-                    authResult.referenceCode(), fees.customerFee(), authResult.referenceCode(), null,
+                    authResult.reference(), fees.customerFee(), authResult.reference(), null,
                     java.time.LocalDateTime.now()));
             return completedResult;
 
