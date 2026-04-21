@@ -30,12 +30,12 @@ public class CleanTestData {
     private static final String[] TEST_USER_PATTERNS = {
             "agent001", "operator001", "auditor001", "teller001",
             "maker001", "checker001", "compliance001", "supervisor001",
-            "AGT-E2E-"
+            "AGT-E2E-", "agent-"
     };
 
     // Test agent patterns to clean up
     private static final String[] TEST_AGENT_PATTERNS = {
-            "AGT-E2E-", "AGT-001", "AGT-002", "AGT-003"
+            "AGT-E2E-", "AGT-001", "AGT-002", "AGT-003", "agent001"
     };
 
     public static void main(String[] args) {
@@ -146,104 +146,128 @@ public class CleanTestData {
     private static void cleanTestUsers(String adminToken) {
         System.out.println("\n--- Cleaning test users ---");
 
-        try {
-            WebTestClient client = WebTestClient.bindToServer().baseUrl(AUTH_URL)
-                    .responseTimeout(java.time.Duration.ofSeconds(30))
-                    .build();
+        int maxRetries = 3;
+        for (int retry = 0; retry < maxRetries; retry++) {
+            try {
+                WebTestClient client = WebTestClient.bindToServer().baseUrl(AUTH_URL)
+                        .responseTimeout(java.time.Duration.ofSeconds(60))
+                        .build();
 
-            // List all users
-            String response = client.get()
-                    .uri("/auth/users")
-                    .header("Authorization", "Bearer " + adminToken)
-                    .exchange()
-                    .expectBody(String.class)
-                    .returnResult()
-                    .getResponseBody();
+                // List all users
+                String response = client.get()
+                        .uri("/auth/users")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .exchange()
+                        .expectBody(String.class)
+                        .returnResult()
+                        .getResponseBody();
 
-            JsonNode users = objectMapper.readTree(response);
-            if (users.isArray()) {
-                for (JsonNode user : users) {
-                    String username = user.get("username").asText();
-                    String userId = user.get("userId").asText();
+                if (response == null) {
+                    System.out.println("  Empty user list received, attempt " + (retry + 1));
+                    continue;
+                }
 
-                    // Check if this is a test user
-                    boolean isTestUser = false;
-                    for (String pattern : TEST_USER_PATTERNS) {
-                        if (username.startsWith(pattern)) {
-                            isTestUser = true;
-                            break;
+                JsonNode users = objectMapper.readTree(response);
+                if (users.isArray()) {
+                    for (JsonNode user : users) {
+                        String username = user.get("username").asText();
+                        String userId = user.get("userId").asText();
+
+                        // Check if this is a test user (by username or email)
+                        boolean isTestUser = false;
+                        String email = user.has("email") ? user.get("email").asText() : "";
+                        
+                        for (String pattern : TEST_USER_PATTERNS) {
+                            if (username.startsWith(pattern) || email.contains("agent-contract") || email.startsWith("agt-e2e")) {
+                                isTestUser = true;
+                                break;
+                            }
                         }
-                    }
 
-                    if (isTestUser) {
-                        System.out.println("  Deleting user: " + username + " (" + userId + ")");
-                        try {
-                            client.delete()
-                                    .uri("/auth/users/" + userId)
-                                    .header("Authorization", "Bearer " + adminToken)
-                                    .exchange();
-                            System.out.println("    Deleted successfully");
-                        } catch (Exception e) {
-                            System.out.println("    Delete failed: " + e.getMessage());
+                        if (isTestUser) {
+                            System.out.println("  Deleting user: " + username + " (" + userId + ")");
+                            try {
+                                client.delete()
+                                        .uri("/auth/users/" + userId)
+                                        .header("Authorization", "Bearer " + adminToken)
+                                        .exchange()
+                                        .expectStatus().isNoContent();
+                                System.out.println("    Deleted successfully");
+                            } catch (Exception e) {
+                                System.out.println("    Delete failed: " + e.getMessage());
+                            }
                         }
                     }
                 }
+                return; // Success
+            } catch (Exception e) {
+                System.out.println("  User cleanup attempt " + (retry + 1) + " failed: " + e.getMessage());
+                try { Thread.sleep(5000); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
             }
-        } catch (Exception e) {
-            System.out.println("Failed to clean users: " + e.getMessage());
         }
     }
 
     private static void cleanTestAgents(String adminToken) {
         System.out.println("\n--- Cleaning test agents ---");
 
-        try {
-            WebTestClient client = WebTestClient.bindToServer().baseUrl(ONBOARDING_URL)
-                    .responseTimeout(java.time.Duration.ofSeconds(30))
-                    .build();
+        int maxRetries = 3;
+        for (int retry = 0; retry < maxRetries; retry++) {
+            try {
+                WebTestClient client = WebTestClient.bindToServer().baseUrl(ONBOARDING_URL)
+                        .responseTimeout(java.time.Duration.ofSeconds(60))
+                        .build();
 
-            // List all agents
-            String response = client.get()
-                    .uri("/backoffice/agents?page=0&size=100")
-                    .header("Authorization", "Bearer " + adminToken)
-                    .exchange()
-                    .expectBody(String.class)
-                    .returnResult()
-                    .getResponseBody();
+                // List all agents
+                String response = client.get()
+                        .uri("/backoffice/agents?page=0&size=100")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .exchange()
+                        .expectBody(String.class)
+                        .returnResult()
+                        .getResponseBody();
 
-            JsonNode agents = objectMapper.readTree(response);
-            JsonNode content = agents.has("content") ? agents.get("content") : agents;
+                if (response == null) {
+                    System.out.println("  Empty agent list received, attempt " + (retry + 1));
+                    continue;
+                }
 
-            if (content.isArray()) {
-                for (JsonNode agent : content) {
-                    String agentCode = agent.has("agentCode") ? agent.get("agentCode").asText() : "";
-                    String agentId = agent.get("agentId").asText();
+                JsonNode agents = objectMapper.readTree(response);
+                JsonNode content = agents.has("content") ? agents.get("content") : agents;
 
-                    // Check if this is a test agent
-                    boolean isTestAgent = false;
-                    for (String pattern : TEST_AGENT_PATTERNS) {
-                        if (agentCode.startsWith(pattern)) {
-                            isTestAgent = true;
-                            break;
+                if (content.isArray()) {
+                    for (JsonNode agent : content) {
+                        String agentCode = agent.has("agentCode") ? agent.get("agentCode").asText() : "";
+                        String agentId = agent.get("agentId").asText();
+
+                        // Check if this is a test agent
+                        boolean isTestAgent = false;
+                        for (String pattern : TEST_AGENT_PATTERNS) {
+                            if (agentCode.startsWith(pattern)) {
+                                isTestAgent = true;
+                                break;
+                            }
                         }
-                    }
 
-                    if (isTestAgent) {
-                        System.out.println("  Deleting agent: " + agentCode + " (" + agentId + ")");
-                        try {
-                            client.delete()
-                                    .uri("/internal/onboarding/agents/" + agentId)
-                                    .header("Authorization", "Bearer " + adminToken)
-                                    .exchange();
-                            System.out.println("    Deleted successfully");
-                        } catch (Exception e) {
-                            System.out.println("    Deactivate failed: " + e.getMessage());
+                        if (isTestAgent) {
+                            System.out.println("  Deleting agent: " + agentCode + " (" + agentId + ")");
+                            try {
+                                client.delete()
+                                        .uri("/internal/onboarding/agents/" + agentId)
+                                        .header("Authorization", "Bearer " + adminToken)
+                                        .exchange()
+                                        .expectStatus().isNoContent();
+                                System.out.println("    Deleted successfully");
+                            } catch (Exception e) {
+                                System.out.println("    Deactivate failed: " + e.getMessage());
+                            }
                         }
                     }
                 }
+                return; // Success
+            } catch (Exception e) {
+                System.out.println("  Agent cleanup attempt " + (retry + 1) + " failed: " + e.getMessage());
+                try { Thread.sleep(5000); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
             }
-        } catch (Exception e) {
-            System.out.println("Failed to clean agents: " + e.getMessage());
         }
     }
 }

@@ -34,6 +34,8 @@ docker compose --profile infra --profile backend up -d
 Ensure all services are healthy, then run:
 ```bash
 ./gradlew :gateway:e2eTest -PtestProfile=local
+# Contract Tests 
+./gradlew :gateway:e2eTest --tests "OpenApiContractE2ETest"
 ```
 
 > [!TIP]

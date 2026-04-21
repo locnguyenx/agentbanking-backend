@@ -193,7 +193,7 @@ public class BillPaymentWorkflowImpl implements BillPaymentWorkflow {
                                 input.geofenceLng(),
                                 input.agentTier(),
                                 input.targetBin(),
-                                "JOMPAY"
+                                "BILL_PAYMENT"
                         )
                 );
             } catch (ActivityFailure e) {

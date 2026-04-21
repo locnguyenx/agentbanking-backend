@@ -151,23 +151,41 @@ public class OrchestratorController {
             detailsNode,
             workflowId,
             null, // transactionType not currently in WorkflowResult
-            result != null && result.amount() != null ? result.amount() : BigDecimal.ZERO,
-            result != null && result.customerFee() != null ? result.customerFee() : BigDecimal.ZERO,
+            toBigDecimal(result != null ? result.amount() : null),
+            toBigDecimal(result != null ? result.customerFee() : null),
             result != null && result.referenceNumber() != null ? result.referenceNumber() : "",
             result != null ? result.errorCode() : null,
             result != null ? result.errorMessage() : null,
             result != null ? result.actionCode() : null,
             result != null ? result.completedAt() : null,
-            (String) metadata.get("agentTier"),
-            (String) metadata.get("targetBin"),
-            (String) metadata.get("customerCardMasked"),
-            (BigDecimal) metadata.get("geofenceLat"),
-            (BigDecimal) metadata.get("geofenceLng"),
-            (String) metadata.get("billerCode"),
-            (String) metadata.get("ref1"),
-            (String) metadata.get("ref2"),
-            (String) metadata.get("destinationAccount")
+            safeToString(metadata.get("agentTier")),
+            safeToString(metadata.get("targetBin")),
+            safeToString(metadata.get("customerCardMasked")),
+            toBigDecimal(metadata.get("geofenceLat")),
+            toBigDecimal(metadata.get("geofenceLng")),
+            safeToString(metadata.get("billerCode")),
+            safeToString(metadata.get("ref1")),
+            safeToString(metadata.get("ref2")),
+            safeToString(metadata.get("destinationAccount"))
         );
+    }
+
+    private String safeToString(Object value) {
+        return value != null ? value.toString() : null;
+    }
+
+    private BigDecimal toBigDecimal(Object value) {
+        if (value == null) return BigDecimal.ZERO;
+        if (value instanceof BigDecimal) return (BigDecimal) value;
+        if (value instanceof Number) return new BigDecimal(value.toString());
+        if (value instanceof String) {
+            try {
+                return new BigDecimal((String) value);
+            } catch (Exception e) {
+                return BigDecimal.ZERO;
+            }
+        }
+        return BigDecimal.ZERO;
     }
 
     public record TransactionRequest(

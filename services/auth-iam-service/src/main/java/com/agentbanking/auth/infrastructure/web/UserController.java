@@ -2,6 +2,7 @@ package com.agentbanking.auth.infrastructure.web;
 
 import com.agentbanking.auth.application.usecase.AuditLogServiceImpl;
 import com.agentbanking.auth.application.usecase.ManageUserUseCaseImpl;
+import com.agentbanking.auth.domain.model.UserStatus;
 import com.agentbanking.auth.domain.model.UserType;
 import com.agentbanking.common.audit.AuditAction;
 import com.agentbanking.common.audit.AuditLogRecord;
@@ -67,29 +68,30 @@ public class UserController {
             return ResponseEntity.status(HttpStatus.CONFLICT).build();
         }
         
-        // For bootstrap, pass "system" as createdBy to satisfy NOT NULL constraint
+        // 21 fields (0-20): userId, username, email, phone, passwordHash, fullName, status, userType, agentId, agentCode, mustChangePassword, temporaryPasswordExpiresAt, permissions, failedLoginAttempts, lockedUntil, passwordChangedAt, passwordExpiresAt, createdAt, updatedAt, lastLoginAt, createdBy
+        // Indices: 0:userId, 1:username, 2:email, 3:phone, 4:passwordHash, 5:fullName, 6:status, 7:userType, 8:agentId, 9:agentCode, 10:mustChangePassword, 11:tempExpiry, 12:perms, 13:failed, 14:locked, 15:changedAt, 16:expireAt, 17:created, 18:updated, 19:lastLogin, 20:createdBy
         UserRecord userRecord = new UserRecord(
-                null, // userId
-                userDto.username(),
-                userDto.email(),
-                null, // phone
-                userDto.password(),
-                userDto.fullName(),
-                null, // status
-                userDto.userType() != null ? UserType.valueOf(userDto.userType()) : UserType.INTERNAL,
-                userDto.agentId(),
-                null, // agentCode
-                null, // mustChangePassword
-                null, // temporaryPasswordExpiresAt
-                null, // permissions
-                null, // failedLoginAttempts
-                null, // lockedUntil
-                null, // passwordChangedAt
-                null, // passwordExpiresAt
-                null, // createdAt
-                null, // updatedAt
-                null, // lastLoginAt
-                "system" // createdBy
+                null,                // 0
+                userDto.username(),  // 1
+                userDto.email(),     // 2
+                null,                // 3
+                userDto.password(),  // 4
+                userDto.fullName(),  // 5
+                UserStatus.ACTIVE,   // 6
+                userDto.userType() != null ? UserType.valueOf(userDto.userType()) : UserType.INTERNAL, // 7
+                userDto.agentId(),   // 8
+                null,                // 9
+                false,               // 10: mustChangePassword
+                null,                // 11
+                null,                // 12
+                0,                   // 13
+                null,                // 14
+                null,                // 15
+                null,                // 16
+                null,                // 17
+                null,                // 18
+                null,                // 19
+                "system"             // 20
         );
         UserRecord created = manageUserUseCase.createUser(userRecord);
         return new ResponseEntity<>(toResponseDto(created), HttpStatus.CREATED);
@@ -97,29 +99,30 @@ public class UserController {
 
     @PostMapping
     public ResponseEntity<UserResponseDto> createUser(@Valid @RequestBody UserCreateDto userDto) {
-        // For now, use "admin" as createdBy - in production this would come from the authenticated user
+        // 21 fields (0-20): userId, username, email, phone, passwordHash, fullName, status, userType, agentId, agentCode, mustChangePassword, temporaryPasswordExpiresAt, permissions, failedLoginAttempts, lockedUntil, passwordChangedAt, passwordExpiresAt, createdAt, updatedAt, lastLoginAt, createdBy
+        // Indices: 0:userId, 1:username, 2:email, 3:phone, 4:passwordHash, 5:fullName, 6:status, 7:userType, 8:agentId, 9:agentCode, 10:mustChangePassword, 11:tempExpiry, 12:perms, 13:failed, 14:locked, 15:changedAt, 16:expireAt, 17:created, 18:updated, 19:lastLogin, 20:createdBy
         UserRecord userRecord = new UserRecord(
-                null, // userId
-                userDto.username(),
-                userDto.email(),
-                null, // phone
-                userDto.password(),
-                userDto.fullName(),
-                null, // status
-                userDto.userType() != null ? UserType.valueOf(userDto.userType()) : UserType.EXTERNAL,
-                userDto.agentId(),
-                null, // agentCode
-                null, // mustChangePassword
-                null, // temporaryPasswordExpiresAt
-                null, // permissions
-                null, // failedLoginAttempts
-                null, // lockedUntil
-                null, // passwordChangedAt
-                null, // passwordExpiresAt
-                null, // createdAt
-                null, // updatedAt
-                null, // lastLoginAt
-                "admin" // createdBy
+                null,                // 0
+                userDto.username(),  // 1
+                userDto.email(),     // 2
+                null,                // 3
+                userDto.password(),  // 4
+                userDto.fullName(),  // 5
+                UserStatus.ACTIVE,   // 6
+                userDto.userType() != null ? UserType.valueOf(userDto.userType()) : UserType.EXTERNAL, // 7
+                userDto.agentId(),   // 8
+                null,                // 9
+                false,               // 10: mustChangePassword
+                null,                // 11
+                null,                // 12
+                0,                   // 13
+                null,                // 14
+                null,                // 15
+                null,                // 16
+                null,                // 17
+                null,                // 18
+                null,                // 19
+                "admin"              // 20
         );
         UserRecord created = manageUserUseCase.createUser(userRecord);
         

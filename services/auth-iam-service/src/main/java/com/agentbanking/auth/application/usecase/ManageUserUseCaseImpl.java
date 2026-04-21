@@ -38,29 +38,29 @@ public class ManageUserUseCaseImpl implements ManageUserUseCase {
         // Hash the password using the outbound port
         String hashedPassword = passwordHasher.hash(userRecord.passwordHash());
         
-        // Create user record with proper defaults
+        // 21 fields mapping
         UserRecord newUser = new UserRecord(
-                UUID.randomUUID(),
-                userRecord.username(),
-                userRecord.email(),
-                userRecord.phone(),
-                hashedPassword,
-                userRecord.fullName(),
-                userRecord.status() != null ? userRecord.status() : UserStatus.ACTIVE,
-                userRecord.userType() != null ? userRecord.userType() : UserType.INTERNAL,
-                userRecord.agentId(),
-                userRecord.agentCode(),
-                userRecord.mustChangePassword() != null ? userRecord.mustChangePassword() : false,
-                userRecord.temporaryPasswordExpiresAt(),
-                userRecord.permissions(),
-                0, // failedLoginAttempts
-                null, // lockedUntil
-                LocalDateTime.now(), // passwordChangedAt
-                LocalDateTime.now().plusDays(90), // passwordExpiresAt (90 days)
-                LocalDateTime.now(), // createdAt
-                LocalDateTime.now(), // updatedAt
-                null, // lastLoginAt
-                userRecord.createdBy()
+                UUID.randomUUID(),   // 0: userId
+                userRecord.username(), // 1: username
+                userRecord.email(),    // 2: email
+                userRecord.phone(),    // 3: phone
+                hashedPassword,        // 4: passwordHash
+                userRecord.fullName(), // 5: fullName
+                userRecord.status() != null ? userRecord.status() : UserStatus.ACTIVE, // 6: status
+                userRecord.userType() != null ? userRecord.userType() : UserType.INTERNAL, // 7: userType
+                userRecord.agentId(),  // 8: agentId
+                userRecord.agentCode(), // 9: agentCode
+                userRecord.mustChangePassword() != null ? userRecord.mustChangePassword() : false, // 10: mustChangePassword
+                userRecord.temporaryPasswordExpiresAt(), // 11: temporaryPasswordExpiresAt
+                userRecord.permissions(), // 12: permissions
+                0, // 13: failedLoginAttempts
+                null, // 14: lockedUntil
+                LocalDateTime.now(), // 15: passwordChangedAt
+                LocalDateTime.now().plusDays(90), // 16: passwordExpiresAt
+                LocalDateTime.now(), // 17: createdAt
+                LocalDateTime.now(), // 18: updatedAt
+                null, // 19: lastLoginAt
+                userRecord.createdBy() // 20: createdBy
         );
 
         return userRepository.save(newUser);

@@ -8,6 +8,8 @@ import com.atlassian.oai.validator.report.ValidationReport;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.reactive.server.EntityExchangeResult;
 import org.springframework.test.web.reactive.server.WebTestClient;
@@ -27,6 +29,7 @@ import static org.junit.jupiter.api.Assertions.fail;
 @Tag("e2e")
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class OpenApiContractE2ETest {
+    private static final Logger log = LoggerFactory.getLogger(OpenApiContractE2ETest.class);
 
     private static final String GATEWAY_URL = System.getenv().getOrDefault("GATEWAY_BASE_URL", "http://localhost:8080");
     private static final String AUTH_URL = System.getenv().getOrDefault("AUTH_SERVICE_URL", "http://localhost:8087");
@@ -37,7 +40,7 @@ public class OpenApiContractE2ETest {
     private static String adminToken;
     private static String agentToken;
     private static String agentId;
-    private static final String AGENT_CODE = "AGT-E2E-" + UUID.randomUUID().toString().substring(0, 8);
+    private static String AGENT_CODE;
 
     private final WebTestClient webClient = WebTestClient.bindToServer()
             .baseUrl(GATEWAY_URL)
@@ -69,6 +72,8 @@ public class OpenApiContractE2ETest {
     }
 
     private void setupEverything() {
+        AGENT_CODE = "AGT-E2E-" + UUID.randomUUID().toString().substring(0, 8);
+        log.info("Starting setup for agent: {}", AGENT_CODE);
         System.out.println("=== OpenAPI Contract Test Setup ===");
         
         // 1. Bootstrap Admin if needed
@@ -138,32 +143,37 @@ public class OpenApiContractE2ETest {
             System.err.println("Agent setup failed - tests requiring agentId will be skipped");
         }
 
-        // 4. Create Agent User
+        // 4. Ensure Agent User is ready with known password
         if (agentId != null) {
             try {
-                authClient.post()
-                        .uri("/auth/users")
+                // The agent creation automatically triggers user creation with a random password.
+                // We need to fetch the userId and reset its password to "12345678" for the test.
+                String userId = authClient.get()
+                        .uri("/internal/users/agent/" + agentId + "/status")
                         .header("Authorization", "Bearer " + adminToken)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .bodyValue("""
-                            {
-                                "username": "%s",
-                                "email": "agent-contract@bank.com",
-                                "password": "12345678",
-                                "fullName": "Contract Test Agent",
-                                "userType": "EXTERNAL",
-                                "agentId": "%s",
-                                "agentCode": "%s",
-                                "status": "ACTIVE"
-                            }
-                            """.formatted(AGENT_CODE, agentId, AGENT_CODE))
                         .exchange()
-                        .expectStatus().isCreated();
+                        .expectStatus().isOk()
+                        .expectBody(JsonNode.class)
+                        .returnResult()
+                        .getResponseBody()
+                        .get("userId").asText();
+
+                if (userId != null) {
+                    authClient.post()
+                            .uri("/auth/users/" + userId + "/reset-password")
+                            .header("Authorization", "Bearer " + adminToken)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .bodyValue(Map.of("newPassword", "12345678"))
+                            .exchange()
+                            .expectStatus().isOk();
+                    
+                    log.info("Password reset successful for user: {}", userId);
+                }
                 
-                // Add a small delay to ensure IAM service has processed the user creation
-                try { Thread.sleep(1000); } catch (InterruptedException ignored) {}
+                // Add a small delay to ensure IAM service has processed the changes
+                try { Thread.sleep(500); } catch (InterruptedException ignored) {}
             } catch (Exception e) {
-                System.err.println("Agent user creation failed: " + e.getMessage());
+                log.error("Failed to ensure agent user is ready: {}", e.getMessage());
             }
 
             // 5. Get Agent Token
@@ -259,13 +269,13 @@ public class OpenApiContractE2ETest {
         }
         String path = "/api/v1/agent/balance";
         var result = webClient.get()
-                .uri(path)
+                .uri(path + "?agentId=" + agentId)
                 .header("Authorization", "Bearer " + agentToken)
                 .exchange()
                 .expectBody(String.class)
                 .returnResult();
 
-        validateContract("GET", path, result.getStatus().value(), result.getResponseBody(), null, null, agentToken);
+        validateContract("GET", path, result.getStatus().value(), result.getResponseBody(), null, Map.of("agentId", agentId.toString()), agentToken);
     }
 
     @Test

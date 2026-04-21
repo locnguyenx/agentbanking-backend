@@ -68,8 +68,8 @@ task e2eTest(type: Test) {
     // Ensure tests run in order
     systemProperty 'junit.jupiter.testclass.order.default',
             'org.junit.jupiter.api.ClassOrderer\$OrderAnnotation'
-    // Increase timeout for E2E tests
-    systemProperty 'junit.jupiter.execution.timeout.default', '60s'
+    // Increase timeout for E2E tests to accommodate Docker latency and retry loops
+    systemProperty 'junit.jupiter.execution.timeout.default', '300s'
     // Fail fast on first failure
     systemProperty 'junit.jupiter.execution.parallel.enabled', 'false'
     

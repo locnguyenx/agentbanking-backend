@@ -72,7 +72,7 @@ public class QueryWorkflowStatusUseCaseImpl implements QueryWorkflowStatusUseCas
     private WorkflowStatus mapStatus(String status) {
         return switch (status) {
             case "COMPLETED" -> WorkflowStatus.COMPLETED;
-            case "FAILED" -> WorkflowStatus.FAILED;
+            case "FAILED", "REJECTED", "CANCELLED", "EXPIRED" -> WorkflowStatus.FAILED;
             case "RUNNING" -> WorkflowStatus.RUNNING;
             case "COMPENSATING" -> WorkflowStatus.COMPENSATING;
             default -> WorkflowStatus.PENDING;

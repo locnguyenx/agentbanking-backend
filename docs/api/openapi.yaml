@@ -61,8 +61,14 @@ paths:
               $ref: '#/components/schemas/TransactionStartRequest'
         required: true
       responses:
+        '202':
+          description: Transaction accepted for processing
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransactionStartResponse'
         '200':
-          description: Transaction started successfully
+          description: Transaction completed immediately
           content:
             application/json:
               schema:
@@ -295,9 +301,26 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/BalanceResponse'
+                type: object
+                properties:
+                  status:
+                    type: string
+                  balance:
+                    type: number
+                  currency:
+                    type: string
+                  accountMasked:
+                    type: string
+                  responseCode:
+                    type: string
         '400':
           description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
           content:
             application/json:
               schema:
@@ -954,6 +977,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/BalanceResponse'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '400':
           description: Bad Request
           content:
@@ -2677,27 +2706,17 @@ components:
         updatedAt:
           type: string
     
-    # Balance Response
+    # Balance Response (for agent balance)
     BalanceResponse:
       type: object
       properties:
         agentId:
           type: string
           format: uuid
-        availableBalance:
-          type: string
-        ledgerBalance:
-          type: string
-        pendingBalance:
-          type: string
+        balance:
+          type: number
         currency:
           type: string
-        lastTransactionId:
-          type: string
-          format: uuid
-        lastUpdated:
-          type: string
-          format: date-time
     
     # Dashboard Response
     DashboardResponse:
